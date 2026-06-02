@@ -1858,7 +1858,7 @@ const SHEETS_COLS = [
 ];
 
 async function sheetsRequest(method, range, body) {
-  if (!googleAccessToken) throw new Error('Sin token Google');
+  if (!googleAccessToken) throw new Error('Sin token Google — vuelve a iniciar sesión');
   const base = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_CONFIG.spreadsheetId}`;
 
   let url, options;
@@ -1884,7 +1884,11 @@ async function sheetsRequest(method, range, body) {
   const resp = await fetch(url, options);
   if (!resp.ok) {
     const txt = await resp.text();
-    throw new Error('Sheets error ' + resp.status + ': ' + txt.slice(0,200));
+    let msg = `Error ${resp.status}`;
+    try { const j = JSON.parse(txt); msg = j.error?.message || msg; } catch(_) {}
+    if (resp.status === 401) msg = 'Token expirado — cierra sesión y vuelve a entrar';
+    if (resp.status === 403) msg = 'Sin permiso para escribir en este Sheet. Verifica que la API de Sheets esté habilitada y que el Sheet sea tuyo';
+    throw new Error(msg);
   }
   return method === 'GET' ? resp.json() : {};
 }
@@ -2105,7 +2109,7 @@ async function guardarOrden() {
     return;
   }
 
-  btn.disabled = true; btn.textContent = '⏳ Guardando en Google Sheets...';
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
 
   try {
     const numOrden = 'OT-' + String(Date.now()).slice(-5);
@@ -2126,20 +2130,34 @@ async function guardarOrden() {
       CostoTotal: 0, FechaCreacion: new Date().toISOString()
     };
 
-    // Guardar en Google Sheets
-    try {
-      await guardarOrdenEnSheets(nuevaOrden);
-      mostrarIndicadorStorage(true);
-    } catch(e) {
-      console.warn('No se pudo guardar en Sheets, guardando local:', e.message);
-      mostrarIndicadorStorage(false);
-    }
-
+    // Guardar siempre en localStorage primero
     allOrdenes.push(nuevaOrden);
     guardarLocal();
 
-    alert.className = 'alert alert-ok show';
-    alert.innerHTML = `✅ Orden <strong>${numOrden}</strong> guardada en Google Sheets correctamente.`;
+    // Intentar guardar en Google Sheets
+    let sheetsOk = false;
+    let sheetsError = '';
+    if (googleAccessToken) {
+      try {
+        await guardarOrdenEnSheets(nuevaOrden);
+        sheetsOk = true;
+      } catch(e) {
+        sheetsError = e.message;
+        console.error('Error Sheets:', e);
+      }
+    } else {
+      sheetsError = 'Sin token de Google. Cierra sesión y vuelve a ingresar.';
+    }
+
+    if (sheetsOk) {
+      alert.className = 'alert alert-ok show';
+      alert.innerHTML = `✅ Orden <strong>${numOrden}</strong> guardada en Google Sheets.`;
+      mostrarIndicadorStorage(true);
+    } else {
+      alert.className = 'alert alert-ok show';
+      alert.innerHTML = `💾 Orden <strong>${numOrden}</strong> guardada localmente. (Sheets: ${sheetsError})`;
+      mostrarIndicadorStorage(false);
+    }
     actualizarContadorTab && actualizarContadorTab();
 
   } catch(e) {
