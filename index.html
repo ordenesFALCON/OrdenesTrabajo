@@ -1011,7 +1011,7 @@ body {
       <button class="btn btn-ghost" onclick="imprimirOrden()">🖨 Imprimir / PDF</button>
       <button class="btn btn-ghost" onclick="descargarPDF()">📄 Descargar PDF</button>
     </div>
-    <div id="detalleContainer" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:visible;height:auto;"></div>
+    <div id="detalleContainer" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:visible;min-height:100px;"></div>
   </div>
 
 </div><!-- /container -->
@@ -1543,6 +1543,9 @@ async function guardarEdicion() {
         FechaFin:          datos.FechaFin,
         MedidasSeguridad:  datos.MedidasSeguridad,
         Observaciones:     datos.Observaciones,
+        tareas:            JSON.stringify(datos.tareas || []),
+        repuestos:         JSON.stringify(datos.repuestos || []),
+        insumos:           JSON.stringify(datos.insumos || []),
       });
     }
   } catch(e) { console.warn('No se pudo actualizar Sheets:', e.message); }
@@ -1599,6 +1602,9 @@ async function guardarCierre() {
           CostoReal:    costoReal,
           FechaCierre:  fechaEj,
           TiempoReal:   tiempoReal,
+          tareas:       JSON.stringify(o.tareas || []),
+          repuestos:    JSON.stringify(o.repuestos || []),
+          insumos:      JSON.stringify(o.insumos || []),
         });
       }
     } catch(e) { console.warn('No se pudo actualizar Sheets:', e.message); }
@@ -1859,7 +1865,8 @@ const SHEETS_COLS = [
   'SolicitadaPor','AutorizadaPor','Responsable','Supervisor',
   'FechaInicio','FechaFin','MedidasSeguridad','Observaciones',
   'UserEmail','CostoTotal','FechaCierre','EjecutadoPor','TiempoReal',
-  'CostoReal','ObsCierre','FechaCreacion'
+  'CostoReal','ObsCierre','FechaCreacion',
+  'tareas','repuestos','insumos'
 ];
 
 async function sheetsRequest(method, range, body) {
@@ -1931,6 +1938,14 @@ async function cargarOrdenesDeSheets() {
     const obj = { _row: i + 2 };
     headers.forEach((h, j) => { obj[h] = row[j] || ''; });
     obj.id = obj.NumeroOrden || ('local-' + i);
+    // Parsear arrays guardados como JSON string
+    ['tareas','repuestos','insumos'].forEach(campo => {
+      if (typeof obj[campo] === 'string' && obj[campo]) {
+        try { obj[campo] = JSON.parse(obj[campo]); } catch(e) { obj[campo] = []; }
+      } else if (!Array.isArray(obj[campo])) {
+        obj[campo] = [];
+      }
+    });
     return obj;
   });
 }
