@@ -2279,6 +2279,18 @@ async function verDetalle(id) {
   const repuestos = parseArr(orden.repuestos).filter(r => r.nombre && String(r.nombre).trim());
   const insumos   = parseArr(orden.insumos).filter(i => i.nombre && String(i.nombre).trim());
 
+  // DEBUG — quitar después
+  console.log('ORDEN:', JSON.stringify({
+    id: orden.id,
+    NumeroOrden: orden.NumeroOrden,
+    tareasRaw: orden.tareas,
+    repuestosRaw: orden.repuestos,
+    insumosRaw: orden.insumos,
+    tareasFiltradas: tareas.length,
+    repuestosFiltrados: repuestos.length,
+    insumosFiltrados: insumos.length
+  }, null, 2));
+
   let html = '';
 
   // ── Cabecera ──
