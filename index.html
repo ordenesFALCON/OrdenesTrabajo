@@ -1864,14 +1864,25 @@ function sigDataUrl(canvasId) {
 /* ══════════════════════════════════════════════
    GOOGLE SHEETS API — GUARDAR ÓRDENES
 ══════════════════════════════════════════════ */
+// Columnas por hoja
 const SHEETS_COLS = [
   'NumeroOrden','Title','Equipo','TipoMantenimiento','Prioridad','Estado',
   'SolicitadaPor','AutorizadaPor','Responsable','Supervisor',
   'FechaInicio','FechaFin','MedidasSeguridad','Observaciones',
   'UserEmail','CostoTotal','FechaCierre','EjecutadoPor','TiempoReal',
-  'CostoReal','ObsCierre','FechaCreacion',
-  'tareas','repuestos','insumos','FirmaCreador','FirmaCierre'
+  'CostoReal','ObsCierre','FechaCreacion','FirmaCreador','FirmaCierre'
 ];
+const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','TiempoReal','OK','Responsable'];
+const REPUESTOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
+const INSUMOS_COLS   = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
+
+// Nombres de hojas
+const SH = {
+  ordenes:   'Ordenes',
+  tareas:    'Tareas',
+  repuestos: 'Repuestos',
+  insumos:   'Insumos',
+};
 
 async function sheetsRequest(method, range, body) {
   if (!googleAccessToken) throw new Error('Sin token Google — vuelve a iniciar sesión');
@@ -2037,58 +2048,99 @@ async function repararHoja() {
   }
 }
 
+// ── Helper: asegurar encabezados en una hoja específica ──
+async function asegurarHoja(nombre, cols) {
+  const base  = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+  const hdrs  = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
+  const colFin = numToCol(cols.length - 1);
+  // Leer fila 1
+  const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A1:' + colFin + '1'), { headers: hdrs });
+  const d = await r.json();
+  const existing = (d.values && d.values[0]) ? d.values[0] : [];
+  const missing  = cols.filter(c => !existing.includes(c));
+  if (existing.length === 0 || missing.length > 0) {
+    const final  = existing.length === 0 ? cols : [...existing, ...missing];
+    const cf2    = numToCol(final.length - 1);
+    await fetch(base + '/values/' + encodeURIComponent(nombre + '!A1:' + cf2 + '1') + '?valueInputOption=RAW', {
+      method: 'PUT', headers: hdrs, body: JSON.stringify({ values: [final] })
+    });
+    return final;
+  }
+  return existing;
+}
+
+// ── Helper: append filas a una hoja ──
+async function appendHoja(nombre, rows) {
+  if (!rows || rows.length === 0) return;
+  const base   = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+  const hdrs   = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
+  const colFin = numToCol(rows[0].length - 1);
+  const url    = base + '/values/' + encodeURIComponent(nombre + '!A:' + colFin) + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
+  const resp   = await fetch(url, { method: 'POST', headers: hdrs, body: JSON.stringify({ values: rows }) });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    let msg = 'Error ' + resp.status;
+    try { msg = JSON.parse(txt).error?.message || msg; } catch(_) {}
+    throw new Error('Hoja ' + nombre + ': ' + msg);
+  }
+}
+
 async function guardarOrdenEnSheets(datos) {
-  // Detectar nombre real de hoja
-  await detectarNombreHoja();
-  const sheetName = window._detectedSheetName || GOOGLE_CONFIG.sheetName;
   const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
 
-  // 1. Leer fila 1 para ver si tiene encabezados correctos
-  let headersActuales = [];
-  try {
-    const colFinMax = numToCol(SHEETS_COLS.length - 1);
-    const r = await fetch(base + '/values/' + encodeURIComponent(sheetName + '!A1:' + colFinMax + '1'), {
-      headers: { Authorization: 'Bearer ' + googleAccessToken }
-    });
-    const d = await r.json();
-    headersActuales = (d.values && d.values[0]) ? d.values[0] : [];
-  } catch(e) { headersActuales = []; }
-
-  // 2. Si faltan columnas, escribir encabezados completos
-  const faltantes = SHEETS_COLS.filter(c => !headersActuales.includes(c));
-  if (headersActuales.length === 0 || faltantes.length > 0) {
-    const nuevoHeaders = headersActuales.length === 0 ? SHEETS_COLS : [...headersActuales, ...faltantes];
-    const colFin = numToCol(nuevoHeaders.length - 1);
-    await fetch(base + '/values/' + encodeURIComponent(sheetName + '!A1:' + colFin + '1') + '?valueInputOption=RAW', {
-      method: 'PUT',
-      headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [nuevoHeaders] })
-    });
-    headersActuales = nuevoHeaders;
-  }
-  window._sheetsHeaders = headersActuales;
-
-  // 3. Construir fila con los headers reales de la hoja
-  const fila = headersActuales.map(col => {
+  // ── 1. Hoja Ordenes (datos principales, sin arrays) ──
+  const hOrdenes = await asegurarHoja(SH.ordenes, SHEETS_COLS);
+  window._sheetsHeaders = hOrdenes;
+  const filaOrden = hOrdenes.map(col => {
     const val = datos[col];
     if (val === null || val === undefined) return '';
-    if (typeof val === 'object') return JSON.stringify(val);
+    if (typeof val === 'object') return '';   // arrays van en hojas propias
     return String(val);
   });
+  await appendHoja(SH.ordenes, [filaOrden]);
 
-  // 4. Agregar la fila
-  const colFin = numToCol(headersActuales.length - 1);
-  const appendUrl = base + '/values/' + encodeURIComponent(sheetName + '!A:' + colFin) + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
-  const appendResp = await fetch(appendUrl, {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values: [fila] })
-  });
-  if (!appendResp.ok) {
-    const txt = await appendResp.text();
-    let msg = 'Error ' + appendResp.status;
-    try { msg = JSON.parse(txt).error?.message || msg; } catch(_) {}
-    throw new Error(msg);
+  const num = datos.NumeroOrden || '';
+
+  // ── 2. Hoja Tareas ──
+  if (datos.tareas && datos.tareas.length) {
+    await asegurarHoja(SH.tareas, TAREAS_COLS);
+    const filasTareas = datos.tareas
+      .filter(t => t.descripcion || t.Descripcion)
+      .map((t, i) => [
+        num, i + 1,
+        t.descripcion || t.Descripcion || '',
+        t.tiempoEstimado || '',
+        t.tiempoReal || '',
+        t.ok ? 'SI' : 'NO',
+        t.responsable || ''
+      ]);
+    if (filasTareas.length) await appendHoja(SH.tareas, filasTareas);
+  }
+
+  // ── 3. Hoja Repuestos ──
+  if (datos.repuestos && datos.repuestos.length) {
+    await asegurarHoja(SH.repuestos, REPUESTOS_COLS);
+    const filasRep = datos.repuestos
+      .filter(r => r.nombre || r.Nombre)
+      .map((r, i) => {
+        const cant = Number(r.cantidad || 0);
+        const costo = Number(r.costoUnitario || r.costoUnit || 0);
+        return [num, i + 1, r.codigo || '', r.nombre || '', cant, r.unidades || 'und', costo, cant * costo];
+      });
+    if (filasRep.length) await appendHoja(SH.repuestos, filasRep);
+  }
+
+  // ── 4. Hoja Insumos ──
+  if (datos.insumos && datos.insumos.length) {
+    await asegurarHoja(SH.insumos, INSUMOS_COLS);
+    const filasIns = datos.insumos
+      .filter(i => i.nombre || i.Nombre)
+      .map((ins, i) => {
+        const cant = Number(ins.cantidad || 0);
+        const costo = Number(ins.costoUnitario || ins.costoUnit || 0);
+        return [num, i + 1, ins.codigo || '', ins.nombre || '', cant, ins.unidades || 'und', costo, cant * costo];
+      });
+    if (filasIns.length) await appendHoja(SH.insumos, filasIns);
   }
 }
 
@@ -2100,65 +2152,184 @@ function numToCol(n) {
 }
 
 async function cargarOrdenesDeSheets() {
-  await asegurarEncabezados();
-  const headers = window._sheetsHeaders || SHEETS_COLS;
-  const colFin  = numToCol(headers.length - 1);
-  const data = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A:${colFin}`);
-  if (!data.values || data.values.length < 2) return [];
-  const hdrs = data.values[0];
-  return data.values.slice(1).map((row, i) => {
+  const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+  const hdrs = { Authorization: 'Bearer ' + googleAccessToken };
+
+  // Función auxiliar para leer una hoja completa
+  async function leerHoja(nombre) {
+    try {
+      const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A:Z'), { headers: hdrs });
+      const d = await r.json();
+      if (!d.values || d.values.length < 2) return [];
+      const cols = d.values[0];
+      return d.values.slice(1).map(row => {
+        const obj = {};
+        cols.forEach((c, j) => { obj[c] = row[j] || ''; });
+        return obj;
+      });
+    } catch(e) { return []; }
+  }
+
+  // Cargar hoja principal Ordenes
+  const hOrdenesHeaders = await asegurarHoja(SH.ordenes, SHEETS_COLS);
+  window._sheetsHeaders = hOrdenesHeaders;
+  const colFin = numToCol(hOrdenesHeaders.length - 1);
+  const rOrden = await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A:' + colFin), { headers: hdrs });
+  const dOrden = await rOrden.json();
+  if (!dOrden.values || dOrden.values.length < 2) return [];
+  const ordenCols = dOrden.values[0];
+  const ordenes = dOrden.values.slice(1).map((row, i) => {
     const obj = { _row: i + 2 };
-    hdrs.forEach((h, j) => { obj[h] = row[j] || ''; });
+    ordenCols.forEach((c, j) => { obj[c] = row[j] || ''; });
     obj.id = obj.NumeroOrden || ('local-' + i);
-    // Parsear arrays guardados como JSON string
-    ['tareas','repuestos','insumos'].forEach(campo => {
-      if (typeof obj[campo] === 'string' && obj[campo]) {
-        try { obj[campo] = JSON.parse(obj[campo]); } catch(e) { obj[campo] = []; }
-      } else if (!Array.isArray(obj[campo])) {
-        obj[campo] = [];
-      }
-    });
-    // Asegurar que las firmas sean strings válidos
-    ['FirmaCreador','FirmaCierre'].forEach(campo => {
-      if (typeof obj[campo] !== 'string') obj[campo] = '';
-    });
+    obj.tareas    = [];
+    obj.repuestos = [];
+    obj.insumos   = [];
+    ['FirmaCreador','FirmaCierre'].forEach(c => { if (typeof obj[c] !== 'string') obj[c] = ''; });
     return obj;
   });
+
+  // Cargar tareas, repuestos, insumos en paralelo
+  const [tareasRows, repuestosRows, insumosRows] = await Promise.all([
+    leerHoja(SH.tareas),
+    leerHoja(SH.repuestos),
+    leerHoja(SH.insumos)
+  ]);
+
+  // Indexar por NumeroOrden
+  const idx = {};
+  ordenes.forEach(o => { idx[o.NumeroOrden] = o; });
+
+  tareasRows.forEach(r => {
+    if (r.NumeroOrden && idx[r.NumeroOrden]) {
+      idx[r.NumeroOrden].tareas.push({
+        descripcion:    r.Descripcion || '',
+        tiempoEstimado: r.TiempoEstimado || '',
+        tiempoReal:     r.TiempoReal || '',
+        ok:             r.OK === 'SI',
+        responsable:    r.Responsable || ''
+      });
+    }
+  });
+
+  repuestosRows.forEach(r => {
+    if (r.NumeroOrden && idx[r.NumeroOrden]) {
+      idx[r.NumeroOrden].repuestos.push({
+        codigo:        r.Codigo || '',
+        nombre:        r.Nombre || '',
+        cantidad:      r.Cantidad || '',
+        unidades:      r.Unidades || 'und',
+        costoUnitario: r.CostoUnitario || '0'
+      });
+    }
+  });
+
+  insumosRows.forEach(r => {
+    if (r.NumeroOrden && idx[r.NumeroOrden]) {
+      idx[r.NumeroOrden].insumos.push({
+        codigo:        r.Codigo || '',
+        nombre:        r.Nombre || '',
+        cantidad:      r.Cantidad || '',
+        unidades:      r.Unidades || 'und',
+        costoUnitario: r.CostoUnitario || '0'
+      });
+    }
+  });
+
+  return ordenes;
 }
 
 async function actualizarOrdenEnSheets(numeroOrden, campos) {
   try {
-    const sheetName = window._detectedSheetName || GOOGLE_CONFIG.sheetName;
-    const headers   = window._sheetsHeaders || SHEETS_COLS;
-    const colFin    = numToCol(headers.length - 1);
-    const base      = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
-    const hdrs      = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
+    const headers = window._sheetsHeaders || SHEETS_COLS;
+    const colFin  = numToCol(headers.length - 1);
+    const base    = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+    const hdrs    = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
 
-    // Buscar fila por número de orden
-    const colAResp = await fetch(base + '/values/' + encodeURIComponent(sheetName + '!A:A'), { headers: hdrs });
+    // ── Actualizar hoja Ordenes (campos escalares) ──
+    const colAResp = await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A:A'), { headers: hdrs });
     const colAData = await colAResp.json();
-    if (!colAData.values) return;
-    const rowIdx = colAData.values.findIndex((r, i) => i > 0 && r[0] === numeroOrden);
-    if (rowIdx < 0) return;
-    const sheetRow = rowIdx + 1;
+    if (colAData.values) {
+      const rowIdx = colAData.values.findIndex((r, i) => i > 0 && r[0] === numeroOrden);
+      if (rowIdx >= 0) {
+        const sheetRow = rowIdx + 1;
+        const rowResp  = await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A' + sheetRow + ':' + colFin + sheetRow), { headers: hdrs });
+        const rowData  = await rowResp.json();
+        if (rowData.values && rowData.values[0]) {
+          const row = rowData.values[0];
+          // Solo actualizar campos escalares (no arrays)
+          const camposEscalares = Object.fromEntries(
+            Object.entries(campos).filter(([k]) => !['tareas','repuestos','insumos'].includes(k))
+          );
+          Object.entries(camposEscalares).forEach(([k, v]) => {
+            const ci = headers.indexOf(k);
+            if (ci >= 0) row[ci] = v === null || v === undefined ? '' : String(v);
+          });
+          while (row.length < headers.length) row.push('');
+          await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A' + sheetRow + ':' + colFin + sheetRow) + '?valueInputOption=RAW', {
+            method: 'PUT', headers: hdrs, body: JSON.stringify({ values: [row] })
+          });
+        }
+      }
+    }
 
-    // Leer fila completa
-    const rowResp = await fetch(base + '/values/' + encodeURIComponent(sheetName + '!A' + sheetRow + ':' + colFin + sheetRow), { headers: hdrs });
-    const rowData = await rowResp.json();
-    if (!rowData.values || !rowData.values[0]) return;
-    const row = rowData.values[0];
+    // ── Actualizar hojas de tareas/repuestos/insumos si vienen en campos ──
+    // Para simplificar: borrar filas existentes del número de orden y re-insertar
+    async function reemplazarFilasHoja(nombreHoja, cols, nuevasFilas) {
+      if (!nuevasFilas || nuevasFilas.length === 0) return;
+      // Leer todas las filas
+      const r = await fetch(base + '/values/' + encodeURIComponent(nombreHoja + '!A:A'), { headers: hdrs });
+      const d = await r.json();
+      if (!d.values) { await appendHoja(nombreHoja, nuevasFilas); return; }
+      // Encontrar filas a borrar (donde col A === numeroOrden)
+      const indicesToBorrar = [];
+      d.values.forEach((row, i) => { if (i > 0 && row[0] === numeroOrden) indicesToBorrar.push(i + 1); });
+      // Borrar en orden inverso con batchUpdate
+      if (indicesToBorrar.length > 0) {
+        // Obtener sheetId de la hoja
+        const metaR = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId + '?fields=sheets.properties', { headers: hdrs });
+        const meta  = await metaR.json();
+        const sheet = (meta.sheets || []).find(s => s.properties.title === nombreHoja);
+        if (sheet) {
+          const sheetId = sheet.properties.sheetId;
+          const requests = indicesToBorrar.slice().reverse().map(rowNum => ({
+            deleteDimension: {
+              range: { sheetId, dimension: 'ROWS', startIndex: rowNum - 1, endIndex: rowNum }
+            }
+          }));
+          await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId + ':batchUpdate', {
+            method: 'POST', headers: hdrs,
+            body: JSON.stringify({ requests })
+          });
+        }
+      }
+      await appendHoja(nombreHoja, nuevasFilas);
+    }
 
-    // Aplicar cambios
-    Object.entries(campos).forEach(([k, v]) => {
-      const ci = headers.indexOf(k);
-      if (ci >= 0) row[ci] = v === null || v === undefined ? '' : String(v);
-    });
-    while (row.length < headers.length) row.push('');
+    if (campos.tareas && Array.isArray(campos.tareas)) {
+      await asegurarHoja(SH.tareas, TAREAS_COLS);
+      const filas = campos.tareas.filter(t => t.descripcion).map((t, i) => [
+        numeroOrden, i+1, t.descripcion||'', t.tiempoEstimado||'', t.tiempoReal||'', t.ok?'SI':'NO', t.responsable||''
+      ]);
+      await reemplazarFilasHoja(SH.tareas, TAREAS_COLS, filas);
+    }
+    if (campos.repuestos && Array.isArray(campos.repuestos)) {
+      await asegurarHoja(SH.repuestos, REPUESTOS_COLS);
+      const filas = campos.repuestos.filter(r => r.nombre).map((r, i) => {
+        const cant = Number(r.cantidad||0), costo = Number(r.costoUnitario||r.costoUnit||0);
+        return [numeroOrden, i+1, r.codigo||'', r.nombre||'', cant, r.unidades||'und', costo, cant*costo];
+      });
+      await reemplazarFilasHoja(SH.repuestos, REPUESTOS_COLS, filas);
+    }
+    if (campos.insumos && Array.isArray(campos.insumos)) {
+      await asegurarHoja(SH.insumos, INSUMOS_COLS);
+      const filas = campos.insumos.filter(i => i.nombre).map((ins, i) => {
+        const cant = Number(ins.cantidad||0), costo = Number(ins.costoUnitario||ins.costoUnit||0);
+        return [numeroOrden, i+1, ins.codigo||'', ins.nombre||'', cant, ins.unidades||'und', costo, cant*costo];
+      });
+      await reemplazarFilasHoja(SH.insumos, INSUMOS_COLS, filas);
+    }
 
-    await fetch(base + '/values/' + encodeURIComponent(sheetName + '!A' + sheetRow + ':' + colFin + sheetRow) + '?valueInputOption=RAW', {
-      method: 'PUT', headers: hdrs,
-      body: JSON.stringify({ values: [row] })
-    });
   } catch(e) {
     console.warn('No se pudo actualizar en Sheets:', e.message);
   }
