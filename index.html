@@ -589,7 +589,46 @@ body::after {
           </div>
           <div class="field">
             <label>Equipo / Activo *</label>
-            <input type="text" id="f_equipo" placeholder="Nombre o código del equipo">
+            <select id="f_equipo">
+              <option value="">— Seleccione un equipo —</option>
+              <optgroup label="Compresores principales">
+                <option>CA1</option><option>CA2</option><option>CA3</option>
+                <option>CB1</option><option>CB2</option><option>CB3</option><option>CB4</option>
+              </optgroup>
+              <optgroup label="Arrancadores">
+                <option>ARRANCADOR CA1</option><option>ARRANCADOR CA2</option><option>ARRANCADOR CA3</option>
+                <option>ARRANCADOR CB1</option><option>ARRANCADOR CB2</option><option>ARRANCADOR CB3</option><option>ARRANCADOR CB4</option>
+              </optgroup>
+              <optgroup label="Secadores principales">
+                <option>SCA1</option><option>SCA2</option><option>SCA3</option>
+                <option>SCB1</option><option>SCB2</option><option>SCB3</option><option>SCB4</option>
+              </optgroup>
+              <optgroup label="Compresor portátil">
+                <option>COMPRESOR PORTATIL</option>
+              </optgroup>
+              <optgroup label="Compresor pistón">
+                <option>COMPRESOR PISTON</option><option>SCPISTON</option>
+              </optgroup>
+              <optgroup label="Servicios">
+                <option>BOMBA AGUA 1</option><option>BOMBA AGUA 2</option>
+                <option>DRYCOOLER 1</option><option>DRYCOOLER 2</option><option>DRYCOOLER 3</option><option>DRYCOOLER 4</option>
+              </optgroup>
+              <optgroup label="Infraestructura">
+                <option>INFRAESTRUCTURA PRIMER PISO</option>
+                <option>INFRAESTRUCTURA SEGUNDO PISO</option>
+                <option>INFRAESTRUCTURA 3 PISO</option>
+              </optgroup>
+              <optgroup label="Compresores de emergencia">
+                <option>COMPRESOR DE EMERGENCIA NX200</option>
+                <option>COMPRESOR EMERGENCIA IR160</option>
+                <option>SCEMERGENCIA</option>
+              </optgroup>
+              <optgroup label="Compresores decorado">
+                <option>COMPRESOR DECORADO NX55</option>
+                <option>COMPRESOR DECORADO NX18</option>
+                <option>SCDECORADO</option>
+              </optgroup>
+            </select>
           </div>
           <div class="field">
             <label>Tipo de mantenimiento</label>
@@ -807,7 +846,46 @@ body::after {
             </div>
             <div class="field">
               <label>Equipo / Activo *</label>
-              <input type="text" id="e_equipo" placeholder="Nombre o código del equipo">
+              <select id="e_equipo">
+              <option value="">— Seleccione un equipo —</option>
+              <optgroup label="Compresores principales">
+                <option>CA1</option><option>CA2</option><option>CA3</option>
+                <option>CB1</option><option>CB2</option><option>CB3</option><option>CB4</option>
+              </optgroup>
+              <optgroup label="Arrancadores">
+                <option>ARRANCADOR CA1</option><option>ARRANCADOR CA2</option><option>ARRANCADOR CA3</option>
+                <option>ARRANCADOR CB1</option><option>ARRANCADOR CB2</option><option>ARRANCADOR CB3</option><option>ARRANCADOR CB4</option>
+              </optgroup>
+              <optgroup label="Secadores principales">
+                <option>SCA1</option><option>SCA2</option><option>SCA3</option>
+                <option>SCB1</option><option>SCB2</option><option>SCB3</option><option>SCB4</option>
+              </optgroup>
+              <optgroup label="Compresor portátil">
+                <option>COMPRESOR PORTATIL</option>
+              </optgroup>
+              <optgroup label="Compresor pistón">
+                <option>COMPRESOR PISTON</option><option>SCPISTON</option>
+              </optgroup>
+              <optgroup label="Servicios">
+                <option>BOMBA AGUA 1</option><option>BOMBA AGUA 2</option>
+                <option>DRYCOOLER 1</option><option>DRYCOOLER 2</option><option>DRYCOOLER 3</option><option>DRYCOOLER 4</option>
+              </optgroup>
+              <optgroup label="Infraestructura">
+                <option>INFRAESTRUCTURA PRIMER PISO</option>
+                <option>INFRAESTRUCTURA SEGUNDO PISO</option>
+                <option>INFRAESTRUCTURA 3 PISO</option>
+              </optgroup>
+              <optgroup label="Compresores de emergencia">
+                <option>COMPRESOR DE EMERGENCIA NX200</option>
+                <option>COMPRESOR EMERGENCIA IR160</option>
+                <option>SCEMERGENCIA</option>
+              </optgroup>
+              <optgroup label="Compresores decorado">
+                <option>COMPRESOR DECORADO NX55</option>
+                <option>COMPRESOR DECORADO NX18</option>
+                <option>SCDECORADO</option>
+              </optgroup>
+            </select>
             </div>
             <div class="field">
               <label>Tipo de mantenimiento</label>
@@ -1060,6 +1138,18 @@ body::after {
   <!-- ════════════ PANEL: DASHBOARD ════════════ -->
   <div id="panel-dashboard" class="panel">
 
+    <!-- Filtro por mes -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-body" style="padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="font-weight:700;color:var(--brand);font-size:13px">📅 Filtrar por mes:</span>
+        <select id="dashFiltroMes" onchange="cargarDashboard()" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;min-width:160px">
+          <option value="">— Todos los meses —</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('dashFiltroMes').value='';cargarDashboard()">✕ Limpiar filtro</button>
+        <span id="dashFiltroLabel" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+      </div>
+    </div>
+
     <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -1085,12 +1175,33 @@ body::after {
       <div class="kpi-card" style="border-top-color:#7719aa">
         <div class="kpi-val" id="kpi_costo_rep" style="color:#7719aa">—</div>
         <div class="kpi-label">Costo Repuestos</div>
-        <div class="kpi-sub">Total acumulado</div>
+        <div class="kpi-sub" id="kpi_costo_rep_sub">Total acumulado</div>
       </div>
       <div class="kpi-card" style="border-top-color:#0078d4">
         <div class="kpi-val" id="kpi_costo_ins" style="color:#0078d4">—</div>
         <div class="kpi-label">Costo Insumos</div>
-        <div class="kpi-sub">Total acumulado</div>
+        <div class="kpi-sub" id="kpi_costo_ins_sub">Total acumulado</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:#107C10;grid-column:span 2">
+        <div class="kpi-val" id="kpi_costo_total" style="color:#107C10;font-size:32px">—</div>
+        <div class="kpi-label">💰 Gasto Total del Período</div>
+        <div class="kpi-sub" id="kpi_costo_total_sub">Repuestos + Insumos</div>
+      </div>
+    </div>
+
+    <!-- Gasto por equipo -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">💰 Gasto por Equipo</div>
+      <div class="card-body" style="padding:0">
+        <div id="tablaGastoEquipos" style="overflow-x:auto"></div>
+      </div>
+    </div>
+
+    <!-- Gráfica gasto por equipo -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">📊 Gasto por Equipo (gráfica)</div>
+      <div class="card-body" style="padding:16px">
+        <canvas id="chartGastoEquipo" height="180"></canvas>
       </div>
     </div>
 
@@ -3086,44 +3197,131 @@ async function marcarRealizada(id) {
 async function cargarDashboard() {
   await new Promise(r => setTimeout(r, 300));
 
+  // ── Poblar selector de meses con los que existen en las órdenes ──
+  const selMes = document.getElementById('dashFiltroMes');
+  const mesMapa = {};
+  allOrdenes.forEach(o => {
+    const f = o.FechaCreacion || o.FechaInicio || '';
+    if (f) {
+      try {
+        const d = new Date(f);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const label = d.toLocaleDateString('es-CO',{year:'numeric',month:'long'});
+        mesMapa[key] = label;
+      } catch(_){}
+    }
+  });
+  const mesesOrdenados = Object.keys(mesMapa).sort().reverse();
+  const selValActual = selMes.value;
+  // Mantener opciones pero regenerar
+  while (selMes.options.length > 1) selMes.remove(1);
+  mesesOrdenados.forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = mesMapa[k];
+    selMes.appendChild(opt);
+  });
+  if (selValActual) selMes.value = selValActual;
+
+  // ── Filtrar órdenes por mes seleccionado ──
+  const filtroMes = selMes.value;
+  let ordenes = allOrdenes;
+  if (filtroMes) {
+    ordenes = allOrdenes.filter(o => {
+      const f = o.FechaCreacion || o.FechaInicio || '';
+      if (!f) return false;
+      try {
+        const d = new Date(f);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        return key === filtroMes;
+      } catch(_){ return false; }
+    });
+  }
+
+  // Etiqueta de período
+  const labelPer = filtroMes ? (mesMapa[filtroMes] || filtroMes) : 'Todos los períodos';
+  document.getElementById('dashFiltroLabel').textContent = `Mostrando: ${labelPer} — ${ordenes.length} órdenes`;
+
   // ── Tipos fijos de mantenimiento ──
   const TIPOS     = ['Preventivo','Correctivo','Predictivo','Mejora'];
   const ESTADOS   = ['Pendiente','Aprobada','En Ejecución','Cerrada','Rechazada'];
   const PRIORIDAD = ['Baja','Media','Alta','Urgente'];
 
-  // ── Conteos ──
-  const total    = allOrdenes.length;
-  const pend     = allOrdenes.filter(o => o.Estado === 'Pendiente').length;
-  const cerradas = allOrdenes.filter(o => o.Estado === 'Cerrada').length;
-  const urgentes = allOrdenes.filter(o => o.Prioridad === 'Urgente' && o.Estado !== 'Cerrada').length;
-
-  // ── Costos de repuestos e insumos ──
+  // ── Costos ──
   let costoRep = 0, costoIns = 0;
-  allOrdenes.forEach(o => {
-    const reps = Array.isArray(o.repuestos) ? o.repuestos : [];
-    const inss = Array.isArray(o.insumos)   ? o.insumos   : [];
-    reps.forEach(r => { costoRep += (Number(r.cantidad||0) * Number(r.costoUnitario||r.costoUnit||0)); });
-    inss.forEach(i => { costoIns += (Number(i.cantidad||0) * Number(i.costoUnitario||i.costoUnit||0)); });
+  ordenes.forEach(o => {
+    (Array.isArray(o.repuestos)?o.repuestos:[]).forEach(r => { costoRep += Number(r.cantidad||0)*Number(r.costoUnitario||r.costoUnit||0); });
+    (Array.isArray(o.insumos)?o.insumos:[]).forEach(i => { costoIns += Number(i.cantidad||0)*Number(i.costoUnitario||i.costoUnit||0); });
   });
+  const costoTotal = costoRep + costoIns;
+  const subLabel   = filtroMes ? mesMapa[filtroMes] : 'Acumulado total';
 
   // ── KPIs ──
-  document.getElementById('kpi_total').textContent     = total;
-  document.getElementById('kpi_pendientes').textContent= pend;
-  document.getElementById('kpi_cerradas').textContent  = cerradas;
-  document.getElementById('kpi_urgentes').textContent  = urgentes;
-  document.getElementById('kpi_costo_rep').textContent = fmtCOP(costoRep);
-  document.getElementById('kpi_costo_ins').textContent = fmtCOP(costoIns);
+  document.getElementById('kpi_total').textContent      = ordenes.length;
+  document.getElementById('kpi_pendientes').textContent = ordenes.filter(o=>o.Estado==='Pendiente').length;
+  document.getElementById('kpi_cerradas').textContent   = ordenes.filter(o=>o.Estado==='Cerrada').length;
+  document.getElementById('kpi_urgentes').textContent   = ordenes.filter(o=>o.Prioridad==='Urgente'&&o.Estado!=='Cerrada').length;
+  document.getElementById('kpi_costo_rep').textContent  = fmtCOP(costoRep);
+  document.getElementById('kpi_costo_ins').textContent  = fmtCOP(costoIns);
+  document.getElementById('kpi_costo_total').textContent= fmtCOP(costoTotal);
+  document.getElementById('kpi_costo_rep_sub').textContent  = subLabel;
+  document.getElementById('kpi_costo_ins_sub').textContent  = subLabel;
+  document.getElementById('kpi_costo_total_sub').textContent= 'Repuestos + Insumos · ' + subLabel;
+
+  // ── Gasto por equipo ──
+  const gastoEquipo = {};
+  ordenes.forEach(o => {
+    const eq = (o.Equipo||'Sin equipo').trim().toUpperCase();
+    if (!gastoEquipo[eq]) gastoEquipo[eq] = { rep:0, ins:0 };
+    (Array.isArray(o.repuestos)?o.repuestos:[]).forEach(r => { gastoEquipo[eq].rep += Number(r.cantidad||0)*Number(r.costoUnitario||r.costoUnit||0); });
+    (Array.isArray(o.insumos)?o.insumos:[]).forEach(i => { gastoEquipo[eq].ins += Number(i.cantidad||0)*Number(i.costoUnitario||i.costoUnit||0); });
+  });
+  const equiposOrdenados = Object.entries(gastoEquipo)
+    .map(([eq,v])=>({ eq, rep:v.rep, ins:v.ins, total:v.rep+v.ins }))
+    .filter(x=>x.total>0)
+    .sort((a,b)=>b.total-a.total);
+
+  // Tabla gasto por equipo
+  const tablaDiv = document.getElementById('tablaGastoEquipos');
+  if (equiposOrdenados.length === 0) {
+    tablaDiv.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No hay datos de costos para el período seleccionado.</div>';
+  } else {
+    let th = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    th += '<thead><tr style="background:var(--brand-light)">';
+    th += '<th style="padding:10px 14px;text-align:left;color:var(--brand);font-size:11px;font-weight:700;border-bottom:2px solid var(--brand-mid)">Equipo / Activo</th>';
+    th += '<th style="padding:10px 14px;text-align:right;color:#7719aa;font-size:11px;font-weight:700;border-bottom:2px solid var(--brand-mid)">Repuestos</th>';
+    th += '<th style="padding:10px 14px;text-align:right;color:#0078d4;font-size:11px;font-weight:700;border-bottom:2px solid var(--brand-mid)">Insumos</th>';
+    th += '<th style="padding:10px 14px;text-align:right;color:#107C10;font-size:11px;font-weight:700;border-bottom:2px solid var(--brand-mid)">Total</th>';
+    th += '</tr></thead><tbody>';
+    const maxTotal = equiposOrdenados[0].total;
+    equiposOrdenados.forEach((x,i) => {
+      const pct = maxTotal > 0 ? Math.round((x.total/maxTotal)*100) : 0;
+      th += `<tr style="border-bottom:1px solid var(--border);background:${i%2===0?'var(--surface)':'var(--bg)'}">`;
+      th += `<td style="padding:9px 14px;font-weight:600">
+               ${esc(x.eq)}
+               <div style="margin-top:4px;height:4px;border-radius:2px;background:var(--border)">
+                 <div style="height:4px;border-radius:2px;background:var(--brand);width:${pct}%"></div>
+               </div>
+             </td>`;
+      th += `<td style="padding:9px 14px;text-align:right;color:#7719aa">${fmtCOP(x.rep)}</td>`;
+      th += `<td style="padding:9px 14px;text-align:right;color:#0078d4">${fmtCOP(x.ins)}</td>`;
+      th += `<td style="padding:9px 14px;text-align:right;font-weight:700;color:#107C10">${fmtCOP(x.total)}</td>`;
+      th += '</tr>';
+    });
+    // Fila total
+    th += `<tr style="background:var(--brand-light);font-weight:700;border-top:2px solid var(--brand-mid)">`;
+    th += `<td style="padding:10px 14px;color:var(--brand)">TOTAL GENERAL</td>`;
+    th += `<td style="padding:10px 14px;text-align:right;color:#7719aa">${fmtCOP(costoRep)}</td>`;
+    th += `<td style="padding:10px 14px;text-align:right;color:#0078d4">${fmtCOP(costoIns)}</td>`;
+    th += `<td style="padding:10px 14px;text-align:right;color:#107C10;font-size:14px">${fmtCOP(costoTotal)}</td>`;
+    th += '</tr>';
+    th += '</tbody></table>';
+    tablaDiv.innerHTML = th;
+  }
 
   // Colores
-  const colores = {
-    Preventivo: '#0d2a52', Correctivo: '#e8701a',
-    Predictivo: '#0078d4', Mejora: '#107C10', Otro: '#797775'
-  };
-  const colEstado = {
-    Pendiente: '#e8701a', Aprobada: '#107C10',
-    'En Ejecución': '#0078d4', Cerrada: '#0d2a52', Rechazada: '#d83b01'
-  };
-  const colPrio = { Baja: '#107C10', Media: '#0078d4', Alta: '#e8701a', Urgente: '#d83b01' };
+  const colores   = { Preventivo:'#0d2a52', Correctivo:'#e8701a', Predictivo:'#0078d4', Mejora:'#107C10', Otro:'#797775' };
+  const colEstado = { Pendiente:'#e8701a', Aprobada:'#107C10', 'En Ejecución':'#0078d4', Cerrada:'#0d2a52', Rechazada:'#d83b01' };
+  const colPrio   = { Baja:'#107C10', Media:'#0078d4', Alta:'#e8701a', Urgente:'#d83b01' };
 
   function destroyChart(key) { if (window[key]) { window[key].destroy(); window[key] = null; } }
   function makeChart(id, key, cfg) {
@@ -3133,110 +3331,60 @@ async function cargarDashboard() {
     window[key] = new Chart(ctx.getContext('2d'), cfg);
   }
 
-  // ── Gráfica 1: Órdenes por Tipo (todos los tipos fijos) ──
-  const tipoData = TIPOS.map(t => allOrdenes.filter(o => o.TipoMantenimiento === t).length);
-  makeChart('chartTipo','_chartTipo',{
-    type: 'bar',
-    data: {
-      labels: TIPOS,
-      datasets: [{
-        label: 'Órdenes', data: tipoData,
-        backgroundColor: TIPOS.map(t => colores[t]||'#797775'),
-        borderRadius: 6, borderSkipped: false
-      }]
+  // ── Gráfica: Gasto por equipo (top 10) ──
+  const topEquipos = equiposOrdenados.slice(0,10);
+  makeChart('chartGastoEquipo','_chartGastoEquipo',{
+    type:'bar',
+    data:{
+      labels: topEquipos.map(x=>x.eq),
+      datasets:[
+        { label:'Repuestos', data:topEquipos.map(x=>x.rep), backgroundColor:'#7719aa', borderRadius:4, stack:'s' },
+        { label:'Insumos',   data:topEquipos.map(x=>x.ins), backgroundColor:'#0078d4', borderRadius:4, stack:'s' }
+      ]
     },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    options:{
+      responsive:true, indexAxis:'y',
+      plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label: ctx=>' '+fmtCOP(ctx.raw) } } },
+      scales:{ x:{ beginAtZero:true, stacked:true, ticks:{ callback:v=>fmtCOP(v) } }, y:{ stacked:true } }
     }
+  });
+
+  // ── Gráfica 1: Órdenes por Tipo ──
+  makeChart('chartTipo','_chartTipo',{
+    type:'bar', data:{ labels:TIPOS, datasets:[{ label:'Órdenes', data:TIPOS.map(t=>ordenes.filter(o=>o.TipoMantenimiento===t).length), backgroundColor:TIPOS.map(t=>colores[t]||'#797775'), borderRadius:6, borderSkipped:false }] },
+    options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
   });
 
   // ── Gráfica 2: Órdenes por Estado ──
-  const estadoData = ESTADOS.map(e => allOrdenes.filter(o => o.Estado === e).length);
   makeChart('chartEstado','_chartEstado',{
-    type: 'doughnut',
-    data: {
-      labels: ESTADOS,
-      datasets: [{
-        data: estadoData,
-        backgroundColor: ESTADOS.map(e => colEstado[e]||'#ccc'),
-        borderWidth: 2, borderColor: '#fff', hoverOffset: 8
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } } },
-      cutout: '60%'
-    }
+    type:'doughnut', data:{ labels:ESTADOS, datasets:[{ data:ESTADOS.map(e=>ordenes.filter(o=>o.Estado===e).length), backgroundColor:ESTADOS.map(e=>colEstado[e]||'#ccc'), borderWidth:2, borderColor:'#fff', hoverOffset:8 }] },
+    options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, padding:14, font:{ size:12 } } } }, cutout:'60%' }
   });
 
-  // ── Gráfica 3: Costos repuestos+insumos por tipo ──
+  // ── Gráfica 3: Costos por tipo ──
   const costoRepTipo = TIPOS.map(t => {
-    let s = 0;
-    allOrdenes.filter(o => o.TipoMantenimiento === t).forEach(o => {
-      (Array.isArray(o.repuestos)?o.repuestos:[]).forEach(r => { s += Number(r.cantidad||0)*Number(r.costoUnitario||r.costoUnit||0); });
-      (Array.isArray(o.insumos)?o.insumos:[]).forEach(i => { s += Number(i.cantidad||0)*Number(i.costoUnitario||i.costoUnit||0); });
+    let s=0;
+    ordenes.filter(o=>o.TipoMantenimiento===t).forEach(o=>{
+      (Array.isArray(o.repuestos)?o.repuestos:[]).forEach(r=>{ s+=Number(r.cantidad||0)*Number(r.costoUnitario||r.costoUnit||0); });
+      (Array.isArray(o.insumos)?o.insumos:[]).forEach(i=>{ s+=Number(i.cantidad||0)*Number(i.costoUnitario||i.costoUnit||0); });
     });
     return s;
   });
   makeChart('chartCostoTipo','_chartCostoTipo',{
-    type: 'bar',
-    data: {
-      labels: TIPOS,
-      datasets: [{
-        label: 'Costo ($)', data: costoRepTipo,
-        backgroundColor: TIPOS.map(t => colores[t]||'#797775'),
-        borderRadius: 6, borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } }
-      },
-      scales: { y: { beginAtZero: true, ticks: { callback: v => fmtCOP(v) } } }
-    }
+    type:'bar', data:{ labels:TIPOS, datasets:[{ label:'Costo ($)', data:costoRepTipo, backgroundColor:TIPOS.map(t=>colores[t]||'#797775'), borderRadius:6, borderSkipped:false }] },
+    options:{ responsive:true, plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:ctx=>' '+fmtCOP(ctx.raw) } } }, scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>fmtCOP(v) } } } }
   });
 
   // ── Gráfica 4: Repuestos vs Insumos ──
   makeChart('chartCostoRep','_chartCostoRep',{
-    type: 'pie',
-    data: {
-      labels: ['Repuestos','Insumos'],
-      datasets: [{
-        data: [costoRep, costoIns],
-        backgroundColor: ['#7719aa','#0078d4'],
-        borderWidth: 2, borderColor: '#fff', hoverOffset: 10
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 13 } } },
-        tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } }
-      }
-    }
+    type:'pie', data:{ labels:['Repuestos','Insumos'], datasets:[{ data:[costoRep,costoIns], backgroundColor:['#7719aa','#0078d4'], borderWidth:2, borderColor:'#fff', hoverOffset:10 }] },
+    options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:14, padding:16, font:{ size:13 } } }, tooltip:{ callbacks:{ label:ctx=>' '+fmtCOP(ctx.raw) } } } }
   });
 
   // ── Gráfica 5: Prioridad ──
-  const prioData = PRIORIDAD.map(p => allOrdenes.filter(o => o.Prioridad === p).length);
   makeChart('chartPrioridad','_chartPrioridad',{
-    type: 'bar',
-    data: {
-      labels: PRIORIDAD,
-      datasets: [{
-        label: 'Órdenes', data: prioData,
-        backgroundColor: PRIORIDAD.map(p => colPrio[p]||'#ccc'),
-        borderRadius: 6, borderSkipped: false
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
-    }
+    type:'bar', data:{ labels:PRIORIDAD, datasets:[{ label:'Órdenes', data:PRIORIDAD.map(p=>ordenes.filter(o=>o.Prioridad===p).length), backgroundColor:PRIORIDAD.map(p=>colPrio[p]||'#ccc'), borderRadius:6, borderSkipped:false }] },
+    options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
   });
 }
 
