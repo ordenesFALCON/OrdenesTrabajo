@@ -1546,6 +1546,7 @@ async function guardarEdicion() {
         tareas:            JSON.stringify(datos.tareas || []),
         repuestos:         JSON.stringify(datos.repuestos || []),
         insumos:           JSON.stringify(datos.insumos || []),
+        FirmaCreador:      o.FirmaCreador || '',
       });
     }
   } catch(e) { console.warn('No se pudo actualizar Sheets:', e.message); }
@@ -1605,6 +1606,8 @@ async function guardarCierre() {
           tareas:       JSON.stringify(o.tareas || []),
           repuestos:    JSON.stringify(o.repuestos || []),
           insumos:      JSON.stringify(o.insumos || []),
+          FirmaCreador: o.FirmaCreador || '',
+          FirmaCierre:  o.FirmaCierre || '',
         });
       }
     } catch(e) { console.warn('No se pudo actualizar Sheets:', e.message); }
@@ -1866,7 +1869,7 @@ const SHEETS_COLS = [
   'FechaInicio','FechaFin','MedidasSeguridad','Observaciones',
   'UserEmail','CostoTotal','FechaCierre','EjecutadoPor','TiempoReal',
   'CostoReal','ObsCierre','FechaCreacion',
-  'tareas','repuestos','insumos'
+  'tareas','repuestos','insumos','FirmaCreador','FirmaCierre'
 ];
 
 async function sheetsRequest(method, range, body) {
@@ -1907,36 +1910,67 @@ async function sheetsRequest(method, range, body) {
 
 async function asegurarEncabezados() {
   try {
-    const data = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A1:Z1`);
-    if (!data.values || !data.values[0] || data.values[0].length < 5) {
-      // Escribir encabezados
+    const data = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A1:AZ1`);
+    const existingHeaders = (data.values && data.values[0]) ? data.values[0] : [];
+    // Detectar si faltan columnas nuevas
+    const faltantes = SHEETS_COLS.filter(col => !existingHeaders.includes(col));
+    if (existingHeaders.length === 0) {
+      // Hoja vacía: escribir todos los encabezados
       await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A1`, [SHEETS_COLS]);
+    } else if (faltantes.length > 0) {
+      // Agregar las columnas que faltan al final
+      const colStart = existingHeaders.length; // índice 0-based de la siguiente columna
+      const colLetra = col => {
+        let n = col, s = '';
+        while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+        return s;
+      };
+      // Escribir encabezados completos (más simple y seguro)
+      const totalCols = existingHeaders.length + faltantes.length;
+      const rangoFin  = colLetra(totalCols - 1);
+      const nuevosHeaders = [...existingHeaders, ...faltantes];
+      await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A1:${rangoFin}1`, [nuevosHeaders]);
     }
+    // Actualizar referencia global de headers
+    const finalData = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A1:AZ1`);
+    window._sheetsHeaders = (finalData.values && finalData.values[0]) ? finalData.values[0] : SHEETS_COLS;
   } catch(e) {
-    // Si la hoja no existe intentar escribir igual
+    console.warn('Error asegurandoEncabezados:', e.message);
     try { await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A1`, [SHEETS_COLS]); } catch(_) {}
+    window._sheetsHeaders = SHEETS_COLS;
   }
 }
 
 async function guardarOrdenEnSheets(datos) {
   await asegurarEncabezados();
-  const fila = SHEETS_COLS.map(col => {
+  const headers = window._sheetsHeaders || SHEETS_COLS;
+  const fila = headers.map(col => {
     const val = datos[col];
     if (val === null || val === undefined) return '';
     if (typeof val === 'object') return JSON.stringify(val);
     return String(val);
   });
-  await sheetsRequest('APPEND', `${GOOGLE_CONFIG.sheetName}!A:A`, [fila]);
+  const colFin = numToCol(headers.length - 1);
+  await sheetsRequest('APPEND', `${GOOGLE_CONFIG.sheetName}!A:${colFin}`, [fila]);
+}
+
+// Convierte índice numérico (0-based) a letra de columna (A, B, ..., Z, AA, AB...)
+function numToCol(n) {
+  let s = '';
+  while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+  return s;
 }
 
 async function cargarOrdenesDeSheets() {
   await asegurarEncabezados();
-  const data = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A:Z`);
+  const headers = window._sheetsHeaders || SHEETS_COLS;
+  const colFin  = numToCol(headers.length - 1);
+  const data = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A:${colFin}`);
   if (!data.values || data.values.length < 2) return [];
-  const headers = data.values[0];
+  const hdrs = data.values[0];
   return data.values.slice(1).map((row, i) => {
     const obj = { _row: i + 2 };
-    headers.forEach((h, j) => { obj[h] = row[j] || ''; });
+    hdrs.forEach((h, j) => { obj[h] = row[j] || ''; });
     obj.id = obj.NumeroOrden || ('local-' + i);
     // Parsear arrays guardados como JSON string
     ['tareas','repuestos','insumos'].forEach(campo => {
@@ -1946,29 +1980,39 @@ async function cargarOrdenesDeSheets() {
         obj[campo] = [];
       }
     });
+    // Asegurar que las firmas sean strings válidos
+    ['FirmaCreador','FirmaCierre'].forEach(campo => {
+      if (typeof obj[campo] !== 'string') obj[campo] = '';
+    });
     return obj;
   });
 }
 
 async function actualizarOrdenEnSheets(numeroOrden, campos) {
   try {
-    const data = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A:A`);
-    if (!data.values) return;
-    const rowIdx = data.values.findIndex((r, i) => i > 0 && r[0] === numeroOrden);
+    await asegurarEncabezados();
+    const headers = window._sheetsHeaders || SHEETS_COLS;
+    const colFin  = numToCol(headers.length - 1);
+
+    const colAData = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A:A`);
+    if (!colAData.values) return;
+    const rowIdx = colAData.values.findIndex((r, i) => i > 0 && r[0] === numeroOrden);
     if (rowIdx < 0) return;
     const sheetRow = rowIdx + 1;
-    // Leer fila actual
-    const rowData = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A${sheetRow}:Z${sheetRow}`);
+
+    // Leer fila completa con rango dinámico
+    const rowData = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A${sheetRow}:${colFin}${sheetRow}`);
     if (!rowData.values || !rowData.values[0]) return;
-    const headers = (await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A1:Z1`)).values[0];
     const row = rowData.values[0];
+
+    // Aplicar cambios
     Object.entries(campos).forEach(([k, v]) => {
       const ci = headers.indexOf(k);
       if (ci >= 0) row[ci] = v === null || v === undefined ? '' : String(v);
     });
     // Rellenar hasta el largo de headers
     while (row.length < headers.length) row.push('');
-    await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A${sheetRow}:Z${sheetRow}`, [row]);
+    await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A${sheetRow}:${colFin}${sheetRow}`, [row]);
   } catch(e) {
     console.warn('No se pudo actualizar en Sheets:', e.message);
   }
@@ -2227,13 +2271,31 @@ async function cargarOrdenes() {
   document.getElementById('listaContainer') && (document.getElementById('listaContainer').innerHTML = '');
   try {
     const sheetsOrdenes = await cargarOrdenesDeSheets();
+    const local = cargarLocal();
+
     if (sheetsOrdenes.length > 0) {
-      // Merge: prioriza Sheets, agrega locales que no estén en Sheets
-      const local = cargarLocal();
+      // Merge: para cada orden de Sheets, si en localStorage hay una versión con campos
+      // más completos (tareas/repuestos/insumos/firmas), usarlos como respaldo
+      const camposRich = ['tareas','repuestos','insumos','FirmaCreador','FirmaCierre'];
+      sheetsOrdenes.forEach(sOrden => {
+        const lOrden = local.find(l => l.NumeroOrden === sOrden.NumeroOrden);
+        if (lOrden) {
+          camposRich.forEach(campo => {
+            const sheetVal = sOrden[campo];
+            const localVal = lOrden[campo];
+            const sheetEmpty = !sheetVal || (Array.isArray(sheetVal) && sheetVal.length === 0);
+            const localFull  = localVal  && (!Array.isArray(localVal) || localVal.length > 0);
+            if (sheetEmpty && localFull) sOrden[campo] = localVal;
+          });
+        }
+      });
+
+      // Agregar locales que no estén en Sheets
       local.forEach(localItem => {
         const existe = sheetsOrdenes.find(o => o.NumeroOrden === localItem.NumeroOrden);
         if (!existe) sheetsOrdenes.push(localItem);
       });
+
       allOrdenes = sheetsOrdenes;
       guardarLocal();
     } else {
