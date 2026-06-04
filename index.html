@@ -1437,7 +1437,17 @@ function showPanel(name) {
   const t = document.querySelectorAll('.nav-tab')[tabs[name]];
   if (t) t.classList.add('active');
 
-  if (name === 'pendientes')   { cargarOrdenes().then(renderPendientes); }
+  if (name === 'pendientes')   {
+    // FIX: si hay un cierre reciente (< 5s) aún sincronizando con Sheets,
+    // no rellamar cargarOrdenes() — los datos ya están en allOrdenes/localStorage
+    const ahora = Date.now();
+    const ultimoGuardado = window._ultimoGuardadoLocal || 0;
+    if (ahora - ultimoGuardado < 5000 && allOrdenes.length > 0) {
+      renderPendientes();
+    } else {
+      cargarOrdenes().then(renderPendientes);
+    }
+  }
   if (name === 'realizadas')   { cargarOrdenes().then(renderRealizadas); }
   if (name === 'lista')        cargarOrdenes();
   if (name === 'dashboard')    cargarDashboard();
@@ -1858,6 +1868,11 @@ async function guardarCierre() {
 
   alerta.className = 'alert alert-ok show';
   alerta.textContent = '✅ Orden marcada como Realizada exitosamente.';
+
+  // FIX: Guardar inmediatamente en localStorage antes de cualquier navegación
+  // para que si cargarOrdenes() se ejecuta antes de que Sheets responda,
+  // el merge encuentre los datos de cierre y no los pierda
+  guardarLocal();
 
   setTimeout(() => {
     volverListaPendientes();
@@ -2686,6 +2701,7 @@ const LS_KEY = 'ordenesTrabajo_v1';
 function guardarLocal() {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(allOrdenes));
+    window._ultimoGuardadoLocal = Date.now(); // FIX: timestamp para evitar reload prematuro
   } catch(e) {
     console.warn('No se pudo guardar en localStorage:', e.message);
   }
@@ -2858,7 +2874,12 @@ async function cargarOrdenes() {
     if (sheetsOrdenes.length > 0) {
       // Merge: para cada orden de Sheets, si en localStorage hay una versión con campos
       // más completos (tareas/repuestos/insumos/firmas), usarlos como respaldo
-      const camposRich = ['tareas','repuestos','insumos','FirmaCreador','FirmaCierre'];
+      // ── FIX: proteger también campos de cierre para que Sheets no los sobreescriba
+      //         si la sincronización no completó antes de navegar a otra sección
+      const camposRich = [
+        'tareas','repuestos','insumos','FirmaCreador','FirmaCierre',
+        'Estado','ObsCierre','EjecutadoPor','FechaCierre','CostoReal','TiempoReal'
+      ];
       sheetsOrdenes.forEach(sOrden => {
         const lOrden = local.find(l => l.NumeroOrden === sOrden.NumeroOrden);
         if (lOrden) {
@@ -2867,7 +2888,12 @@ async function cargarOrdenes() {
             const localVal = lOrden[campo];
             const sheetEmpty = !sheetVal || (Array.isArray(sheetVal) && sheetVal.length === 0);
             const localFull  = localVal  && (!Array.isArray(localVal) || localVal.length > 0);
-            if (sheetEmpty && localFull) sOrden[campo] = localVal;
+            // Para Estado: preferir local si es más avanzado (Cerrada > Pendiente)
+            if (campo === 'Estado' && localVal === 'Cerrada' && sheetVal !== 'Cerrada') {
+              sOrden[campo] = localVal;
+            } else if (sheetEmpty && localFull) {
+              sOrden[campo] = localVal;
+            }
           });
         }
       });
