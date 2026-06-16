@@ -556,6 +556,7 @@ body::after {
   <div class="header-right">
     <div id="storageIndicator" style="font-size:11px;opacity:.7;display:flex;align-items:center;gap:5px"></div>
     <button onclick="repararHoja()" title="Reparar columnas de Google Sheets" style="background:rgba(255,200,0,.18);border:1px solid rgba(255,200,0,.4);color:white;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit">🔧 Reparar hoja</button>
+    <button onclick="limpiarCacheLocal()" title="Eliminar órdenes fantasma guardadas solo en este equipo" style="background:rgba(255,80,80,.18);border:1px solid rgba(255,80,80,.4);color:white;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit">🗑 Limpiar caché</button>
     <div class="user-chip">
       <div class="user-avatar" id="userInitials">??</div>
       <span id="userName">Cargando...</span>
@@ -3500,6 +3501,75 @@ function descargarPDF()  {
 
 function exportarExcel() {
   window.open(`https://docs.google.com/spreadsheets/d/${GOOGLE_CONFIG.spreadsheetId}/edit`, '_blank');
+}
+
+/* ══════════════════════════════════════════════
+   LIMPIAR CACHÉ LOCAL
+   Muestra las órdenes guardadas solo en este equipo
+   (no están en Google Sheets) y permite borrarlas
+══════════════════════════════════════════════ */
+function limpiarCacheLocal() {
+  const clave = 'ordenesTrabajo_v1';
+  const datos = JSON.parse(localStorage.getItem(clave) || '[]');
+
+  if (datos.length === 0) {
+    alert('✅ El caché local está vacío.\nNo hay órdenes guardadas solo en este equipo.');
+    return;
+  }
+
+  // Construir lista legible para mostrar al usuario
+  const lista = datos.map((o, i) =>
+    `${i + 1}. ${o.NumeroOrden || '—'} · ${o.Equipo || '—'} · ${o.Estado || '—'}\n   ${(o.Descripcion || '').slice(0, 60)}`
+  ).join('\n\n');
+
+  const msg =
+    `📋 Órdenes guardadas en este equipo (${datos.length} total):\n\n` +
+    lista +
+    `\n\n——————————————————————\n` +
+    `Escribe el NÚMERO DE ORDEN a borrar (ej: OT-98455)\n` +
+    `o escribe TODAS para limpiar todo el caché local.\n` +
+    `(Las órdenes que están en Google Sheets NO se borran de allá)`;
+
+  const respuesta = prompt(msg);
+  if (!respuesta) return;
+
+  if (respuesta.trim().toUpperCase() === 'TODAS') {
+    const confirmar = confirm(
+      `⚠ ¿Seguro que quieres borrar TODAS las ${datos.length} órdenes del caché local?\n\n` +
+      `Las que están en Google Sheets se volverán a cargar al recargar la página.\n` +
+      `Las que NO están en Sheets se perderán definitivamente.`
+    );
+    if (!confirmar) return;
+    localStorage.removeItem(clave);
+    allOrdenes = [];
+    alert('✅ Caché local limpiado. Recargando...');
+    location.reload();
+    return;
+  }
+
+  // Borrar una orden específica
+  const numero = respuesta.trim();
+  const existe = datos.find(o => o.NumeroOrden === numero);
+  if (!existe) {
+    alert(`❌ No se encontró la orden "${numero}" en el caché local.\n\nVerifica el número e intenta de nuevo.`);
+    return;
+  }
+
+  const confirmar = confirm(
+    `⚠ ¿Borrar esta orden del caché local?\n\n` +
+    `• Número: ${existe.NumeroOrden}\n` +
+    `• Equipo: ${existe.Equipo || '—'}\n` +
+    `• Estado: ${existe.Estado || '—'}\n` +
+    `• Descripción: ${(existe.Descripcion || '').slice(0, 80)}\n\n` +
+    `Si esta orden NO está en Google Sheets, se borrará definitivamente.`
+  );
+  if (!confirmar) return;
+
+  const filtrado = datos.filter(o => o.NumeroOrden !== numero);
+  localStorage.setItem(clave, JSON.stringify(filtrado));
+  allOrdenes = allOrdenes.filter(o => o.NumeroOrden !== numero);
+  alert(`✅ Orden ${numero} eliminada del caché local. Recargando...`);
+  location.reload();
 }
 
 /* ══════════════════════════════════════════════
