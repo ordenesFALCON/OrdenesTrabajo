@@ -495,6 +495,8 @@ body::after {
   #panel-detalle { display: block !important; }
   body { background: white; }
   .card { box-shadow: none; border: 1px solid #ddd; }
+  /* Ocultar botones de navegación en el PDF */
+  #detalle-btn-bar, #btn-finalizar-orden { display: none !important; }
 }
 
 /* ── Section counter badge ── */
@@ -556,7 +558,6 @@ body::after {
   <div class="header-right">
     <div id="storageIndicator" style="font-size:11px;opacity:.7;display:flex;align-items:center;gap:5px"></div>
     <button onclick="repararHoja()" title="Reparar columnas de Google Sheets" style="background:rgba(255,200,0,.18);border:1px solid rgba(255,200,0,.4);color:white;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit">🔧 Reparar hoja</button>
-    <button onclick="limpiarCacheLocal()" title="Eliminar órdenes fantasma guardadas solo en este equipo" style="background:rgba(255,80,80,.18);border:1px solid rgba(255,80,80,.4);color:white;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit">🗑 Limpiar caché</button>
     <div class="user-chip">
       <div class="user-avatar" id="userInitials">??</div>
       <span id="userName">Cargando...</span>
@@ -1264,7 +1265,7 @@ body::after {
 
   <!-- ════════════ PANEL: DETALLE ════════════ -->
   <div id="panel-detalle" class="panel">
-    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <div id="detalle-btn-bar" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <button class="btn btn-ghost" onclick="showPanel('lista')">← Volver</button>
       <button class="btn btn-ghost" onclick="imprimirOrden()">🖨 Imprimir / PDF</button>
       <button class="btn btn-ghost" onclick="descargarPDF()">📄 Descargar PDF</button>
@@ -3090,18 +3091,33 @@ async function verDetalle(id) {
     html += '<th style="padding:7px 10px;text-align:center;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">OK</th>';
     html += '<th style="padding:7px 10px;text-align:left;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">Responsable</th>';
     html += '</tr></thead><tbody>';
-    tareas.forEach(function(t) {
-      html += '<tr style="border-bottom:1px solid var(--border)">';
+    tareas.forEach(function(t, idx) {
+      const checked = t.ok ? 'checked' : '';
+      const rowStyle = t.ok ? 'background:#f0fff4;' : '';
+      html += `<tr style="border-bottom:1px solid var(--border);${rowStyle}" id="tarea-row-${idx}">`;
       html += '<td style="padding:6px 10px">' + esc(t.descripcion||'—') + '</td>';
       html += '<td style="padding:6px 10px">' + esc(t.tiempoEstimado||'—') + '</td>';
       html += '<td style="padding:6px 10px">' + esc(t.tiempoReal||'—') + '</td>';
-      html += '<td style="padding:6px 10px;text-align:center">' + (t.ok ? '✅' : '⬜') + '</td>';
+      html += `<td style="padding:6px 10px;text-align:center">
+        <input type="checkbox" ${checked}
+          style="width:18px;height:18px;accent-color:#107C10;cursor:pointer"
+          onchange="toggleTareaOk('${esc(orden.id||orden.NumeroOrden)}', ${idx}, this.checked)">
+      </td>`;
       html += '<td style="padding:6px 10px">' + esc(t.responsable||'—') + '</td>';
       html += '</tr>';
     });
     html += '</tbody></table></div>';
   } else {
     html += '<div style="padding:12px 18px;color:var(--text3);font-size:12px;font-style:italic">No se registraron tareas.</div>';
+  }
+  // Botón Finalizar (solo si no está cerrada)
+  if (orden.Estado !== 'Cerrada' && orden.Estado !== 'Rechazada') {
+    html += `<div id="btn-finalizar-orden" style="padding:10px 18px 14px">
+      <button onclick="finalizarOrden('${esc(orden.id||orden.NumeroOrden)}')"
+        style="background:#0d2a52;color:white;border:none;border-radius:6px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+        ✅ Marcar como Finalizada (Cerrada)
+      </button>
+    </div>`;
   }
   html += '</div>';
 
@@ -3206,13 +3222,13 @@ function renderTimeline(estado) {
   const steps = [
     { label: 'Creada', key: 'creada' },
     { label: 'Pendiente', key: 'pendiente' },
-    { label: 'Aprobada', key: 'aprobada' },
     { label: 'En ejecución', key: 'ejecucion' },
     { label: 'Cerrada', key: 'cerrada' },
   ];
   const idx = {
     'Borrador': 0, 'Pendiente': 1,
-    'Aprobada': 2, 'En ejecución': 3, 'Cerrada': 4, 'Rechazada': -1
+    'Aprobada': 1,
+    'En ejecución': 2, 'Cerrada': 3, 'Rechazada': -1
   }[estado] ?? 0;
 
   let html = '<div class="timeline">';
@@ -3504,72 +3520,90 @@ function exportarExcel() {
 }
 
 /* ══════════════════════════════════════════════
-   LIMPIAR CACHÉ LOCAL
-   Muestra las órdenes guardadas solo en este equipo
-   (no están en Google Sheets) y permite borrarlas
+   TOGGLE OK EN TAREA DEL DETALLE
+   Al marcar cualquier tarea → estado pasa a "En ejecución"
+   automáticamente y se actualiza en Sheets
 ══════════════════════════════════════════════ */
-function limpiarCacheLocal() {
-  const clave = 'ordenesTrabajo_v1';
-  const datos = JSON.parse(localStorage.getItem(clave) || '[]');
+async function toggleTareaOk(ordenId, tareaIdx, checked) {
+  const o = allOrdenes.find(x => String(x.id) === String(ordenId) || x.NumeroOrden === ordenId);
+  if (!o) return;
 
-  if (datos.length === 0) {
-    alert('✅ El caché local está vacío.\nNo hay órdenes guardadas solo en este equipo.');
-    return;
+  // Parsear tareas
+  let tareas = [];
+  if (Array.isArray(o.tareas)) tareas = o.tareas;
+  else { try { tareas = JSON.parse(o.tareas||'[]'); } catch(e) { tareas = []; } }
+
+  if (!tareas[tareaIdx]) return;
+
+  // Actualizar el ok de la tarea
+  tareas[tareaIdx].ok = checked;
+  o.tareas = tareas;
+
+  // Colorear fila en pantalla
+  const fila = document.getElementById('tarea-row-' + tareaIdx);
+  if (fila) fila.style.background = checked ? '#f0fff4' : '';
+
+  // Si al menos una tarea está OK y la orden NO es Cerrada → pasar a "En ejecución"
+  const hayAlgunaOk = tareas.some(t => t.ok);
+  if (hayAlgunaOk && o.Estado !== 'Cerrada' && o.Estado !== 'En ejecución') {
+    o.Estado = 'En ejecución';
+    guardarLocal();
+    // Actualizar timeline visualmente
+    const tlZone = document.querySelector('#detalleContainer .timeline');
+    if (tlZone) tlZone.parentElement.innerHTML = renderTimeline('En ejecución');
+    // Guardar en Sheets
+    try {
+      if (o.NumeroOrden && googleAccessToken) {
+        await actualizarOrdenEnSheets(o.NumeroOrden, { Estado: 'En ejecución', tareas: JSON.stringify(tareas) });
+      }
+    } catch(e) { console.warn('Sheets no actualizado:', e.message); }
+    actualizarContadorTab();
+  } else {
+    // Solo guardar el cambio de tarea sin cambiar estado
+    guardarLocal();
+    try {
+      if (o.NumeroOrden && googleAccessToken) {
+        await actualizarOrdenEnSheets(o.NumeroOrden, { tareas: JSON.stringify(tareas) });
+      }
+    } catch(e) { console.warn('Sheets no actualizado:', e.message); }
   }
+}
 
-  // Construir lista legible para mostrar al usuario
-  const lista = datos.map((o, i) =>
-    `${i + 1}. ${o.NumeroOrden || '—'} · ${o.Equipo || '—'} · ${o.Estado || '—'}\n   ${(o.Descripcion || '').slice(0, 60)}`
-  ).join('\n\n');
+/* ══════════════════════════════════════════════
+   FINALIZAR ORDEN → CERRADA
+   Botón "Marcar como Finalizada" en el detalle
+══════════════════════════════════════════════ */
+async function finalizarOrden(ordenId) {
+  if (!confirm('¿Marcar esta orden como FINALIZADA (Cerrada)?\nEsta acción cambiará su estado definitivamente.')) return;
 
-  const msg =
-    `📋 Órdenes guardadas en este equipo (${datos.length} total):\n\n` +
-    lista +
-    `\n\n——————————————————————\n` +
-    `Escribe el NÚMERO DE ORDEN a borrar (ej: OT-98455)\n` +
-    `o escribe TODAS para limpiar todo el caché local.\n` +
-    `(Las órdenes que están en Google Sheets NO se borran de allá)`;
+  const o = allOrdenes.find(x => String(x.id) === String(ordenId) || x.NumeroOrden === ordenId);
+  if (!o) return;
 
-  const respuesta = prompt(msg);
-  if (!respuesta) return;
+  o.Estado      = 'Cerrada';
+  o.FechaCierre = new Date().toISOString();
+  o.EjecutadoPor = o.EjecutadoPor || currentUser.name;
+  guardarLocal();
 
-  if (respuesta.trim().toUpperCase() === 'TODAS') {
-    const confirmar = confirm(
-      `⚠ ¿Seguro que quieres borrar TODAS las ${datos.length} órdenes del caché local?\n\n` +
-      `Las que están en Google Sheets se volverán a cargar al recargar la página.\n` +
-      `Las que NO están en Sheets se perderán definitivamente.`
-    );
-    if (!confirmar) return;
-    localStorage.removeItem(clave);
-    allOrdenes = [];
-    alert('✅ Caché local limpiado. Recargando...');
-    location.reload();
-    return;
-  }
+  // Ocultar botón finalizar
+  const btnFin = document.getElementById('btn-finalizar-orden');
+  if (btnFin) btnFin.innerHTML = '<span style="color:#107C10;font-weight:700;padding:8px 0;display:block">✅ Orden cerrada correctamente.</span>';
 
-  // Borrar una orden específica
-  const numero = respuesta.trim();
-  const existe = datos.find(o => o.NumeroOrden === numero);
-  if (!existe) {
-    alert(`❌ No se encontró la orden "${numero}" en el caché local.\n\nVerifica el número e intenta de nuevo.`);
-    return;
-  }
+  // Actualizar timeline
+  const tlWrap = document.querySelector('#detalleContainer .timeline');
+  if (tlWrap) tlWrap.parentElement.innerHTML = renderTimeline('Cerrada');
 
-  const confirmar = confirm(
-    `⚠ ¿Borrar esta orden del caché local?\n\n` +
-    `• Número: ${existe.NumeroOrden}\n` +
-    `• Equipo: ${existe.Equipo || '—'}\n` +
-    `• Estado: ${existe.Estado || '—'}\n` +
-    `• Descripción: ${(existe.Descripcion || '').slice(0, 80)}\n\n` +
-    `Si esta orden NO está en Google Sheets, se borrará definitivamente.`
-  );
-  if (!confirmar) return;
+  try {
+    if (o.NumeroOrden && googleAccessToken) {
+      await actualizarOrdenEnSheets(o.NumeroOrden, {
+        Estado:      'Cerrada',
+        FechaCierre: o.FechaCierre,
+        EjecutadoPor: o.EjecutadoPor
+      });
+    }
+  } catch(e) { console.warn('Sheets no actualizado:', e.message); }
 
-  const filtrado = datos.filter(o => o.NumeroOrden !== numero);
-  localStorage.setItem(clave, JSON.stringify(filtrado));
-  allOrdenes = allOrdenes.filter(o => o.NumeroOrden !== numero);
-  alert(`✅ Orden ${numero} eliminada del caché local. Recargando...`);
-  location.reload();
+  actualizarContadorTab();
+  renderPendientes();
 }
 
 /* ══════════════════════════════════════════════
