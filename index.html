@@ -838,6 +838,19 @@ body::after {
         <button class="btn btn-success" onclick="guardarCierre()">✅ Marcar como Realizada</button>
       </div>
 
+      <!-- Header con timeline (estado actual de la orden) -->
+      <div class="card" style="overflow:visible">
+        <div class="detail-header">
+          <div>
+            <div style="font-size:11px;opacity:.6;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px">Orden de Trabajo</div>
+            <div id="editOrdenTitle" style="font-size:15px;font-weight:600">—</div>
+          </div>
+          <div class="detail-num" id="editOrdenNumHeader">—</div>
+        </div>
+        <div style="padding:14px 18px" id="editOrdenTimelineWrap"></div>
+      </div>
+
+
       <!-- ══ 1. IDENTIFICACIÓN ══ -->
       <div class="card">
         <div class="card-head">1 · Identificación de la Orden</div>
@@ -1613,6 +1626,9 @@ function abrirModalCompletar(id) {
   // Cabecera
   document.getElementById('editOrdenNum').textContent  = o.NumeroOrden || id;
   document.getElementById('editOrdenBadge').innerHTML  = `<span class="badge ${badgeClass(o.Estado)}">${esc(o.Estado||'—')}</span>`;
+  document.getElementById('editOrdenTitle').textContent      = o.Title || '—';
+  document.getElementById('editOrdenNumHeader').textContent  = o.NumeroOrden || id;
+  document.getElementById('editOrdenTimelineWrap').innerHTML = renderTimeline(o.Estado);
 
   // ── 1. Identificación
   document.getElementById('e_descripcion').value   = o.Title || '';
@@ -1638,7 +1654,7 @@ function abrirModalCompletar(id) {
       <td><input type="text" placeholder="Descripción de la tarea" value="${esc(t.descripcion||'')}"></td>
       <td><input type="text" placeholder="2h" value="${esc(t.tiempoEstimado||'')}"></td>
       <td><input type="text" placeholder="" value="${esc(t.tiempoReal||'')}"></td>
-      <td style="text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" ${t.ok?'checked':''}></td>
+      <td style="text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" ${t.ok?'checked':''} onchange="actualizarEstadoPorTareasEditor()"></td>
       <td><input type="text" placeholder="Técnico" value="${esc(t.responsable||'')}"></td>
       <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
     eTareas.appendChild(tr);
@@ -1722,6 +1738,49 @@ function abrirModalCompletar(id) {
     cx2.lineCap = 'round'; cx2.lineJoin = 'round';
     setupCanvasEvents(c2, cx2);
   }, 80);
+}
+
+/* ── Cambia el Estado automáticamente al marcar/desmarcar tareas
+      en el editor de "Completar": Pendiente/Aprobada -> En ejecución
+      al marcar la primera tarea; vuelve atrás si se desmarcan todas. ── */
+async function actualizarEstadoPorTareasEditor() {
+  const o = allOrdenes.find(x => String(x.id) === String(modalOrdenId) || x.NumeroOrden === modalOrdenId);
+  if (!o) return;
+
+  const checks = Array.from(document.getElementById('e_tbody_tareas').querySelectorAll('input[type="checkbox"]'));
+  const total       = checks.length;
+  const completadas = checks.filter(c => c.checked).length;
+  const hayAlgunaOk = completadas > 0;
+
+  if (hayAlgunaOk && !o.EstadoAntesEjecucion && o.Estado !== 'En ejecución' && o.Estado !== 'Cerrada') {
+    o.EstadoAntesEjecucion = o.Estado;
+  }
+
+  let nuevoEstado = o.Estado;
+  if (hayAlgunaOk && o.Estado !== 'En ejecución' && o.Estado !== 'Cerrada') {
+    nuevoEstado = 'En ejecución';
+  } else if (!hayAlgunaOk && o.Estado === 'En ejecución') {
+    nuevoEstado = o.EstadoAntesEjecucion || 'Pendiente';
+    o.EstadoAntesEjecucion = null;
+  }
+
+  if (nuevoEstado !== o.Estado) {
+    o.Estado = nuevoEstado;
+    guardarLocal();
+
+    // Reflejar en el encabezado del editor
+    document.getElementById('editOrdenBadge').innerHTML       = `<span class="badge ${badgeClass(o.Estado)}">${esc(o.Estado||'—')}</span>`;
+    document.getElementById('editOrdenTimelineWrap').innerHTML = renderTimeline(o.Estado);
+
+    try {
+      if (o.NumeroOrden && googleAccessToken) {
+        await actualizarOrdenEnSheets(o.NumeroOrden, { Estado: o.Estado });
+      }
+    } catch(e) { console.warn('No se pudo actualizar Estado en Sheets:', e.message); }
+
+    actualizarContadorTab();
+    if (typeof renderPendientes === 'function') renderPendientes();
+  }
 }
 
 function volverListaPendientes() {
@@ -2013,7 +2072,7 @@ function addRow(tbodyId, tipo) {
       <td><input type="text" placeholder="Descripción de la tarea"></td>
       <td><input type="text" placeholder="2h"></td>
       <td><input type="text" placeholder=""></td>
-      <td style="text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)"></td>
+      <td style="text-align:center"><input type="checkbox" style="width:auto;transform:scale(1.3)" ${tbodyId==='e_tbody_tareas' ? 'onchange="actualizarEstadoPorTareasEditor()"' : ''}></td>
       <td><input type="text" placeholder="Técnico"></td>
       <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
   } else {
@@ -3266,14 +3325,10 @@ async function verDetalle(id) {
 
   let html = '';
 
-  // ── Cabecera ──
-  html += '<div class="detail-header">';
-  html += '<div><div style="font-size:11px;opacity:.6;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px">Orden de Trabajo</div>';
-  html += '<div style="font-size:15px;font-weight:600">' + esc(orden.Title||'—') + '</div></div>';
-  html += '<div class="detail-num">' + esc(orden.NumeroOrden||'—') + '</div></div>';
-
-  // ── Timeline ──
-  html += '<div style="padding:14px 18px;border-bottom:1px solid var(--border)">' + renderTimeline(orden.Estado) + '</div>';
+  // ── Título simple (sin timeline, eso solo aparece en "Completar") ──
+  html += '<div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
+  html += '<div style="font-size:15px;font-weight:600">' + esc(orden.Title||'—') + '</div>';
+  html += '<span class="order-num">' + esc(orden.NumeroOrden||'—') + '</span></div>';
 
   // ── Identificación ──
   html += '<div class="detail-section"><div class="detail-section-title">Identificación</div><div class="detail-grid">';
