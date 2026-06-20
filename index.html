@@ -554,9 +554,6 @@ body::after {
       <div class="header-company" id="headerCompanyText">SolucionAIRE <span>·</span> O-I <span>·</span> Zipaquirá</div>
       <div class="header-subtitle">Sistema de Órdenes de Trabajo</div>
     </div>
-    <select id="selectorOperacion" onchange="cambiarOperacion(this.value)"
-      title="Cambiar de sede/operación"
-      style="margin-left:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:white;border-radius:8px;padding:6px 10px;font-size:12px;font-family:inherit;cursor:pointer"></select>
   </div>
   <div class="header-right">
     <div id="storageIndicator" style="font-size:11px;opacity:.7;display:flex;align-items:center;gap:5px"></div>
@@ -572,6 +569,10 @@ body::after {
 
 <!-- ════════════ NAV ════════════ -->
 <nav class="nav-tabs">
+  <div style="position:relative;display:inline-block">
+    <button class="nav-tab" id="btnMenuOperacion" onclick="toggleMenuOperacion()">🌐 Operación: <span id="nombreOperacionTab">—</span></button>
+    <div id="menuOperacionPanel" style="display:none;position:absolute;top:100%;left:0;z-index:50;background:white;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);min-width:240px;overflow:hidden;margin-top:4px"></div>
+  </div>
   <button class="nav-tab" onclick="showPanel('nueva')">➕ Nueva Orden</button>
   <button class="nav-tab active" onclick="showPanel('pendientes')">⏳ Pendientes</button>
   <button class="nav-tab" onclick="showPanel('realizadas')">✅ Realizadas</button>
@@ -1331,16 +1332,72 @@ const GOOGLE_CONFIG = {
      la hoja de cálculo de esa sede.
 ══════════════════════════════════════════════ */
 const OPERACIONES = {
-  zipaquira: { nombre: 'O-I · Zipaquirá',  spreadsheetId: '1TGz9MSbcVlK2GYCzsliKQK6-BxUnuF7B_f9gqxH1fjw' },
-  antioquia: { nombre: 'O-I · Antioquia',  spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_ANTIOQUIA' },
-  mexico:    { nombre: 'O-I · México',     spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_MEXICO' },
-  peru:      { nombre: 'O-I · Perú',       spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_PERU' },
+  zipaquira: { nombre: 'O-I · Zipaquirá',  bandera: '🇨🇴', clave: 'admin123', spreadsheetId: '1TGz9MSbcVlK2GYCzsliKQK6-BxUnuF7B_f9gqxH1fjw' },
+  antioquia: { nombre: 'O-I · Antioquia',  bandera: '🇨🇴', clave: 'admin123', spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_ANTIOQUIA' },
+  mexico:    { nombre: 'O-I · México',     bandera: '🇲🇽', clave: 'admin123', spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_MEXICO' },
+  peru:      { nombre: 'O-I · Perú',       bandera: '🇵🇪', clave: 'admin123', spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_PERU' },
 };
 
 // Operación activa (se recuerda entre sesiones en este equipo)
 let operacionActual = localStorage.getItem('operacionActual') || 'zipaquira';
 if (!OPERACIONES[operacionActual]) operacionActual = Object.keys(OPERACIONES)[0];
 GOOGLE_CONFIG.spreadsheetId = OPERACIONES[operacionActual].spreadsheetId;
+
+/** Abre/cierra el menú de operaciones (lista con bandera por sede) */
+function toggleMenuOperacion() {
+  const panel = document.getElementById('menuOperacionPanel');
+  if (!panel) return;
+  const abierto = panel.style.display === 'block';
+  if (abierto) { panel.style.display = 'none'; return; }
+
+  panel.innerHTML = Object.keys(OPERACIONES).map(key => {
+    const op = OPERACIONES[key];
+    const activo = key === operacionActual;
+    return `
+      <div onclick="seleccionarOperacion('${key}')"
+        style="display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;font-size:13px;
+               color:var(--brand);background:${activo ? 'rgba(20,60,110,.08)' : 'white'};font-weight:${activo ? '700' : '400'};
+               border-bottom:1px solid var(--border)"
+        onmouseover="this.style.background='rgba(20,60,110,.08)'"
+        onmouseout="this.style.background='${activo ? 'rgba(20,60,110,.08)' : 'white'}'">
+        <span style="font-size:18px">${op.bandera}</span>
+        <span style="flex:1">${esc(op.nombre)}</span>
+        ${activo ? '<span style="font-size:11px;color:var(--accent2)">● Activa</span>' : ''}
+      </div>`;
+  }).join('');
+
+  panel.style.display = 'block';
+
+  // Cerrar el menú si se hace click afuera
+  setTimeout(() => {
+    document.addEventListener('click', cerrarMenuOperacionFuera, { once: true });
+  }, 0);
+}
+
+function cerrarMenuOperacionFuera(e) {
+  const panel = document.getElementById('menuOperacionPanel');
+  const btn   = document.getElementById('btnMenuOperacion');
+  if (panel && !panel.contains(e.target) && e.target !== btn) {
+    panel.style.display = 'none';
+  } else if (panel && panel.style.display === 'block') {
+    document.addEventListener('click', cerrarMenuOperacionFuera, { once: true });
+  }
+}
+
+/** Pide contraseña antes de cambiar de operación/sede */
+function seleccionarOperacion(key) {
+  const panel = document.getElementById('menuOperacionPanel');
+  if (panel) panel.style.display = 'none';
+  if (!OPERACIONES[key] || key === operacionActual) return;
+
+  const pass = prompt(`🔒 Ingresa la contraseña para entrar a "${OPERACIONES[key].nombre}":`);
+  if (pass === null) return; // canceló
+  if (pass !== OPERACIONES[key].clave) {
+    alert('❌ Contraseña incorrecta.');
+    return;
+  }
+  cambiarOperacion(key);
+}
 
 /** Cambia de operación/sede: guarda la elección y recarga la app desde cero
  *  para evitar mezclar en memoria datos de una sede con otra. */
@@ -1350,14 +1407,11 @@ function cambiarOperacion(key) {
   location.reload();
 }
 
-// Pinta el selector de sede y el nombre en el header al cargar la página
-(function inicializarSelectorOperacion() {
-  const sel = document.getElementById('selectorOperacion');
-  if (sel) {
-    sel.innerHTML = Object.keys(OPERACIONES).map(key =>
-      `<option value="${key}" ${key === operacionActual ? 'selected' : ''}>${OPERACIONES[key].nombre}</option>`
-    ).join('');
-  }
+// Pinta el nombre de la operación activa en el botón del menú y en el header
+(function inicializarMenuOperacion() {
+  const tab = document.getElementById('nombreOperacionTab');
+  if (tab) tab.textContent = OPERACIONES[operacionActual].bandera + ' ' + OPERACIONES[operacionActual].nombre;
+
   const headerTxt = document.getElementById('headerCompanyText');
   if (headerTxt) {
     const partes = OPERACIONES[operacionActual].nombre.split('·').map(s => s.trim());
@@ -1387,14 +1441,23 @@ function mostrarPantallaLogin() {
       <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:40px 48px;text-align:center;max-width:380px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,.10)">
         <div style="font-size:36px;margin-bottom:10px">⚙</div>
         <h2 style="font-size:22px;font-weight:800;color:var(--brand);margin-bottom:4px;letter-spacing:.5px">SOLUCIONAIRE · ${esc(OPERACIONES[operacionActual].nombre.toUpperCase())}</h2><p style="font-size:12px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Sistema de Órdenes de Trabajo</p>
-        <div style="margin-bottom:18px">
-          <label style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px">Sede / Operación</label>
-          <select id="selectorOperacionLogin" onchange="cambiarOperacion(this.value)"
-            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--brand);cursor:pointer">
-            ${Object.keys(OPERACIONES).map(key =>
-              `<option value="${key}" ${key === operacionActual ? 'selected' : ''}>${esc(OPERACIONES[key].nombre)}</option>`
-            ).join('')}
-          </select>
+        <div style="margin-bottom:18px;text-align:left">
+          <label style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;text-align:center">Sede / Operación</label>
+          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+            ${Object.keys(OPERACIONES).map((key, i) => {
+              const op = OPERACIONES[key];
+              const activo = key === operacionActual;
+              return `
+                <div onclick="seleccionarOperacion('${key}')"
+                  style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;
+                         color:var(--brand);background:${activo ? 'rgba(20,60,110,.08)' : 'white'};font-weight:${activo ? '700' : '400'};
+                         ${i > 0 ? 'border-top:1px solid var(--border)' : ''}">
+                  <span style="font-size:18px">${op.bandera}</span>
+                  <span style="flex:1;text-align:left">${esc(op.nombre)}</span>
+                  ${activo ? '<span style="font-size:11px;color:var(--accent2)">● Activa</span>' : ''}
+                </div>`;
+            }).join('')}
+          </div>
         </div>
         <p style="font-size:13px;color:var(--text2);margin-bottom:28px">Inicia sesión con tu cuenta de Google para continuar</p>
         <div id="googleLoginBtn" style="display:flex;justify-content:center"></div>
