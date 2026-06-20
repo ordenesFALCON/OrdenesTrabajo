@@ -2687,14 +2687,14 @@ function renderFotosOrden(orden, contId, readonly) {
     return;
   }
 
-  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:8px">';
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:8px">';
   fotos.forEach((f, i) => {
     const imgId   = `foto-img-${contId}-${i}`;
     const verLink = f.driveFileId ? `https://drive.google.com/file/d/${f.driveFileId}/view` : f.urlVer;
     html += `
       <div style="position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden">
         <a href="${esc(verLink)}" target="_blank" rel="noopener">
-          <img id="${imgId}" alt="Foto evidencia" style="width:100%;height:90px;object-fit:cover;display:block;background:#f2f2f2">
+          <img id="${imgId}" alt="Foto evidencia" style="width:100%;height:180px;object-fit:cover;display:block;background:#f2f2f2">
         </a>
         ${readonly ? '' : `<button onclick="eliminarFotoOrden('${esc(orden.id||orden.NumeroOrden)}','${esc(f.driveFileId)}','${contId}')"
           title="Eliminar foto"
