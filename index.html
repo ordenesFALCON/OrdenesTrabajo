@@ -1288,6 +1288,18 @@ body::after {
     <div id="detalleContainer" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:visible;min-height:100px;"></div>
   </div>
 
+  <!-- ════════════ PANEL DE INVENTARIO ════════════ -->
+  <div id="panel-inventario" class="panel">
+    <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <div id="invTituloVista" style="font-weight:700;color:var(--brand);font-size:15px;flex:1">📦 Inventario</div>
+      <button class="btn btn-ghost" onclick="volverDeInventario()">← Volver</button>
+    </div>
+    <div id="invMsg" style="font-size:13px;color:var(--text3);margin-bottom:8px"></div>
+    <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white">
+      <iframe id="invIframe" style="width:100%;height:calc(100vh - 230px);min-height:520px;border:none;display:block"></iframe>
+    </div>
+  </div>
+
 </div><!-- /container -->
 
 <!-- ════════════════════════════════════════════════════
@@ -1315,16 +1327,73 @@ const GOOGLE_CONFIG = {
      la hoja de cálculo de esa sede.
 ══════════════════════════════════════════════ */
 const OPERACIONES = {
-  zipaquira: { nombre: 'O-I ZIPAQUIRA',               bandera: '🇨🇴', clave: 'admin123', spreadsheetId: '1TGz9MSbcVlK2GYCzsliKQK6-BxUnuF7B_f9gqxH1fjw' },
-  antioquia: { nombre: 'SERVICIOTECNICO-ANTIOQUIA',   bandera: '🇨🇴', clave: 'admin123', spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_ANTIOQUIA' },
-  mexico:    { nombre: 'PAVISA-MEXICO',                bandera: '🇲🇽', clave: 'admin123', spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_MEXICO' },
-  peru:      { nombre: 'O-I PERU',                     bandera: '🇵🇪', clave: 'admin123', spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_PERU' },
+  zipaquira: { nombre: 'O-I ZIPAQUIRA',               bandera: '🇨🇴', clave: 'admin123', spreadsheetId: '1lezTqQJFl_qDftkDJbkk26Pe-u34MO2MA338Gj99zqk' },
+  antioquia: { nombre: 'SERVICIOTECNICO-ANTIOQUIA',   bandera: '🇨🇴', clave: 'admin123', spreadsheetId: '1cqMzlHEBbzKy9d_GDkVTVarvzL0Es2J1_bSXeKpkHYs' },
+  mexico:    { nombre: 'PAVISA-MEXICO',                bandera: '🇲🇽', clave: 'admin123', spreadsheetId: '13kf6xZPfdnxDJmCyKJ0q-1z7ijRak7oMNhzemzq2KpI' },
+  peru:      { nombre: 'O-I PERU',                     bandera: '🇵🇪', clave: 'admin123', spreadsheetId: '1UbN_mnzJZBxpaL0mZqE-z0U_CIA-MbGwPiokpmKRjvI' },
 };
 
 // Operación activa (se recuerda entre sesiones en este equipo)
 let operacionActual = localStorage.getItem('operacionActual') || 'zipaquira';
 if (!OPERACIONES[operacionActual]) operacionActual = Object.keys(OPERACIONES)[0];
 GOOGLE_CONFIG.spreadsheetId = OPERACIONES[operacionActual].spreadsheetId;
+
+/* ══════════════════════════════════════════════
+   INVENTARIO POR OPERACIÓN
+   Cada sede tiene su propio Apps Script (Web App)
+   con su propia hoja de Productos/Movimientos.
+   ► Pega aquí la URL "/exec" de cada Apps Script
+     una vez lo despliegues como Web App.
+══════════════════════════════════════════════ */
+const INVENTARIO_CONFIG = {
+  zipaquira: 'PEGA_AQUI_LA_URL_/exec_DEL_APPS_SCRIPT_DE_ZIPAQUIRA',
+  antioquia: 'PEGA_AQUI_LA_URL_/exec_DEL_APPS_SCRIPT_DE_ANTIOQUIA',
+  mexico:    'PEGA_AQUI_LA_URL_/exec_DEL_APPS_SCRIPT_DE_MEXICO',
+  peru:      'PEGA_AQUI_LA_URL_/exec_DEL_APPS_SCRIPT_DE_PERU',
+};
+
+// Filtra el listado de Stock por "Grupo" según el ítem del menú elegido
+const INVENTARIO_FILTROS_GRUPO = {
+  stockGeneral:   null, // sin filtro: muestra todo
+  repuestos:      ['Repuestos'],
+  materiales:     ['Materia Prima','Materiales','Consumibles','Suministros','Químicos','Empaques'],
+  equiposActivos: ['Equipos','Producto en Proceso','Producto Terminado','Herramientas'],
+};
+
+let inventarioVistaActual  = 'stockGeneral'; // filtro de Grupo activo dentro del panel (chips)
+let inventarioOperacionActual = null;        // qué OPERACIÓN de inventario está abierta
+let inventarioCacheStock   = [];             // último stock cargado (para filtrar sin re-pedir)
+
+/** Llama al Apps Script de inventario de la operación de inventario activa (GET) */
+async function inventarioGet(accion, params) {
+  const base = INVENTARIO_CONFIG[inventarioOperacionActual];
+  if (!base || base.startsWith('PEGA_AQUI')) {
+    throw new Error('Aún no se configuró la URL del Apps Script de inventario para esta sede.');
+  }
+  const qs = new URLSearchParams({ accion, ...(params||{}) });
+  const resp = await fetch(base + '?' + qs.toString());
+  const data = await resp.json();
+  if (!data.ok) throw new Error(data.error || 'Error desconocido del inventario');
+  return data.data;
+}
+
+/** Llama al Apps Script de inventario (escritura, vía POST con text/plain
+ *  para evitar el preflight CORS que Apps Script no maneja). */
+async function inventarioPost(accion, payload) {
+  const base = INVENTARIO_CONFIG[inventarioOperacionActual];
+  if (!base || base.startsWith('PEGA_AQUI')) {
+    throw new Error('Aún no se configuró la URL del Apps Script de inventario para esta sede.');
+  }
+  const resp = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ accion, ...payload })
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error(data.mensaje || data.error || 'Error desconocido del inventario');
+  return data;
+}
+
 
 /** Pinta la lista fija de operaciones en el panel lateral izquierdo */
 function renderSidebarOperaciones() {
@@ -1348,7 +1417,26 @@ function renderSidebarOperaciones() {
 
   sidebar.innerHTML = `
     <div style="padding:10px 16px 6px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase">🌐 Operaciones</div>
-    ${items}`;
+    ${items}
+    <div style="border-top:1px solid var(--border);margin:8px 0"></div>
+    <div style="padding:10px 16px 6px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase">📦 Inventario</div>
+    ${Object.keys(OPERACIONES).map(key => {
+      const op = OPERACIONES[key];
+      const habilitado = key === operacionActual;
+      const activo = key === inventarioOperacionActual && document.getElementById('panel-inventario')?.classList.contains('active');
+      return `
+        <div ${habilitado ? `onclick="abrirInventario('${key}')"` : ''}
+          title="${habilitado ? '' : 'Solo puedes abrir el inventario de la sede activa (' + esc(OPERACIONES[operacionActual].nombre) + ')'}"
+          style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;
+                 cursor:${habilitado ? 'pointer' : 'not-allowed'};
+                 color:${habilitado ? 'var(--brand)' : 'var(--text3)'};opacity:${habilitado ? '1' : '.5'};
+                 background:${activo ? 'rgba(20,60,110,.08)' : 'white'};font-weight:${activo ? '700' : '400'}"
+          ${habilitado ? `onmouseover="this.style.background='rgba(20,60,110,.08)'" onmouseout="this.style.background='${activo ? 'rgba(20,60,110,.08)' : 'white'}'"` : ''}>
+          <span style="font-size:16px">${op.bandera}</span>
+          <span style="flex:1;line-height:1.25">INV ${esc(op.nombre)}</span>
+          ${habilitado ? '' : '<span style="font-size:14px">🔒</span>'}
+        </div>`;
+    }).join('')}`;
 }
 
 /** Pide contraseña antes de cambiar de operación/sede */
@@ -4263,13 +4351,250 @@ function fmtFecha(f) {
   try { return new Date(f).toLocaleDateString('es-CO',{year:'numeric',month:'2-digit',day:'2-digit'}); }
   catch(e) { return f; }
 }
+/* ══════════════════════════════════════════════
+   MONEDA POR OPERACIÓN
+   Zipaquirá / Antioquia → Peso colombiano (COP)
+   PAVISA-MEXICO         → Peso mexicano (MXN)
+   O-I PERU              → Soles (PEN)
+══════════════════════════════════════════════ */
+const MONEDAS_POR_OPERACION = {
+  zipaquira: { simbolo: '$',   sufijo: '',    locale: 'es-CO' }, // COP
+  antioquia: { simbolo: '$',   sufijo: '',    locale: 'es-CO' }, // COP
+  mexico:    { simbolo: '$',   sufijo: ' MXN',locale: 'es-MX' }, // Peso mexicano
+  peru:      { simbolo: 'S/',  sufijo: '',    locale: 'es-PE' }, // Soles
+};
+
 function fmtCOP(valor) {
   const n = Number(valor) || 0;
-  if (n === 0) return '$ 0';
-  if (n >= 1000000000) return '$ ' + (n / 1000000000).toFixed(2).replace(/\.?0+$/, '') + ' MM';
-  if (n >= 1000000)    return '$ ' + (n / 1000000).toFixed(2).replace(/\.?0+$/, '') + ' M';
-  return '$ ' + n.toLocaleString('es-CO');
+  const m = MONEDAS_POR_OPERACION[operacionActual] || MONEDAS_POR_OPERACION.zipaquira;
+  if (n === 0) return m.simbolo + ' 0' + m.sufijo;
+  if (n >= 1000000000) return m.simbolo + ' ' + (n / 1000000000).toFixed(2).replace(/\.?0+$/, '') + ' MM' + m.sufijo;
+  if (n >= 1000000)    return m.simbolo + ' ' + (n / 1000000).toFixed(2).replace(/\.?0+$/, '') + ' M' + m.sufijo;
+  return m.simbolo + ' ' + n.toLocaleString(m.locale) + m.sufijo;
 }
+
+/* ══════════════════════════════════════════════
+   MÓDULO DE INVENTARIO
+══════════════════════════════════════════════ */
+const INVENTARIO_CHIPS = [
+  { key:'stockGeneral',   label:'📊 Stock general' },
+  { key:'repuestos',      label:'🔧 Repuestos' },
+  { key:'materiales',     label:'📦 Materiales' },
+  { key:'equiposActivos', label:'🖥️ Equipos / Activos' },
+];
+
+function abrirInventario(opKey) {
+  if (opKey !== operacionActual) {
+    alert('🔒 Solo puedes abrir el inventario de la sede activa: ' + OPERACIONES[operacionActual].nombre);
+    return;
+  }
+  inventarioOperacionActual = opKey;
+
+  const url = INVENTARIO_CONFIG[opKey];
+  const msg = document.getElementById('invMsg');
+  const iframe = document.getElementById('invIframe');
+
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-inventario').classList.add('active');
+  document.getElementById('invTituloVista').textContent = '📦 INV ' + OPERACIONES[opKey].nombre;
+
+  if (!url || url.startsWith('PEGA_AQUI')) {
+    msg.innerHTML = '⚠️ Aún no se configuró la URL del Apps Script de inventario para esta sede.';
+    iframe.src = 'about:blank';
+  } else {
+    msg.textContent = '';
+    iframe.src = url;
+  }
+
+  renderSidebarOperaciones();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function volverDeInventario() {
+  inventarioOperacionActual = null;
+  document.getElementById('invIframe').src = 'about:blank';
+  showPanel('pendientes');
+  renderSidebarOperaciones();
+}
+
+async function cargarInventarioUI() {
+  const msg = document.getElementById('invMsg');
+  const wrap = document.getElementById('invTablaWrap');
+  msg.textContent = '⏳ Cargando inventario...';
+  wrap.innerHTML = '';
+  try {
+    inventarioCacheStock = await inventarioGet('obtenerStock');
+    msg.textContent = '';
+    filtrarInventarioUI();
+  } catch (e) {
+    msg.innerHTML = `⚠️ ${esc(e.message)}`;
+  }
+}
+
+function filtrarInventarioUI() {
+  const texto   = (document.getElementById('invBuscar').value || '').toLowerCase().trim();
+  const grupos  = INVENTARIO_FILTROS_GRUPO[inventarioVistaActual];
+
+  let lista = inventarioCacheStock.slice();
+  if (grupos) lista = lista.filter(p => grupos.includes(p.grupo));
+  if (texto)  lista = lista.filter(p =>
+    (p.codigo||'').toLowerCase().includes(texto) || (p.nombre||'').toLowerCase().includes(texto)
+  );
+
+  const wrap = document.getElementById('invTablaWrap');
+  if (!lista.length) {
+    wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No hay productos para mostrar.</div>';
+    return;
+  }
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--surface2)">
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Código</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Nombre</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Grupo</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Unidad</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)">Stock</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)">Mínimo</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)">Estado</th>
+    </tr></thead><tbody>`;
+
+  lista.forEach(p => {
+    let estado = '<span class="badge" style="background:#e6f4ea;color:#1e7e34">Normal</span>';
+    if (p.cantidad <= 0) estado = '<span class="badge" style="background:#fdecea;color:#c62828">Sin stock</span>';
+    else if (p.stockMin > 0 && p.cantidad <= p.stockMin) estado = '<span class="badge" style="background:#fff4e0;color:#b56a00">Stock bajo</span>';
+
+    html += `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 10px;font-family:'Courier New',monospace">${esc(p.codigo)}</td>
+      <td style="padding:7px 10px">${esc(p.nombre)}</td>
+      <td style="padding:7px 10px">${esc(p.grupo)}</td>
+      <td style="padding:7px 10px">${esc(p.unidad)}</td>
+      <td style="padding:7px 10px;text-align:center;font-weight:700">${p.cantidad}</td>
+      <td style="padding:7px 10px;text-align:center;color:var(--text3)">${p.stockMin}</td>
+      <td style="padding:7px 10px;text-align:center">${estado}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+/** Crea un overlay modal genérico y devuelve su contenedor de contenido */
+function crearModalInventario(titulo) {
+  const overlay = document.createElement('div');
+  overlay.id = 'invModalOverlay';
+  overlay.style = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:10px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)">
+      <div style="background:var(--brand);color:white;padding:14px 18px;font-weight:700;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+        <span>${esc(titulo)}</span>
+        <span onclick="cerrarModalInventario()" style="cursor:pointer;font-size:18px">✕</span>
+      </div>
+      <div id="invModalBody" style="padding:18px"></div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModalInventario(); });
+  document.body.appendChild(overlay);
+  return document.getElementById('invModalBody');
+}
+
+function cerrarModalInventario() {
+  const ov = document.getElementById('invModalOverlay');
+  if (ov) ov.remove();
+}
+
+async function abrirModalProducto() {
+  let listas = { unidades: [], grupos: [] };
+  try { listas = await inventarioGet('obtenerListas'); } catch(e) { /* usa selects vacíos si falla */ }
+
+  const body = crearModalInventario('➕ Nuevo Producto');
+  body.innerHTML = `
+    <div class="field" style="margin-bottom:10px"><label>Código *</label><input id="invP_codigo" placeholder="Ej: REP-001"></div>
+    <div class="field" style="margin-bottom:10px"><label>Nombre *</label><input id="invP_nombre" placeholder="Nombre del producto"></div>
+    <div class="field" style="margin-bottom:10px"><label>Unidad</label>
+      <select id="invP_unidad">${(listas.unidades||['Unidades']).map(u=>`<option>${esc(u)}</option>`).join('')}</select>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label>Grupo</label>
+      <select id="invP_grupo">${(listas.grupos||['General']).map(g=>`<option>${esc(g)}</option>`).join('')}</select>
+    </div>
+    <div class="field" style="margin-bottom:16px"><label>Stock mínimo</label><input id="invP_stockMin" type="number" min="0" value="0"></div>
+    <div id="invP_msg" style="font-size:12px;color:var(--danger);margin-bottom:10px"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="guardarProductoInventario()">Guardar producto</button>`;
+}
+
+async function guardarProductoInventario() {
+  const codigo   = document.getElementById('invP_codigo').value.trim();
+  const nombre   = document.getElementById('invP_nombre').value.trim();
+  const unidad   = document.getElementById('invP_unidad').value;
+  const grupo    = document.getElementById('invP_grupo').value;
+  const stockMin = document.getElementById('invP_stockMin').value;
+  const msg      = document.getElementById('invP_msg');
+
+  if (!codigo || !nombre) { msg.textContent = 'Código y nombre son obligatorios.'; return; }
+
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando...';
+  try {
+    const r = await inventarioPost('registrarProducto', { producto: { codigo, nombre, unidad, grupo, stockMin } });
+    if (!r.ok) { msg.style.color = 'var(--danger)'; msg.textContent = r.mensaje; return; }
+    cerrarModalInventario();
+    cargarInventarioUI();
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = e.message;
+  }
+}
+
+async function abrirModalMovimiento() {
+  const body = crearModalInventario('↕ Registrar Movimiento');
+  const hoy  = new Date().toISOString().slice(0,10);
+  body.innerHTML = `
+    <div class="field" style="margin-bottom:10px"><label>Código del producto *</label><input id="invM_codigo" placeholder="Ej: REP-001"></div>
+    <div class="field" style="margin-bottom:10px"><label>Fecha *</label><input id="invM_fecha" type="date" value="${hoy}"></div>
+    <div class="field" style="margin-bottom:10px"><label>Tipo de movimiento *</label>
+      <select id="invM_tipo">
+        <option value="INGRESO">Ingreso</option>
+        <option value="SALIDA">Salida</option>
+        <option value="AJUSTE_POSITIVO">Ajuste positivo</option>
+        <option value="AJUSTE_NEGATIVO">Ajuste negativo</option>
+        <option value="AJUSTE">Ajuste</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label>Cantidad *</label><input id="invM_cantidad" type="number" min="0.01" step="0.01"></div>
+    <div class="field" style="margin-bottom:10px"><label>Responsable</label><input id="invM_responsable" placeholder="Nombre"></div>
+    <div class="field" style="margin-bottom:10px"><label>Equipo destino</label><input id="invM_equipo" placeholder="Ej: CA1"></div>
+    <div class="field" style="margin-bottom:16px"><label>Observaciones</label><input id="invM_obs" placeholder="Opcional"></div>
+    <div id="invM_msg" style="font-size:12px;color:var(--danger);margin-bottom:10px"></div>
+    <button class="btn btn-success" style="width:100%" onclick="guardarMovimientoInventario()">Registrar movimiento</button>`;
+}
+
+async function guardarMovimientoInventario() {
+  const codigo      = document.getElementById('invM_codigo').value.trim();
+  const fecha        = document.getElementById('invM_fecha').value;
+  const tipo          = document.getElementById('invM_tipo').value;
+  const cantidad      = document.getElementById('invM_cantidad').value;
+  const responsable   = document.getElementById('invM_responsable').value.trim();
+  const equipo        = document.getElementById('invM_equipo').value.trim();
+  const obs            = document.getElementById('invM_obs').value.trim();
+  const msg            = document.getElementById('invM_msg');
+
+  if (!codigo || !fecha || !tipo || !cantidad) { msg.textContent = 'Completa los campos obligatorios (*).'; return; }
+
+  // Empaqueta responsable/equipo/obs en un solo string, tal como espera el Apps Script
+  const observaciones = [
+    responsable ? `Responsable: ${responsable}` : '',
+    equipo      ? `Equipo: ${equipo}`           : '',
+    obs         ? `Obs: ${obs}`                  : '',
+  ].filter(Boolean).join(' | ');
+
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando...';
+  try {
+    const r = await inventarioPost('registrarMovimiento', { mov: { codigo, fecha, tipo, cantidad, observaciones } });
+    if (!r.ok) { msg.style.color = 'var(--danger)'; msg.textContent = r.mensaje; return; }
+    cerrarModalInventario();
+    cargarInventarioUI();
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = e.message;
+  }
+}
+
 </script>
 </body>
 </html>
