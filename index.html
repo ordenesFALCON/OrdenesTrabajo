@@ -169,6 +169,7 @@ body::after {
 
 /* ── Container ── */
 .container { max-width: 1020px; margin: 0 auto; margin-left: 216px; padding: 20px 16px; }
+body.inv-activo .container { max-width: 1700px; }
 @media (max-width: 900px) {
   .container { margin-left: 0; }
   .nav-tabs { margin-left: 0; }
@@ -1290,13 +1291,15 @@ body::after {
 
   <!-- ════════════ PANEL DE INVENTARIO ════════════ -->
   <div id="panel-inventario" class="panel">
-    <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
-      <div id="invTituloVista" style="font-weight:700;color:var(--brand);font-size:15px;flex:1">📦 Inventario</div>
-      <button class="btn btn-ghost" onclick="volverDeInventario()">← Volver</button>
-    </div>
-    <div id="invMsg" style="font-size:13px;color:var(--text3);margin-bottom:8px"></div>
-    <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white">
-      <iframe id="invIframe" style="width:100%;height:calc(100vh - 230px);min-height:520px;border:none;display:block"></iframe>
+    <div style="max-width:1300px;margin:0 auto;width:100%">
+      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+        <div id="invTituloVista" style="font-weight:700;color:var(--brand);font-size:15px;flex:1">📦 Inventario</div>
+        <button class="btn btn-ghost" onclick="volverDeInventario()">← Volver</button>
+      </div>
+      <div id="invMsg" style="font-size:13px;color:var(--text3);margin-bottom:8px"></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white">
+        <iframe id="invIframe" style="width:100%;height:calc(100vh - 230px);min-height:520px;border:none;display:block"></iframe>
+      </div>
     </div>
   </div>
 
@@ -1337,6 +1340,18 @@ const OPERACIONES = {
 let operacionActual = localStorage.getItem('operacionActual') || 'zipaquira';
 if (!OPERACIONES[operacionActual]) operacionActual = Object.keys(OPERACIONES)[0];
 GOOGLE_CONFIG.spreadsheetId = OPERACIONES[operacionActual].spreadsheetId;
+
+/** Pestañas internas del inventario (deben coincidir con los id de showTab() en el Apps Script) */
+const INVENTARIO_TABS = [
+  { key: 'dashboard',     icono: '📊', label: 'Dashboard' },
+  { key: 'productos',     icono: '📦', label: 'Nuevo Producto' },
+  { key: 'movimientos',   icono: '🔄', label: 'Movimientos' },
+  { key: 'inventario',    icono: '📋', label: 'Inventario' },
+  { key: 'reportes',      icono: '📈', label: 'Reportes' },
+  { key: 'buscar',        icono: '🔍', label: 'Buscar' },
+  { key: 'configuracion', icono: '⚙️', label: 'Configuración' },
+];
+let inventarioTabActual = 'dashboard';
 
 /* ══════════════════════════════════════════════
    INVENTARIO POR OPERACIÓN
@@ -1435,7 +1450,20 @@ function renderSidebarOperaciones() {
           <span style="font-size:16px">${op.bandera}</span>
           <span style="flex:1;line-height:1.25">INV ${esc(op.nombre)}</span>
           ${habilitado ? '' : '<span style="font-size:14px">🔒</span>'}
-        </div>`;
+        </div>
+        ${activo ? `<div style="background:rgba(0,0,0,.15);padding:4px 0 6px">
+          ${INVENTARIO_TABS.map(t => `
+            <div onclick="irATabInventario('${t.key}')"
+              style="display:flex;align-items:center;gap:9px;padding:8px 16px 8px 30px;cursor:pointer;font-size:12.5px;
+                     color:${t.key === inventarioTabActual ? 'white' : 'rgba(255,255,255,.65)'};
+                     font-weight:${t.key === inventarioTabActual ? '700' : '400'};
+                     background:${t.key === inventarioTabActual ? 'rgba(255,255,255,.12)' : 'transparent'}"
+              onmouseover="this.style.background='rgba(255,255,255,.10)'"
+              onmouseout="this.style.background='${t.key === inventarioTabActual ? 'rgba(255,255,255,.12)' : 'transparent'}'">
+              <span style="font-size:13px">${t.icono}</span>
+              <span>${t.label}</span>
+            </div>`).join('')}
+        </div>` : ''}`;
     }).join('')}`;
 }
 
@@ -4389,6 +4417,7 @@ function abrirInventario(opKey) {
     return;
   }
   inventarioOperacionActual = opKey;
+  inventarioTabActual = 'dashboard';
 
   const url = INVENTARIO_CONFIG[opKey];
   const msg = document.getElementById('invMsg');
@@ -4398,6 +4427,11 @@ function abrirInventario(opKey) {
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-inventario').classList.add('active');
   document.getElementById('invTituloVista').textContent = '📦 INV ' + OPERACIONES[opKey].nombre;
+
+  // Oculta la barra de Nueva Orden/Pendientes/etc. mientras se está en el inventario
+  const navTabs = document.querySelector('.nav-tabs');
+  if (navTabs) navTabs.style.display = 'none';
+  document.body.classList.add('inv-activo');
 
   if (!url || url.startsWith('PEGA_AQUI')) {
     msg.innerHTML = '⚠️ Aún no se configuró la URL del Apps Script de inventario para esta sede.';
@@ -4414,7 +4448,20 @@ function abrirInventario(opKey) {
 function volverDeInventario() {
   inventarioOperacionActual = null;
   document.getElementById('invIframe').src = 'about:blank';
+  const navTabs = document.querySelector('.nav-tabs');
+  if (navTabs) navTabs.style.display = 'flex';
+  document.body.classList.remove('inv-activo');
   showPanel('pendientes');
+  renderSidebarOperaciones();
+}
+
+/** Le dice al iframe del inventario que cambie de pestaña (vía postMessage) */
+function irATabInventario(tabKey) {
+  inventarioTabActual = tabKey;
+  const iframe = document.getElementById('invIframe');
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({ tipo: 'mostrarTab', tab: tabKey }, '*');
+  }
   renderSidebarOperaciones();
 }
 
