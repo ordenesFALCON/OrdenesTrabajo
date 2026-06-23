@@ -4455,12 +4455,17 @@ function volverDeInventario() {
   renderSidebarOperaciones();
 }
 
-/** Le dice al iframe del inventario que cambie de pestaña (vía postMessage) */
+/** Le dice al iframe del inventario qué pestaña mostrar.
+ *  Apps Script sandboxea su HTML en un iframe interno propio que bloquea
+ *  postMessage entre dominios, así que en vez de eso recargamos el iframe
+ *  con el parámetro ?tab=, que el inventario lee al cargar. */
 function irATabInventario(tabKey) {
   inventarioTabActual = tabKey;
   const iframe = document.getElementById('invIframe');
-  if (iframe && iframe.contentWindow) {
-    iframe.contentWindow.postMessage({ tipo: 'mostrarTab', tab: tabKey }, '*');
+  const base = INVENTARIO_CONFIG[inventarioOperacionActual];
+  if (iframe && base && !base.startsWith('PEGA_AQUI')) {
+    const sep = base.includes('?') ? '&' : '?';
+    iframe.src = base + sep + 'tab=' + encodeURIComponent(tabKey);
   }
   renderSidebarOperaciones();
 }
