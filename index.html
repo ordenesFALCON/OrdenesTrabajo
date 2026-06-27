@@ -1285,6 +1285,47 @@ body.inv-activo .container { max-width: 1700px; }
 
   </div>
 
+  <!-- ════════════ PANEL: NOVEDADES OPERATIVAS DE PLANTA ════════════ -->
+  <div id="panel-novedades" class="panel">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <div style="flex:1;font-weight:800;color:var(--brand);font-size:16px">📝 Informe de Novedades Operativas de Planta</div>
+      <button class="btn btn-primary" onclick="abrirModalNovedad()">+ Nueva Novedad</button>
+      <button class="btn btn-success" onclick="generarInformeNovedades()">📄 Descargar Informe (PDF)</button>
+    </div>
+
+    <!-- Dashboard de novedades -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-head">📊 Novedades por Tipo de Problema</div>
+        <div class="card-body" style="padding:14px"><canvas id="chartNovTipo" height="190"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head">🏭 Novedades por Área / Equipo</div>
+        <div class="card-body" style="padding:14px"><canvas id="chartNovArea" height="190"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head">⏱ Tiempo de Reacción Promedio (min) por Mes</div>
+        <div class="card-body" style="padding:14px"><canvas id="chartNovReaccion" height="190"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
+        <input id="novBuscar" placeholder="Buscar por área, tipo o descripción..." oninput="filtrarNovedadesUI()" style="flex:1;min-width:200px">
+        <select id="novFiltroTipo" onchange="filtrarNovedadesUI()" style="min-width:160px"><option value="">Todos los tipos</option></select>
+      </div>
+    </div>
+
+    <!-- Lista -->
+    <div class="card">
+      <div class="card-head">📋 Novedades Registradas</div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <div id="novTablaWrap"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ════════════ PANEL: DETALLE ════════════ -->
   <div id="panel-detalle" class="panel">
     <div id="detalle-btn-bar" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -1310,6 +1351,10 @@ body.inv-activo .container { max-width: 1700px; }
   </div>
 
 </div><!-- /container -->
+
+<!-- Contenedor del informe de Novedades, solo visible al imprimir/exportar PDF -->
+<div id="novedadesInformeImprimible" style="display:none;padding:24px;max-width:900px;margin:0 auto;font-family:'Segoe UI',sans-serif"></div>
+
 
 <!-- ════════════════════════════════════════════════════
      CHART.JS (mini dashboard)
