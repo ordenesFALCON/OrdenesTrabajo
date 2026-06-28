@@ -2546,6 +2546,8 @@ const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','Tiempo
 const REPUESTOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const INSUMOS_COLS   = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const FOTOS_COLS     = ['NumeroOrden','#','DriveFileId','UrlVer','UrlDescarga','TareaDescripcion','SubidoPor','Fecha'];
+const NOVEDADES_COLS = ['NumeroNovedad','Fecha','HoraInicio','HoraFin','TiempoTotalMin','TiempoReaccionMin','AreaEquipo','TipoProblema','Descripcion','Responsable','Correo','FechaRegistro','Estado'];
+const FOTOS_NOVEDADES_COLS = ['NumeroNovedad','#','DriveFileId','UrlVer','UrlDescarga','Titulo','Descripcion','SubidoPor','Fecha'];
 
 // Nombres de hojas
 const SH = {
@@ -2554,7 +2556,15 @@ const SH = {
   repuestos: 'Repuestos',
   insumos:   'Insumos',
   fotos:     'Fotos',
+  novedades: 'Novedades',
+  fotosNovedades: 'FotosNovedades',
 };
+
+// Tipos de problema y áreas/equipo más comunes (igual que en el Excel de Novedades)
+const TIPOS_PROBLEMA_NOVEDAD = ['Energía','Hornos o máquinas','Aire comprimido','Refrigeración','Infraestructura','Calidad','Seguridad','Otro'];
+const AREAS_NOVEDAD = ['Planta general','CA1','CA2','CA3','CB1','CB2','CB3','CB4','Bombas de recirculación de agua','Aire de sellos','Drycoolers','Infraestructura primer piso','Infraestructura segundo piso','Otro'];
+
+let allNovedades = [];
 
 /** Modal centrado y amigable cuando el token de Google caduca (pasa cada
  *  ~1 hora si dejas la pestaña abierta). Reemplaza los errores técnicos en JSON. */
@@ -2744,12 +2754,14 @@ async function repararHoja() {
     }
 
     window._sheetsHeaders = SHEETS_COLS;
-    // Crear también las hojas de Tareas, Repuestos, Insumos y Fotos
+    // Crear también las hojas de Tareas, Repuestos, Insumos, Fotos, Novedades y FotosNovedades
     await asegurarHoja(SH.tareas,    TAREAS_COLS);
     await asegurarHoja(SH.repuestos, REPUESTOS_COLS);
     await asegurarHoja(SH.insumos,   INSUMOS_COLS);
     await asegurarHoja(SH.fotos,     FOTOS_COLS);
-    alert('Hojas creadas correctamente:\n- Ordenes\n- Tareas\n- Repuestos\n- Insumos\n- Fotos\n\nYa puedes guardar órdenes con todos los campos.');
+    await asegurarHoja(SH.novedades, NOVEDADES_COLS);
+    await asegurarHoja(SH.fotosNovedades, FOTOS_NOVEDADES_COLS);
+    alert('Hojas creadas correctamente:\n- Ordenes\n- Tareas\n- Repuestos\n- Insumos\n- Fotos\n- Novedades\n- FotosNovedades\n\nYa puedes guardar órdenes y novedades con todos los campos.');
     await cargarOrdenes();
   } catch(e) {
     alert('Error de red: ' + e.message);
@@ -4727,6 +4739,479 @@ async function guardarMovimientoInventario() {
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.textContent = e.message;
   }
+}
+
+/* ══════════════════════════════════════════════
+   MÓDULO: NOVEDADES OPERATIVAS DE PLANTA
+══════════════════════════════════════════════ */
+
+/** Lee una hoja completa y la devuelve como lista de objetos (clave = encabezado) */
+async function _leerHojaGenerica(nombre) {
+  try {
+    const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+    const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A:Z'),
+      { headers: { Authorization: 'Bearer ' + googleAccessToken } });
+    const d = await r.json();
+    if (!d.values || d.values.length < 2) return [];
+    const cols = d.values[0];
+    return d.values.slice(1).map((row, i) => {
+      const obj = { _row: i + 2 };
+      cols.forEach((c, j) => { obj[c] = row[j] || ''; });
+      return obj;
+    });
+  } catch (e) { return []; }
+}
+
+/** Carga todas las novedades (con sus fotos) desde la hoja de la sede activa */
+async function cargarNovedadesDeSheets() {
+  await asegurarHoja(SH.novedades, NOVEDADES_COLS);
+  await asegurarHoja(SH.fotosNovedades, FOTOS_NOVEDADES_COLS);
+
+  const [filas, fotos] = await Promise.all([
+    _leerHojaGenerica(SH.novedades),
+    _leerHojaGenerica(SH.fotosNovedades),
+  ]);
+
+  const novedades = filas
+    .filter(f => f.NumeroNovedad && f.Estado !== 'Eliminada')
+    .map(f => ({ ...f, fotos: [] }));
+
+  const idx = {};
+  novedades.forEach(n => { idx[n.NumeroNovedad] = n; });
+
+  fotos.forEach(f => {
+    if (f.NumeroNovedad && idx[f.NumeroNovedad]) {
+      idx[f.NumeroNovedad].fotos.push({
+        driveFileId: f.DriveFileId || '',
+        urlVer:      f.UrlVer || '',
+        titulo:      f.Titulo || '',
+        descripcion: f.Descripcion || '',
+        subidoPor:   f.SubidoPor || '',
+        fecha:       f.Fecha || '',
+      });
+    }
+  });
+
+  allNovedades = novedades.sort((a, b) => (b.Fecha || '').localeCompare(a.Fecha || ''));
+  return allNovedades;
+}
+
+/** Se llama cada vez que se entra a la pestaña Novedades */
+async function inicializarPanelNovedades() {
+  const wrap = document.getElementById('novTablaWrap');
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">⏳ Cargando novedades...</div>';
+  try {
+    await cargarNovedadesDeSheets();
+  } catch (e) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger)">⚠️ ' + esc(e.message) + '</div>';
+    return;
+  }
+
+  // Poblar filtro de tipos
+  const selTipo = document.getElementById('novFiltroTipo');
+  const tiposUsados = [...new Set(allNovedades.map(n => n.TipoProblema).filter(Boolean))];
+  selTipo.innerHTML = '<option value="">Todos los tipos</option>' +
+    tiposUsados.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+
+  filtrarNovedadesUI();
+  renderGraficasNovedades();
+}
+
+function filtrarNovedadesUI() {
+  const texto = (document.getElementById('novBuscar').value || '').toLowerCase().trim();
+  const tipo  = document.getElementById('novFiltroTipo').value;
+
+  let lista = allNovedades.slice();
+  if (tipo)  lista = lista.filter(n => n.TipoProblema === tipo);
+  if (texto) lista = lista.filter(n =>
+    (n.AreaEquipo||'').toLowerCase().includes(texto) ||
+    (n.TipoProblema||'').toLowerCase().includes(texto) ||
+    (n.Descripcion||'').toLowerCase().includes(texto)
+  );
+
+  const wrap = document.getElementById('novTablaWrap');
+  if (!lista.length) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">No hay novedades registradas todavía.</div>';
+    return;
+  }
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--surface2)">
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Fecha</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Área / Equipo</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Tipo</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Descripción</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)">T. Reacción</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Responsable</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)">📷</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)"></th>
+    </tr></thead><tbody>`;
+
+  lista.forEach(n => {
+    html += `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 10px">${esc(n.Fecha)}</td>
+      <td style="padding:7px 10px">${esc(n.AreaEquipo)}</td>
+      <td style="padding:7px 10px"><span class="badge" style="background:#e0f2fe;color:#0369a1">${esc(n.TipoProblema)}</span></td>
+      <td style="padding:7px 10px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(n.Descripcion)}">${esc(n.Descripcion)}</td>
+      <td style="padding:7px 10px;text-align:center">${esc(n.TiempoReaccionMin)} min</td>
+      <td style="padding:7px 10px">${esc(n.Responsable)}</td>
+      <td style="padding:7px 10px;text-align:center">${n.fotos.length || 0}</td>
+      <td style="padding:7px 10px;text-align:center;white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalNovedad('${esc(n.NumeroNovedad)}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="eliminarNovedad('${esc(n.NumeroNovedad)}')" style="color:var(--danger)">🗑️</button>
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+/** Calcula minutos de diferencia entre dos horas "HH:MM" */
+function _minutosEntre(horaInicio, horaFin) {
+  if (!horaInicio || !horaFin) return '';
+  const [h1,m1] = horaInicio.split(':').map(Number);
+  const [h2,m2] = horaFin.split(':').map(Number);
+  if (isNaN(h1)||isNaN(m1)||isNaN(h2)||isNaN(m2)) return '';
+  let mins = (h2*60+m2) - (h1*60+m1);
+  if (mins < 0) mins += 24*60; // cruzó la medianoche
+  return mins;
+}
+
+/** Abre el modal de Nueva Novedad, o edición si se pasa un numeroNovedad existente */
+function abrirModalNovedad(numeroNovedad) {
+  const existente = numeroNovedad ? allNovedades.find(n => n.NumeroNovedad === numeroNovedad) : null;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modalNovedadOverlay';
+  overlay.style = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:3000;padding:16px;overflow-y:auto';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.3)">
+      <div style="background:var(--brand);color:white;padding:14px 20px;font-weight:700;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center">
+        <span>📝 ${existente ? 'Editar' : 'Nueva'} Novedad Operativa</span>
+        <span onclick="document.getElementById('modalNovedadOverlay').remove()" style="cursor:pointer;font-size:18px">✕</span>
+      </div>
+      <div style="padding:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="field"><label>Fecha *</label><input id="nov_fecha" type="date" value="${esc(existente?.Fecha || new Date().toISOString().slice(0,10))}"></div>
+          <div class="field"><label>Área / Equipo *</label>
+            <select id="nov_area">${AREAS_NOVEDAD.map(a => `<option ${existente?.AreaEquipo===a?'selected':''}>${esc(a)}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Hora inicio novedad *</label><input id="nov_horaInicio" type="time" value="${esc(existente?.HoraInicio||'')}" onchange="actualizarTiempoTotalNovedad()"></div>
+          <div class="field"><label>Hora fin novedad *</label><input id="nov_horaFin" type="time" value="${esc(existente?.HoraFin||'')}" onchange="actualizarTiempoTotalNovedad()"></div>
+          <div class="field"><label>Tiempo total (min)</label><input id="nov_tiempoTotal" type="number" value="${esc(existente?.TiempoTotalMin||'')}" readonly style="background:var(--surface2)"></div>
+          <div class="field"><label>Tiempo de reacción (min) *</label><input id="nov_tiempoReaccion" type="number" min="0" value="${esc(existente?.TiempoReaccionMin||'')}"></div>
+          <div class="field" style="grid-column:1/-1"><label>Tipo de problema *</label>
+            <select id="nov_tipo">${TIPOS_PROBLEMA_NOVEDAD.map(t => `<option ${existente?.TipoProblema===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+          </div>
+          <div class="field" style="grid-column:1/-1"><label>¿Qué novedad ocurrió? *</label>
+            <textarea id="nov_descripcion" rows="3" placeholder="Describe brevemente la novedad...">${esc(existente?.Descripcion||'')}</textarea>
+          </div>
+        </div>
+        <div id="nov_msg" style="font-size:12px;color:var(--danger);margin-bottom:10px"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="guardarNovedad(${existente ? `'${esc(existente.NumeroNovedad)}'` : 'null'})">💾 Guardar Novedad</button>
+
+        ${existente ? `
+        <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:14px">
+          <div style="font-weight:700;color:var(--brand);margin-bottom:8px">📷 Fotos de esta novedad</div>
+          <label style="display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:white;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px">
+            📷 Agregar foto
+            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="abrirFormFotoNovedad(this, '${esc(existente.NumeroNovedad)}')">
+          </label>
+          <div id="nov_galeria_fotos"></div>
+        </div>` : `
+        <div style="font-size:12px;color:var(--text3);margin-top:14px;text-align:center">
+          Guarda la novedad primero para poder agregarle fotos con título y descripción.
+        </div>`}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  if (existente) renderGaleriaFotosNovedad(existente.NumeroNovedad);
+}
+
+function actualizarTiempoTotalNovedad() {
+  const ini = document.getElementById('nov_horaInicio').value;
+  const fin = document.getElementById('nov_horaFin').value;
+  document.getElementById('nov_tiempoTotal').value = _minutosEntre(ini, fin);
+}
+
+async function guardarNovedad(numeroExistente) {
+  const fecha = document.getElementById('nov_fecha').value;
+  const area = document.getElementById('nov_area').value;
+  const horaInicio = document.getElementById('nov_horaInicio').value;
+  const horaFin = document.getElementById('nov_horaFin').value;
+  const tiempoTotal = document.getElementById('nov_tiempoTotal').value || _minutosEntre(horaInicio, horaFin);
+  const tiempoReaccion = document.getElementById('nov_tiempoReaccion').value;
+  const tipo = document.getElementById('nov_tipo').value;
+  const descripcion = document.getElementById('nov_descripcion').value.trim();
+  const msg = document.getElementById('nov_msg');
+
+  if (!fecha || !area || !horaInicio || !horaFin || tiempoReaccion === '' || !descripcion) {
+    msg.textContent = 'Completa todos los campos obligatorios (*).';
+    return;
+  }
+
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando...';
+
+  try {
+    await asegurarHoja(SH.novedades, NOVEDADES_COLS);
+
+    if (numeroExistente) {
+      // Actualizar fila existente
+      const fila = allNovedades.find(n => n.NumeroNovedad === numeroExistente);
+      const valores = [numeroExistente, fecha, horaInicio, horaFin, tiempoTotal, tiempoReaccion, area, tipo, descripcion,
+        fila.Responsable, fila.Correo, fila.FechaRegistro, 'Activa'];
+      const colFin = numToCol(NOVEDADES_COLS.length - 1);
+      const rango = SH.novedades + '!A' + fila._row + ':' + colFin + fila._row;
+      await sheetsRequest('PUT', rango, { values: [valores] });
+    } else {
+      const numeroNuevo = 'NOV-' + String(Date.now()).slice(-6);
+      const valores = [numeroNuevo, fecha, horaInicio, horaFin, tiempoTotal, tiempoReaccion, area, tipo, descripcion,
+        usuarioActual?.nombre || usuarioActual?.email || 'Usuario', usuarioActual?.email || '', new Date().toISOString(), 'Activa'];
+      await appendHoja(SH.novedades, [valores]);
+    }
+
+    document.getElementById('modalNovedadOverlay').remove();
+    await inicializarPanelNovedades();
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Error al guardar: ' + e.message;
+  }
+}
+
+async function eliminarNovedad(numeroNovedad) {
+  if (!confirm('¿Eliminar esta novedad? Esta acción no se puede deshacer.')) return;
+  const fila = allNovedades.find(n => n.NumeroNovedad === numeroNovedad);
+  if (!fila) return;
+  try {
+    const colEstado = numToCol(NOVEDADES_COLS.indexOf('Estado'));
+    await sheetsRequest('PUT', SH.novedades + '!' + colEstado + fila._row, { values: [['Eliminada']] });
+    await inicializarPanelNovedades();
+  } catch (e) {
+    alert('Error al eliminar: ' + e.message);
+  }
+}
+
+/* ── Fotos de Novedades (con título y descripción por imagen) ── */
+
+async function subirFotoNovedad(file, numeroNovedad, titulo, descripcion) {
+  const carpetaRaiz = await _driveBuscarOCrearCarpeta('Fotos Novedades - ' + OPERACIONES[operacionActual].nombre, null);
+  const carpetaNov  = await _driveBuscarOCrearCarpeta(numeroNovedad, carpetaRaiz);
+  const nombreArchivo = numeroNovedad + '_' + Date.now() + '_' + file.name;
+
+  const subida = await _driveSubirArchivo(file, carpetaNov, nombreArchivo);
+  await _driveHacerPublico(subida.id);
+
+  const urlVer = `https://drive.google.com/thumbnail?id=${subida.id}&sz=w1000`;
+  const urlDescarga = `https://drive.google.com/uc?export=download&id=${subida.id}`;
+  const subidoPor = usuarioActual?.email || 'Usuario';
+  const fecha = new Date().toISOString();
+
+  await asegurarHoja(SH.fotosNovedades, FOTOS_NOVEDADES_COLS);
+  await appendHoja(SH.fotosNovedades, [[
+    numeroNovedad, '', subida.id, urlVer, urlDescarga, titulo || '', descripcion || '', subidoPor, fecha
+  ]]);
+
+  return { driveFileId: subida.id, urlVer, titulo: titulo||'', descripcion: descripcion||'', subidoPor, fecha };
+}
+
+/** Pide título y descripción antes de subir la foto a una novedad */
+async function abrirFormFotoNovedad(inputEl, numeroNovedad) {
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  inputEl.value = '';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modalFotoNovedadOverlay';
+  overlay.style = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:3500;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:10px;max-width:380px;width:100%;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3)">
+      <div style="font-weight:700;color:var(--brand);margin-bottom:12px">📷 Detalles de la foto</div>
+      <div class="field" style="margin-bottom:10px"><label>Título *</label><input id="foto_nov_titulo" placeholder="Ej: Fuga detectada"></div>
+      <div class="field" style="margin-bottom:14px"><label>Descripción breve</label><textarea id="foto_nov_desc" rows="2" placeholder="Opcional"></textarea></div>
+      <div id="foto_nov_msg" style="font-size:12px;color:var(--danger);margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('modalFotoNovedadOverlay').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="confirmarSubidaFotoNovedad('${esc(numeroNovedad)}')">Subir foto</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay._archivoPendiente = file;
+}
+
+async function confirmarSubidaFotoNovedad(numeroNovedad) {
+  const overlay = document.getElementById('modalFotoNovedadOverlay');
+  const file = overlay._archivoPendiente;
+  const titulo = document.getElementById('foto_nov_titulo').value.trim();
+  const descripcion = document.getElementById('foto_nov_desc').value.trim();
+  const msg = document.getElementById('foto_nov_msg');
+
+  if (!titulo) { msg.textContent = 'El título es obligatorio.'; return; }
+
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Subiendo...';
+  try {
+    await subirFotoNovedad(file, numeroNovedad, titulo, descripcion);
+    overlay.remove();
+    await cargarNovedadesDeSheets();
+    renderGaleriaFotosNovedad(numeroNovedad);
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Error: ' + e.message;
+  }
+}
+
+function renderGaleriaFotosNovedad(numeroNovedad) {
+  const cont = document.getElementById('nov_galeria_fotos');
+  if (!cont) return;
+  const n = allNovedades.find(x => x.NumeroNovedad === numeroNovedad);
+  const fotos = n?.fotos || [];
+
+  if (!fotos.length) {
+    cont.innerHTML = '<div style="font-size:12px;color:var(--text3);font-style:italic">Sin fotos aún.</div>';
+    return;
+  }
+
+  cont.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">' +
+    fotos.map((f, i) => `
+      <div style="border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <img id="nov_foto_img_${i}" style="width:100%;height:110px;object-fit:cover;background:#f2f2f2" alt="${esc(f.titulo)}">
+        <div style="padding:5px 7px">
+          <div style="font-size:11px;font-weight:700;color:var(--brand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.titulo)}</div>
+          ${f.descripcion ? `<div style="font-size:10px;color:var(--text3)">${esc(f.descripcion)}</div>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+
+  fotos.forEach((f, i) => _cargarFotoEnImg(f.driveFileId, document.getElementById('nov_foto_img_' + i)));
+}
+
+/* ── Gráficas del dashboard de Novedades ── */
+function renderGraficasNovedades() {
+  function destroyChart(key) { if (window[key]) { window[key].destroy(); window[key] = null; } }
+  function makeChart(id, key, cfg) {
+    destroyChart(key);
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    window[key] = new Chart(ctx.getContext('2d'), cfg);
+  }
+
+  // Por tipo de problema
+  const porTipo = {};
+  allNovedades.forEach(n => { const t = n.TipoProblema || 'Sin tipo'; porTipo[t] = (porTipo[t]||0)+1; });
+  makeChart('chartNovTipo', '_chartNovTipo', {
+    type: 'doughnut',
+    data: { labels: Object.keys(porTipo), datasets: [{ data: Object.values(porTipo),
+      backgroundColor: ['#0d2a52','#e8701a','#107C10','#0891b2','#7c3aed','#dc2626','#ca8a04','#374151'] }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+  });
+
+  // Por área/equipo
+  const porArea = {};
+  allNovedades.forEach(n => { const a = n.AreaEquipo || 'Sin área'; porArea[a] = (porArea[a]||0)+1; });
+  const areasOrdenadas = Object.entries(porArea).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  makeChart('chartNovArea', '_chartNovArea', {
+    type: 'bar',
+    data: { labels: areasOrdenadas.map(a=>a[0]), datasets: [{ data: areasOrdenadas.map(a=>a[1]),
+      backgroundColor: '#0d2a52', borderRadius: 5 }] },
+    options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  // Tiempo de reacción promedio por mes
+  const porMes = {};
+  allNovedades.forEach(n => {
+    if (!n.Fecha || n.TiempoReaccionMin === '') return;
+    const mes = n.Fecha.slice(0,7); // YYYY-MM
+    if (!porMes[mes]) porMes[mes] = { suma: 0, n: 0 };
+    porMes[mes].suma += Number(n.TiempoReaccionMin) || 0;
+    porMes[mes].n++;
+  });
+  const mesesOrdenados = Object.keys(porMes).sort();
+  makeChart('chartNovReaccion', '_chartNovReaccion', {
+    type: 'line',
+    data: { labels: mesesOrdenados, datasets: [{ label: 'Min. promedio',
+      data: mesesOrdenados.map(m => Math.round(porMes[m].suma / porMes[m].n)),
+      borderColor: '#e8701a', backgroundColor: 'rgba(232,112,26,.15)', fill: true, tension: .3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+
+/* ── Exportar Informe completo a PDF (usa el mismo método de impresión que las Órdenes) ── */
+async function generarInformeNovedades() {
+  const cont = document.getElementById('novedadesInformeImprimible');
+
+  // Capturar las 3 gráficas como imágenes para que se vean en el PDF impreso
+  const imgTipo     = document.getElementById('chartNovTipo')?.toDataURL('image/png') || '';
+  const imgArea     = document.getElementById('chartNovArea')?.toDataURL('image/png') || '';
+  const imgReaccion = document.getElementById('chartNovReaccion')?.toDataURL('image/png') || '';
+
+  let html = `
+    <div style="text-align:center;border-bottom:3px solid var(--brand);padding-bottom:14px;margin-bottom:20px">
+      <h1 style="color:var(--brand);font-size:22px;margin-bottom:4px">📝 Informe de Novedades Operativas de Planta</h1>
+      <div style="color:#666;font-size:13px">${esc(OPERACIONES[operacionActual].nombre)} · Generado el ${new Date().toLocaleDateString('es-CO')}</div>
+    </div>
+
+    <h2 style="color:var(--brand);font-size:16px;margin:18px 0 10px">📊 Resumen Gráfico</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+      <div style="text-align:center"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Por Tipo de Problema</div><img src="${imgTipo}" style="max-width:100%"></div>
+      <div style="text-align:center"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Por Área / Equipo</div><img src="${imgArea}" style="max-width:100%"></div>
+    </div>
+    <div style="text-align:center;margin-bottom:24px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">Tiempo de Reacción Promedio por Mes</div><img src="${imgReaccion}" style="max-width:60%"></div>
+
+    <h2 style="color:var(--brand);font-size:16px;margin:18px 0 10px;page-break-before:always">📋 Detalle de Novedades (${allNovedades.length})</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:20px">
+      <thead><tr style="background:#eef3f9">
+        <th style="border:1px solid #ccc;padding:6px">Fecha</th>
+        <th style="border:1px solid #ccc;padding:6px">Área/Equipo</th>
+        <th style="border:1px solid #ccc;padding:6px">Tipo</th>
+        <th style="border:1px solid #ccc;padding:6px">Descripción</th>
+        <th style="border:1px solid #ccc;padding:6px">T. Total</th>
+        <th style="border:1px solid #ccc;padding:6px">T. Reacción</th>
+        <th style="border:1px solid #ccc;padding:6px">Responsable</th>
+      </tr></thead><tbody>
+      ${allNovedades.map(n => `
+        <tr>
+          <td style="border:1px solid #ccc;padding:6px">${esc(n.Fecha)}</td>
+          <td style="border:1px solid #ccc;padding:6px">${esc(n.AreaEquipo)}</td>
+          <td style="border:1px solid #ccc;padding:6px">${esc(n.TipoProblema)}</td>
+          <td style="border:1px solid #ccc;padding:6px">${esc(n.Descripcion)}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center">${esc(n.TiempoTotalMin)} min</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center">${esc(n.TiempoReaccionMin)} min</td>
+          <td style="border:1px solid #ccc;padding:6px">${esc(n.Responsable)}</td>
+        </tr>`).join('')}
+    </tbody></table>`;
+
+  // Fotos con título y descripción, por novedad
+  const conFotos = allNovedades.filter(n => n.fotos && n.fotos.length);
+  if (conFotos.length) {
+    html += `<h2 style="color:var(--brand);font-size:16px;margin:18px 0 10px;page-break-before:always">📷 Registro Fotográfico</h2>`;
+    for (const n of conFotos) {
+      html += `<div style="margin-bottom:18px"><div style="font-weight:700;font-size:13px;margin-bottom:6px">${esc(n.NumeroNovedad)} — ${esc(n.AreaEquipo)} (${esc(n.Fecha)})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">`;
+      for (const f of n.fotos) {
+        let dataUrl = f.urlVer;
+        try {
+          const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${f.driveFileId}?alt=media`,
+            { headers: { Authorization: 'Bearer ' + googleAccessToken } });
+          const blob = await resp.blob();
+          dataUrl = await new Promise(res => { const rd = new FileReader(); rd.onload = () => res(rd.result); rd.readAsDataURL(blob); });
+        } catch(_) {}
+        html += `<div style="width:160px">
+          <img src="${dataUrl}" style="width:100%;height:110px;object-fit:cover;border:1px solid #ccc">
+          <div style="font-size:10px;font-weight:700;margin-top:3px">${esc(f.titulo)}</div>
+          ${f.descripcion ? `<div style="font-size:9px;color:#666">${esc(f.descripcion)}</div>` : ''}
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+  }
+
+  cont.innerHTML = html;
+  document.body.classList.add('imprimiendo-novedades');
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => document.body.classList.remove('imprimiendo-novedades'), 500);
+  }, 200);
 }
 
 </script>
