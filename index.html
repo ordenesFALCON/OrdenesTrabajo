@@ -1297,7 +1297,7 @@ body.inv-activo .container { max-width: 1700px; }
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px">
       <div class="card">
         <div class="card-head">⏱ Distribución de Tiempos de Recuperación</div>
-        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposDona" height="220"></canvas></div>
+        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposDona" height="220"></canvas><div id="novLeyendaRangos"></div></div>
       </div>
       <div class="card">
         <div class="card-head">📊 Tiempo de Recuperación por Informe (min)</div>
@@ -5167,29 +5167,28 @@ function renderGraficasNovedades() {
     window[key] = new Chart(ctx.getContext('2d'), cfg);
   }
 
-  // Dona: distribución de tiempos de recuperación por rango
-  const rangos = { '≤ 5 min': 0, '6–15 min': 0, '16–30 min': 0, '> 30 min': 0 };
+  // Dona: distribución de novedades por rango de tiempo de recuperación
+  const conteoRangos = RANGOS_NOVEDAD.map(r => 0);
   allNovedades.forEach(n => {
-    const t = Number(n.TiempoTotalMin) || 0;
-    if (t <= 5) rangos['≤ 5 min']++;
-    else if (t <= 15) rangos['6–15 min']++;
-    else if (t <= 30) rangos['16–30 min']++;
-    else rangos['> 30 min']++;
+    const idx = RANGOS_NOVEDAD.indexOf(_rangoPorMinutos(n.TiempoTotalMin));
+    conteoRangos[idx]++;
   });
   makeChart('chartNovTiemposDona', '_chartNovTiemposDona', {
     type: 'doughnut',
-    data: { labels: Object.keys(rangos), datasets: [{ data: Object.values(rangos),
-      backgroundColor: ['#107C10','#0d2a52','#e8701a','#dc2626'] }] },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    data: { labels: RANGOS_NOVEDAD.map(r => r.nombre), datasets: [{ data: conteoRangos,
+      backgroundColor: RANGOS_NOVEDAD.map(r => r.color) }] },
+    options: { responsive: true, plugins: { legend: { display: false } } }
   });
+  const leyendaDiv = document.getElementById('novLeyendaRangos');
+  if (leyendaDiv) leyendaDiv.innerHTML = _leyendaRangosHtml();
 
-  // Barras: tiempo de recuperación por informe (código)
+  // Barras: tiempo de recuperación por informe (código), coloreadas por su propio rango
   const ordenadas = allNovedades.slice().sort((a,b)=>(a.FechaEvento||'').localeCompare(b.FechaEvento||''));
   makeChart('chartNovTiemposBarras', '_chartNovTiemposBarras', {
     type: 'bar',
     data: { labels: ordenadas.map(n => n.Codigo), datasets: [{ label: 'Minutos',
       data: ordenadas.map(n => Number(n.TiempoTotalMin) || 0),
-      backgroundColor: '#0d2a52', borderRadius: 5 }] },
+      backgroundColor: ordenadas.map(n => _colorPorMinutos(n.TiempoTotalMin)), borderRadius: 5 }] },
     options: { responsive: true, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
@@ -5273,27 +5272,36 @@ async function _construirHtmlInformeNovedad(n, incluirEncabezadoMarca) {
 /** Exporta UN solo informe en PDF, igual a la estructura del documento de referencia */
 /** Genera 2 mini-gráficas (dona + barras) con los tiempos de ESTE informe únicamente:
  *  tiempo de detección (evento→inicio), tiempo de resolución (inicio→estabilización) y total. */
-/** Devuelve un color según el rango de minutos (0-5 verde, 5-10 negro,
- *  y sigue subiendo de 5 en 5 hasta 1 hora; más de 60 min = vino tinto). */
-function _colorPorMinutos(min) {
+/** Rangos de tiempo de recuperación, con nombre y color (de mejor a peor). */
+const RANGOS_NOVEDAD = [
+  { max: 5,        nombre: 'Restablecimiento Rápido',        color: '#16a34a' }, // verde
+  { max: 15,       nombre: 'Restablecimiento Medio Rápido',  color: '#0d2a52' }, // azul oscuro
+  { max: 30,       nombre: 'Restablecimiento Medio',         color: '#e8701a' }, // naranja
+  { max: 60,       nombre: 'Restablecimiento Lento',         color: '#dc2626' }, // rojo
+  { max: 119,      nombre: 'Restablecimiento Muy Lento',     color: '#831843' }, // vino tinto
+  { max: Infinity, nombre: 'Crítico',                        color: '#000000' }, // negro
+];
+
+/** Devuelve el rango (nombre + color) al que pertenece una cantidad de minutos */
+function _rangoPorMinutos(min) {
   const m = Number(min) || 0;
-  const paleta = [
-    '#16a34a', // 0-5   verde
-    '#000000', // 5-10  negro
-    '#0d2a52', // 10-15 azul oscuro
-    '#e8701a', // 15-20 naranja
-    '#ca8a04', // 20-25 amarillo oscuro
-    '#7c3aed', // 25-30 morado
-    '#0891b2', // 30-35 cian
-    '#65a30d', // 35-40 verde oliva
-    '#dc2626', // 40-45 rojo
-    '#9333ea', // 45-50 púrpura
-    '#374151', // 50-55 gris oscuro
-    '#b45309', // 55-60 marrón
-  ];
-  if (m > 60) return '#831843'; // más de 1 hora: vino tinto
-  const bucket = Math.min(Math.floor(m / 5), paleta.length - 1);
-  return paleta[bucket];
+  return RANGOS_NOVEDAD.find(r => m <= r.max) || RANGOS_NOVEDAD[RANGOS_NOVEDAD.length - 1];
+}
+
+/** Devuelve solo el color (compatibilidad con el resto del código) */
+function _colorPorMinutos(min) {
+  return _rangoPorMinutos(min).color;
+}
+
+/** Genera la fila de leyenda HTML con todos los rangos (igual al estilo solicitado) */
+function _leyendaRangosHtml() {
+  return `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:10px">
+    ${RANGOS_NOVEDAD.map(r => `
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#333">
+        <span style="width:16px;height:10px;background:${r.color};border-radius:2px;display:inline-block"></span>
+        <span>${esc(r.nombre)} ${r.max === Infinity ? '(≥ 2 h)' : `(≤ ${r.max} min)`}</span>
+      </div>`).join('')}
+  </div>`;
 }
 
 async function _crearMiniDashboardNovedad(n) {
@@ -5312,14 +5320,16 @@ async function _crearMiniDashboardNovedad(n) {
     { label: 'Resolución', valor: resol },
   ].filter(p => p.valor !== '' && p.valor !== null && !isNaN(p.valor) && p.valor >= 0);
 
-  const donaLabels = piezas.length ? piezas.map(p => `${p.label} (${p.valor} min)`) : [`Tiempo total (${total} min)`];
+  const donaLabels = piezas.length
+    ? piezas.map(p => `${p.label} (${p.valor} min — ${_rangoPorMinutos(p.valor).nombre})`)
+    : [`Tiempo total (${total} min — ${_rangoPorMinutos(total).nombre})`];
   const donaData   = piezas.length ? piezas.map(p => p.valor) : [total];
   const donaColors = piezas.length ? piezas.map(p => _colorPorMinutos(p.valor)) : [_colorPorMinutos(total)];
 
   const chartDona = new Chart(c1.getContext('2d'), {
     type: 'doughnut',
     data: { labels: donaLabels, datasets: [{ data: donaData, backgroundColor: donaColors }] },
-    options: { responsive: false, animation: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 13 } } } } }
+    options: { responsive: false, animation: false, plugins: { legend: { display: false } } }
   });
 
   const barrasTodas = [
@@ -5344,7 +5354,7 @@ async function _crearMiniDashboardNovedad(n) {
   chartDona.destroy(); chartBar.destroy();
   c1.remove(); c2.remove();
 
-  return { imgDona, imgBar };
+  return { imgDona, imgBar, detec, resol, total };
 }
 
 async function exportarInformeIndividual(codigo) {
@@ -5352,7 +5362,12 @@ async function exportarInformeIndividual(codigo) {
   if (!n) return;
   const cont = document.getElementById('novedadesInformeImprimible');
 
-  const { imgDona, imgBar } = await _crearMiniDashboardNovedad(n);
+  const { imgDona, imgBar, detec, resol, total } = await _crearMiniDashboardNovedad(n);
+
+  const desglose = [
+    (detec !== '' && detec !== null && !isNaN(detec)) ? `Detección: ${detec} min (${_rangoPorMinutos(detec).nombre})` : '',
+    (resol !== '' && resol !== null && !isNaN(resol)) ? `Resolución: ${resol} min (${_rangoPorMinutos(resol).nombre})` : '',
+  ].filter(Boolean).join(' · ') || `Tiempo total: ${total} min (${_rangoPorMinutos(total).nombre})`;
 
   let html = `
     <div style="text-align:center;border-bottom:3px solid var(--brand);padding-bottom:14px;margin-bottom:20px">
@@ -5361,10 +5376,13 @@ async function exportarInformeIndividual(codigo) {
     </div>
 
     <h2 style="color:var(--brand);font-size:16px;margin:14px 0 10px">⏱ Dashboard de Tiempos de esta Novedad</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">
       <div style="text-align:center"><div style="font-size:13px;font-weight:700;margin-bottom:8px">Distribución del Tiempo</div><img src="${imgDona}" style="width:100%;height:auto"></div>
       <div style="text-align:center"><div style="font-size:13px;font-weight:700;margin-bottom:8px">Tiempos por Etapa (min)</div><img src="${imgBar}" style="width:100%;height:auto"></div>
     </div>
+    <div style="text-align:center;font-size:12px;color:#444;margin-bottom:6px">${esc(desglose)}</div>
+    ${_leyendaRangosHtml()}
+    <div style="margin-bottom:24px"></div>
     <div style="page-break-before:always;padding-top:10px">` + await _construirHtmlInformeNovedad(n, true) + `</div>`;
 
   cont.innerHTML = html;
@@ -5388,10 +5406,12 @@ async function generarInformeConsolidado() {
     </div>
 
     <h2 style="color:var(--brand);font-size:16px;margin:18px 0 10px">⏱ Dashboard de Tiempos</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">
       <div style="text-align:center"><div style="font-size:13px;font-weight:700;margin-bottom:8px">Distribución de Tiempos de Recuperación</div><img src="${imgDona}" style="width:100%;height:auto"></div>
       <div style="text-align:center"><div style="font-size:13px;font-weight:700;margin-bottom:8px">Tiempo de Recuperación por Informe</div><img src="${imgBarras}" style="width:100%;height:auto"></div>
-    </div>`;
+    </div>
+    ${_leyendaRangosHtml()}
+    <div style="margin-bottom:24px"></div>`;
 
   let primero = true;
   for (const n of allNovedades) {
