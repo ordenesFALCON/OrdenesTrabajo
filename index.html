@@ -1377,6 +1377,7 @@ const GOOGLE_CONFIG = {
 ══════════════════════════════════════════════ */
 const OPERACIONES = {
   zipaquira: { nombre: 'O-I ZIPAQUIRA',               bandera: '🇨🇴', clave: 'admin123', spreadsheetId: '1lezTqQJFl_qDftkDJbkk26Pe-u34MO2MA338Gj99zqk' },
+  soacha:    { nombre: 'O-I SOACHA',                   bandera: '🇨🇴', clave: 'admin123', spreadsheetId: 'PEGA_AQUI_EL_ID_DEL_SHEET_DE_SOACHA' },
   antioquia: { nombre: 'SERVICIOTECNICO-ANTIOQUIA',   bandera: '🇨🇴', clave: 'admin123', spreadsheetId: '1cqMzlHEBbzKy9d_GDkVTVarvzL0Es2J1_bSXeKpkHYs' },
   mexico:    { nombre: 'PAVISA-MEXICO',                bandera: '🇲🇽', clave: 'admin123', spreadsheetId: '13kf6xZPfdnxDJmCyKJ0q-1z7ijRak7oMNhzemzq2KpI' },
   peru:      { nombre: 'O-I PERU',                     bandera: '🇵🇪', clave: 'admin123', spreadsheetId: '1UbN_mnzJZBxpaL0mZqE-z0U_CIA-MbGwPiokpmKRjvI' },
@@ -1408,6 +1409,7 @@ let inventarioTabActual = 'dashboard';
 ══════════════════════════════════════════════ */
 const INVENTARIO_CONFIG = {
   zipaquira: 'https://script.google.com/macros/s/AKfycbwlCXJRAmqTUOkD0T9JTUNO0JNTBVSUgnK_LxPYXQueGhmADIKpKOtMNLn9CguLBLjz/exec',
+  soacha:    'PEGA_AQUI_LA_URL_/exec_DEL_APPS_SCRIPT_DE_SOACHA',
   antioquia: 'https://script.google.com/macros/s/AKfycbwxgaViJVFOH7SiZhGG9JmjGAokapALoFsrkiQyA_cKKbtgiz4zORPSBT28mXw9NL_ZUw/exec',
   mexico:    'https://script.google.com/macros/s/AKfycbxazUEsZmHo7XddMlwugP2NL-b9HfYVqglV1LId9wMG5GHz5xM4iH0VaFIt6BNIrLyO/exec',
   peru:      'https://script.google.com/macros/s/AKfycbxjTe-hz1bTaEY36OtBkaa-lbsyL7NsO-WFab51pyLWPYUZNzAVxLc0brL9Nypja0If/exec',
@@ -4469,6 +4471,7 @@ function fmtFecha(f) {
 ══════════════════════════════════════════════ */
 const MONEDAS_POR_OPERACION = {
   zipaquira: { simbolo: '$',   sufijo: '',    locale: 'es-CO' }, // COP
+  soacha:    { simbolo: '$',   sufijo: '',    locale: 'es-CO' }, // COP
   antioquia: { simbolo: '$',   sufijo: '',    locale: 'es-CO' }, // COP
   mexico:    { simbolo: '$',   sufijo: ' MXN',locale: 'es-MX' }, // Peso mexicano
   peru:      { simbolo: 'S/',  sufijo: '',    locale: 'es-PE' }, // Soles
@@ -4766,9 +4769,18 @@ async function _leerHojaGenerica(nombre) {
 }
 
 /** Carga todos los informes de novedad (con sus fotos) desde la hoja de la sede activa */
+/** A diferencia de asegurarHoja(), esta SIEMPRE sobreescribe la fila 1 con los
+ *  encabezados correctos — necesario porque si la hoja ya existía con una
+ *  estructura vieja (de pruebas anteriores), asegurarHoja() no la corrige. */
+async function _forzarEncabezados(nombre, cols) {
+  await asegurarHoja(nombre, cols); // crea la hoja si no existe
+  const colFin = numToCol(cols.length - 1);
+  await sheetsRequest('UPDATE', nombre + '!A1:' + colFin + '1', [cols]);
+}
+
 async function cargarNovedadesDeSheets() {
-  await asegurarHoja(SH.novedades, NOVEDADES_COLS);
-  await asegurarHoja(SH.fotosNovedades, FOTOS_NOVEDADES_COLS);
+  await _forzarEncabezados(SH.novedades, NOVEDADES_COLS);
+  await _forzarEncabezados(SH.fotosNovedades, FOTOS_NOVEDADES_COLS);
 
   const [filas, fotos] = await Promise.all([
     _leerHojaGenerica(SH.novedades),
@@ -5258,7 +5270,24 @@ async function exportarInformeIndividual(codigo) {
   const n = allNovedades.find(x => x.Codigo === codigo);
   if (!n) return;
   const cont = document.getElementById('novedadesInformeImprimible');
-  cont.innerHTML = await _construirHtmlInformeNovedad(n, true);
+
+  const imgDona   = document.getElementById('chartNovTiemposDona')?.toDataURL('image/png') || '';
+  const imgBarras = document.getElementById('chartNovTiemposBarras')?.toDataURL('image/png') || '';
+
+  let html = `
+    <div style="text-align:center;border-bottom:3px solid var(--brand);padding-bottom:14px;margin-bottom:20px">
+      <h1 style="color:var(--brand);font-size:20px;margin-bottom:4px">📝 Informe de Novedad — ${esc(n.Codigo)}</h1>
+      <div style="color:#666;font-size:13px">${esc(OPERACIONES[operacionActual].nombre)} · Generado el ${new Date().toLocaleDateString('es-CO')}</div>
+    </div>
+
+    <h2 style="color:var(--brand);font-size:15px;margin:14px 0 8px">⏱ Dashboard de Tiempos</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
+      <div style="text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:6px">Distribución de Tiempos de Recuperación</div><img src="${imgDona}" style="max-width:100%"></div>
+      <div style="text-align:center"><div style="font-size:11px;font-weight:700;margin-bottom:6px">Tiempo de Recuperación por Informe</div><img src="${imgBarras}" style="max-width:100%"></div>
+    </div>
+    <div style="page-break-before:always;padding-top:10px">` + await _construirHtmlInformeNovedad(n, true) + `</div>`;
+
+  cont.innerHTML = html;
   document.body.classList.add('imprimiendo-novedades');
   setTimeout(() => {
     window.print();
