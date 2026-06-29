@@ -1173,10 +1173,16 @@ body.inv-activo .container { max-width: 1700px; }
           <label style="margin-bottom:4px;display:block">Año</label>
           <select id="dash_anio" onchange="cargarDashboard()" style="margin:0">
             <option value="">Todos</option>
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
             <option value="2026">2026</option>
             <option value="2027">2027</option>
+            <option value="2028">2028</option>
+            <option value="2029">2029</option>
+            <option value="2030">2030</option>
+            <option value="2031">2031</option>
+            <option value="2032">2032</option>
+            <option value="2033">2033</option>
+            <option value="2034">2034</option>
+            <option value="2035">2035</option>
           </select>
         </div>
         <div style="font-size:12px;color:var(--text3);padding-bottom:6px">
@@ -1300,19 +1306,7 @@ body.inv-activo .container { max-width: 1700px; }
       <button class="btn btn-success" onclick="generarInformeConsolidado()">📄 Descargar Consolidado (PDF)</button>
     </div>
 
-    <!-- Dashboard de tiempos -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px">
-      <div class="card">
-        <div class="card-head">⏱ Distribución de Tiempos de Recuperación</div>
-        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposDona" height="220"></canvas><div id="novLeyendaRangos"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head">📊 Tiempo de Recuperación por Informe (min)</div>
-        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposBarras" height="220"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Buscador y filtros -->
+    <!-- Filtro de mes/año (arriba del dashboard) -->
     <div class="card" style="margin-bottom:14px">
       <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
         <input id="novBuscar" placeholder="Buscar por código, título o descripción..." oninput="filtrarNovedadesUI()" style="flex:1;min-width:200px">
@@ -1325,7 +1319,23 @@ body.inv-activo .container { max-width: 1700px; }
         </select>
         <select id="novFiltroAnio" onchange="filtrarNovedadesUI()" style="min-width:110px">
           <option value="">Todos los años</option>
+          <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
+          <option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option>
+          <option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option>
+          <option value="2035">2035</option>
         </select>
+      </div>
+    </div>
+
+    <!-- Dashboard de tiempos -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-head">⏱ Distribución de Tiempos de Recuperación</div>
+        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposDona" height="220"></canvas><div id="novLeyendaRangos"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">📊 Tiempo de Recuperación por Informe (min)</div>
+        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposBarras" height="220"></canvas></div>
       </div>
     </div>
 
@@ -2800,6 +2810,7 @@ async function asegurarHoja(nombre, cols) {
   await crearHojaSiNoExiste(nombre);
   // Leer fila 1
   const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A1:' + colFin + '1'), { headers: hdrs });
+  if (r.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
   const d = await r.json();
   const existing = (d.values && d.values[0]) ? d.values[0] : [];
   const missing  = cols.filter(c => !existing.includes(c));
@@ -2823,6 +2834,10 @@ async function appendHoja(nombre, rows) {
   const url    = base + '/values/' + encodeURIComponent(nombre + '!A:' + colFin) + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
   const resp   = await fetch(url, { method: 'POST', headers: hdrs, body: JSON.stringify({ values: rows }) });
   if (!resp.ok) {
+    if (resp.status === 401) {
+      mostrarModalSesionExpirada();
+      throw new Error('401 Token expirado — cierra sesión y vuelve a entrar');
+    }
     const txt = await resp.text();
     let msg = 'Error ' + resp.status;
     try { msg = JSON.parse(txt).error?.message || msg; } catch(_) {}
@@ -3589,6 +3604,9 @@ async function guardarOrden() {
       } catch(e) {
         sheetsError = e.message;
         console.error('Error Sheets:', e);
+        if (/token expirado/i.test(e.message) || /401/.test(e.message)) {
+          mostrarModalSesionExpirada();
+        }
       }
     } else {
       sheetsError = 'Sin token de Google. Cierra sesión y vuelve a ingresar.';
@@ -3599,8 +3617,9 @@ async function guardarOrden() {
       alert.innerHTML = `✅ Orden <strong>${numOrden}</strong> guardada en Google Sheets. <a href="#" onclick="verDetalle('${numOrden}');showPanel('detalle');return false" style="color:var(--accent2);font-weight:700">Ver orden →</a>`;
       mostrarIndicadorStorage(true);
     } else {
-      alert.className = 'alert alert-ok show';
-      alert.innerHTML = `💾 Orden <strong>${numOrden}</strong> guardada localmente. <a href="#" onclick="verDetalle('${numOrden}');showPanel('detalle');return false" style="color:var(--accent2);font-weight:700">Ver orden →</a>`;
+      // ⚠️ IMPORTANTE: esto NO quedó en el Sheet, solo en este navegador.
+      alert.className = 'alert alert-err show';
+      alert.innerHTML = `⚠️ La orden <strong>${numOrden}</strong> NO se pudo guardar en Google Sheets (${esc(sheetsError)}). Se guardó solo en este navegador como respaldo — vuelve a iniciar sesión y créala de nuevo para que quede en el Sheet. <a href="#" onclick="verDetalle('${numOrden}');showPanel('detalle');return false" style="color:var(--accent2);font-weight:700">Ver orden →</a>`;
       mostrarIndicadorStorage(false);
     }
     actualizarContadorTab && actualizarContadorTab();
@@ -4001,7 +4020,7 @@ async function cargarDashboard() {
 
   // ── Tipos fijos de mantenimiento ──
   const TIPOS     = ['Preventivo','Correctivo','Predictivo','Mejora'];
-  const ESTADOS   = ['Pendiente','Aprobada','En Ejecución','Cerrada','Rechazada'];
+  const ESTADOS   = ['Pendiente','En ejecución','Cerrada'];
   const PRIORIDAD = ['Baja','Media','Alta','Urgente'];
 
   // ── Filtro por mes/año ──
@@ -4062,7 +4081,7 @@ async function cargarDashboard() {
   };
   const colEstado = {
     Pendiente: '#e8701a', Aprobada: '#107C10',
-    'En Ejecución': '#0078d4', Cerrada: '#0d2a52', Rechazada: '#d83b01'
+    'En ejecución': '#0078d4', Cerrada: '#0d2a52', Rechazada: '#d83b01'
   };
   const colPrio = { Baja: '#107C10', Media: '#0078d4', Alta: '#e8701a', Urgente: '#d83b01' };
 
@@ -4855,18 +4874,7 @@ async function inicializarPanelNovedades() {
     wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger)">⚠️ ' + esc(e.message) + '</div>';
     return;
   }
-  _poblarFiltroAnioNovedades();
   filtrarNovedadesUI();
-  renderGraficasNovedades();
-}
-
-/** Llena el selector de años con los años que realmente existen en los informes */
-function _poblarFiltroAnioNovedades() {
-  const sel = document.getElementById('novFiltroAnio');
-  const anioActual = sel.value; // conservar selección si la sigue habiendo
-  const anios = [...new Set(allNovedades.map(n => (n.FechaEvento || '').slice(0, 4)).filter(Boolean))].sort((a,b) => b.localeCompare(a));
-  sel.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
-  if (anios.includes(anioActual)) sel.value = anioActual;
 }
 
 // Lista visible tras aplicar los filtros (mes/año/búsqueda) — el consolidado usa esta, no allNovedades
@@ -4924,6 +4932,7 @@ function filtrarNovedadesUI() {
 
   html += '</tbody></table>';
   wrap.innerHTML = html;
+  renderGraficasNovedades();
 }
 
 /** Calcula minutos de diferencia entre dos horas "HH:MM" */
