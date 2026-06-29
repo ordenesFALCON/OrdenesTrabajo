@@ -1312,10 +1312,20 @@ body.inv-activo .container { max-width: 1700px; }
       </div>
     </div>
 
-    <!-- Buscador -->
+    <!-- Buscador y filtros -->
     <div class="card" style="margin-bottom:14px">
       <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
         <input id="novBuscar" placeholder="Buscar por código, título o descripción..." oninput="filtrarNovedadesUI()" style="flex:1;min-width:200px">
+        <select id="novFiltroMes" onchange="filtrarNovedadesUI()" style="min-width:140px">
+          <option value="">Todos los meses</option>
+          <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+          <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+          <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+        <select id="novFiltroAnio" onchange="filtrarNovedadesUI()" style="min-width:110px">
+          <option value="">Todos los años</option>
+        </select>
       </div>
     </div>
 
@@ -4824,14 +4834,15 @@ async function cargarNovedadesDeSheets() {
   return allNovedades;
 }
 
-/** Genera el siguiente código INF-N-XX (correlativo según los que ya existen) */
-function _siguienteCodigoNovedad() {
+/** Genera el siguiente código (INF-N-XX o INF-E-XX), cada prefijo con su propia numeración */
+function _siguienteCodigo(prefijo) {
   let max = 0;
+  const re = new RegExp(prefijo + '-(\\d+)');
   allNovedades.forEach(n => {
-    const m = (n.Codigo || '').match(/INF-N-(\d+)/);
+    const m = (n.Codigo || '').match(re);
     if (m) max = Math.max(max, parseInt(m[1], 10));
   });
-  return 'INF-N-' + String(max + 1).padStart(2, '0');
+  return prefijo + '-' + String(max + 1).padStart(2, '0');
 }
 
 /** Se llama cada vez que se entra a la pestaña Novedades */
@@ -4844,23 +4855,43 @@ async function inicializarPanelNovedades() {
     wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger)">⚠️ ' + esc(e.message) + '</div>';
     return;
   }
+  _poblarFiltroAnioNovedades();
   filtrarNovedadesUI();
   renderGraficasNovedades();
 }
 
+/** Llena el selector de años con los años que realmente existen en los informes */
+function _poblarFiltroAnioNovedades() {
+  const sel = document.getElementById('novFiltroAnio');
+  const anioActual = sel.value; // conservar selección si la sigue habiendo
+  const anios = [...new Set(allNovedades.map(n => (n.FechaEvento || '').slice(0, 4)).filter(Boolean))].sort((a,b) => b.localeCompare(a));
+  sel.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+  if (anios.includes(anioActual)) sel.value = anioActual;
+}
+
+// Lista visible tras aplicar los filtros (mes/año/búsqueda) — el consolidado usa esta, no allNovedades
+let novedadesFiltradasActual = [];
+
 function filtrarNovedadesUI() {
   const texto = (document.getElementById('novBuscar').value || '').toLowerCase().trim();
+  const mes   = document.getElementById('novFiltroMes').value;
+  const anio  = document.getElementById('novFiltroAnio').value;
 
   let lista = allNovedades.slice();
+  if (anio) lista = lista.filter(n => (n.FechaEvento || '').slice(0, 4) === anio);
+  if (mes)  lista = lista.filter(n => (n.FechaEvento || '').slice(5, 7) === mes);
   if (texto) lista = lista.filter(n =>
     (n.Codigo||'').toLowerCase().includes(texto) ||
     (n.Titulo||'').toLowerCase().includes(texto) ||
     (n.DescripcionProblema||'').toLowerCase().includes(texto)
   );
 
+  novedadesFiltradasActual = lista;
+
   const wrap = document.getElementById('novTablaWrap');
   if (!lista.length) {
-    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">No hay informes registrados todavía.</div>';
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">No hay informes que coincidan con el filtro.</div>';
+    renderGraficasNovedades();
     return;
   }
 
@@ -4916,7 +4947,8 @@ function _viñetasHtml(texto) {
 /** Abre el modal de Nuevo Informe, o edición si se pasa un código existente */
 function abrirModalNovedad(codigo) {
   const existente = codigo ? allNovedades.find(n => n.Codigo === codigo) : null;
-  const codigoNuevo = existente ? existente.Codigo : _siguienteCodigoNovedad();
+  const tipoInicial = existente ? (existente.Codigo.startsWith('INF-E') ? 'INF-E' : 'INF-N') : 'INF-N';
+  const codigoNuevo = existente ? existente.Codigo : _siguienteCodigo(tipoInicial);
 
   const overlay = document.createElement('div');
   overlay.id = 'modalNovedadOverlay';
@@ -4924,10 +4956,22 @@ function abrirModalNovedad(codigo) {
   overlay.innerHTML = `
     <div style="background:white;border-radius:12px;max-width:680px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.3)">
       <div style="background:var(--brand);color:white;padding:14px 20px;font-weight:700;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center">
-        <span>📝 ${existente ? 'Editar' : 'Nuevo'} Informe — ${esc(codigoNuevo)}</span>
+        <span>📝 ${existente ? 'Editar' : 'Nuevo'} Informe — <span id="nov_codigoDisplay">${esc(codigoNuevo)}</span></span>
         <span onclick="document.getElementById('modalNovedadOverlay').remove()" style="cursor:pointer;font-size:18px">✕</span>
       </div>
       <div style="padding:20px">
+
+        ${!existente ? `
+        <div class="field" style="margin-bottom:14px">
+          <label>Tipo de Informe *</label>
+          <select id="nov_tipoInforme" onchange="actualizarCodigoPorTipo()">
+            <option value="INF-N">📋 Informe por Novedad (INF-N-XX)</option>
+            <option value="INF-E">⚡ Informe por Energía (INF-E-XX)</option>
+          </select>
+        </div>` : `
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+          Tipo: <b>${existente.Codigo.startsWith('INF-E') ? '⚡ Informe por Energía' : '📋 Informe por Novedad'}</b>
+        </div>`}
 
         <div class="field" style="margin-bottom:12px"><label>Título del informe *</label>
           <input id="nov_titulo" placeholder="Ej: Caída de presión sistema de alta presión" value="${esc(existente?.Titulo||'')}"></div>
@@ -4978,23 +5022,33 @@ function abrirModalNovedad(codigo) {
         </div>
 
         <div id="nov_msg" style="font-size:12px;color:var(--danger);margin-bottom:10px"></div>
-        <button class="btn btn-primary" style="width:100%" onclick="guardarNovedad(${existente ? `'${esc(existente.Codigo)}'` : `'${esc(codigoNuevo)}'`}, ${existente ? 'true' : 'false'})">💾 Guardar Informe</button>
+        <button class="btn btn-primary" style="width:100%" onclick="guardarNovedad()">💾 Guardar Informe</button>
 
         <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:14px">
           <div style="font-weight:700;color:var(--brand);margin-bottom:8px">📷 Evidencias gráficas del evento</div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Puedes agregar fotos/gráficas ya mismo, antes de guardar el informe. Cada una lleva su propio título y descripción.</div>
           <label style="display:inline-flex;align-items:center;gap:6px;background:var(--brand);color:white;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px">
             📷 Agregar foto/gráfica
-            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="abrirFormFotoNovedad(this, '${esc(codigoNuevo)}')">
+            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="abrirFormFotoNovedad(this)">
           </label>
           <div id="nov_galeria_fotos"></div>
         </div>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  overlay._codigoFotos = codigoNuevo;
+  overlay._codigoActual = codigoNuevo;
+  overlay._esEdicion = !!existente;
   overlay._fotosLocal = existente ? [...(existente.fotos || [])] : [];
   renderGaleriaFotosNovedadLocal(overlay._fotosLocal);
+}
+
+/** Al cambiar el Tipo de Informe (Novedad/Energía), recalcula el código correlativo */
+function actualizarCodigoPorTipo() {
+  const overlay = document.getElementById('modalNovedadOverlay');
+  const tipo = document.getElementById('nov_tipoInforme').value;
+  const nuevoCodigo = _siguienteCodigo(tipo);
+  overlay._codigoActual = nuevoCodigo;
+  document.getElementById('nov_codigoDisplay').textContent = nuevoCodigo;
 }
 
 function actualizarTiempoTotalNovedad() {
@@ -5004,7 +5058,11 @@ function actualizarTiempoTotalNovedad() {
   if (calc !== '') document.getElementById('nov_tiempoTotal').value = calc;
 }
 
-async function guardarNovedad(codigo, esEdicion) {
+async function guardarNovedad() {
+  const overlay = document.getElementById('modalNovedadOverlay');
+  const codigo = overlay._codigoActual;
+  const esEdicion = overlay._esEdicion;
+
   const titulo = document.getElementById('nov_titulo').value.trim();
   const fechaEvento = document.getElementById('nov_fechaEvento').value;
   const horaEvento = document.getElementById('nov_horaEvento').value;
@@ -5097,7 +5155,7 @@ async function subirFotoNovedad(file, codigo, titulo, descripcion) {
 }
 
 /** Pide título y descripción antes de subir la foto a un informe */
-async function abrirFormFotoNovedad(inputEl, codigo) {
+async function abrirFormFotoNovedad(inputEl) {
   const file = inputEl.files && inputEl.files[0];
   if (!file) return;
   inputEl.value = '';
@@ -5113,16 +5171,17 @@ async function abrirFormFotoNovedad(inputEl, codigo) {
       <div id="foto_nov_msg" style="font-size:12px;color:var(--danger);margin-bottom:10px"></div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('modalFotoNovedadOverlay').remove()">Cancelar</button>
-        <button class="btn btn-primary" style="flex:1" onclick="confirmarSubidaFotoNovedad('${esc(codigo)}')">Subir foto</button>
+        <button class="btn btn-primary" style="flex:1" onclick="confirmarSubidaFotoNovedad()">Subir foto</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
   overlay._archivoPendiente = file;
 }
 
-async function confirmarSubidaFotoNovedad(codigo) {
+async function confirmarSubidaFotoNovedad() {
   const overlayFoto = document.getElementById('modalFotoNovedadOverlay');
   const overlayNov  = document.getElementById('modalNovedadOverlay');
+  const codigo = overlayNov ? overlayNov._codigoActual : null;
   const file = overlayFoto._archivoPendiente;
   const titulo = document.getElementById('foto_nov_titulo').value.trim();
   const descripcion = document.getElementById('foto_nov_desc').value.trim();
@@ -5182,7 +5241,7 @@ function renderGraficasNovedades() {
 
   // Dona: distribución de novedades por rango de tiempo de recuperación
   const conteoRangos = RANGOS_NOVEDAD.map(r => 0);
-  allNovedades.forEach(n => {
+  novedadesFiltradasActual.forEach(n => {
     const idx = RANGOS_NOVEDAD.indexOf(_rangoPorMinutos(n.TiempoTotalMin));
     conteoRangos[idx]++;
   });
@@ -5196,7 +5255,7 @@ function renderGraficasNovedades() {
   if (leyendaDiv) leyendaDiv.innerHTML = _leyendaRangosHtml();
 
   // Barras: tiempo de recuperación por informe (código), coloreadas por su propio rango
-  const ordenadas = allNovedades.slice().sort((a,b)=>(a.FechaEvento||'').localeCompare(b.FechaEvento||''));
+  const ordenadas = novedadesFiltradasActual.slice().sort((a,b)=>(a.FechaEvento||'').localeCompare(b.FechaEvento||''));
   makeChart('chartNovTiemposBarras', '_chartNovTiemposBarras', {
     type: 'bar',
     data: { labels: ordenadas.map(n => n.Codigo), datasets: [{ label: 'Minutos',
@@ -5392,10 +5451,17 @@ async function generarInformeConsolidado() {
   const imgDona    = document.getElementById('chartNovTiemposDona')?.toDataURL('image/png') || '';
   const imgBarras  = document.getElementById('chartNovTiemposBarras')?.toDataURL('image/png') || '';
 
+  const mesNombres = { '01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo','06':'Junio',
+    '07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre' };
+  const mesSel  = document.getElementById('novFiltroMes').value;
+  const anioSel = document.getElementById('novFiltroAnio').value;
+  const etiquetaFiltro = [mesSel ? mesNombres[mesSel] : '', anioSel].filter(Boolean).join(' de ') || 'Todos los periodos';
+
   let html = `
     <div style="text-align:center;border-bottom:3px solid var(--brand);padding-bottom:14px;margin-bottom:20px">
       <h1 style="color:var(--brand);font-size:22px;margin-bottom:4px">📝 Informes de Novedades Operativas de Planta</h1>
       <div style="color:#666;font-size:13px">${esc(OPERACIONES[operacionActual].nombre)} · Generado el ${new Date().toLocaleDateString('es-CO')}</div>
+      <div style="color:var(--brand);font-size:13px;font-weight:700;margin-top:4px">Periodo: ${esc(etiquetaFiltro)} · ${novedadesFiltradasActual.length} informe(s)</div>
     </div>
 
     <h2 style="color:var(--brand);font-size:16px;margin:18px 0 10px">⏱ Dashboard de Tiempos</h2>
@@ -5407,7 +5473,7 @@ async function generarInformeConsolidado() {
     <div style="margin-bottom:24px"></div>`;
 
   let primero = true;
-  for (const n of allNovedades) {
+  for (const n of novedadesFiltradasActual) {
     html += `<div style="${primero ? '' : 'page-break-before:always;'}padding-top:10px">` + await _construirHtmlInformeNovedad(n, true) + `</div>`;
     primero = false;
   }
