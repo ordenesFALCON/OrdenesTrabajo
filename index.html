@@ -450,7 +450,7 @@ body.inv-activo .container { max-width: 1700px; }
   background: var(--brand-light); color: var(--brand);
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 1px; padding: 7px 18px;
-  border-left: 3px solid var(--brand);
+  border-left: 4px solid var(--accent);
 }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; }
 .detail-field { padding: 10px 18px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -497,9 +497,11 @@ body.inv-activo .container { max-width: 1700px; }
 
 /* Print */
 @media print {
+  @page { margin: 16mm 14mm; }
   .app-header, .nav-tabs, .action-bar,
   #panel-nueva, #panel-lista, #panel-dashboard, #panel-novedades, #sidebarOperaciones { display: none !important; }
   #panel-detalle { display: block !important; }
+  .container { max-width: 760px !important; margin: 0 auto !important; }
   body { background: white; }
   .card { box-shadow: none; border: 1px solid #ddd; }
   /* Ocultar botones de navegación en el PDF */
@@ -602,6 +604,111 @@ body.inv-activo .container { max-width: 1700px; }
 </div>
 
 <div class="container">
+
+  <!-- ════════════ PANEL: PORTADA / SISTEMA OPTIMIZADO ════════════ -->
+  <div id="panel-inicio" class="panel active">
+
+    <!-- Hero -->
+    <div style="background:linear-gradient(135deg,var(--brand) 0%,#081d3a 100%);border-radius:16px;padding:48px 36px;text-align:center;margin-bottom:28px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--accent),#ffb066,var(--accent))"></div>
+      <img src="" id="portadaLogoImg" alt="SolucionAIRE" style="height:64px;object-fit:contain;margin-bottom:18px">
+      <h1 style="color:white;font-size:30px;font-weight:800;letter-spacing:.5px;margin-bottom:8px">🚀 SISTEMA OPTIMIZADO <span style="color:var(--accent)">SolucionAIRE</span></h1>
+      <p style="color:rgba(255,255,255,.8);font-size:14px;max-width:640px;margin:0 auto">
+        Plataforma integral de gestión de mantenimiento, inventario y novedades operativas — diseñada para centralizar y agilizar toda la operación de SolucionAIRE en una sola herramienta.
+      </p>
+    </div>
+
+    <!-- Tarjetas de módulos -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:24px">
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">➕</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Órdenes de Trabajo</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Crea, autoriza y ejecuta órdenes de mantenimiento preventivo, correctivo, predictivo y de mejora. Registra tareas, repuestos, insumos, firmas digitales y evidencia fotográfica.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">⏳</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Pendientes y Realizadas</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Visualiza de un vistazo qué órdenes están pendientes de ejecución y cuáles ya fueron cerradas, con filtros por tipo de mantenimiento y búsqueda instantánea.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">📋</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Todas las Órdenes</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Historial completo de todas las órdenes registradas en la sede activa, con acceso al detalle imprimible/PDF de cada una, listo para auditoría o archivo.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">📊</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Dashboard</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Gráficas dinámicas por tipo de mantenimiento, estado de las órdenes, prioridad y costos por equipo, filtrables por mes y año (2026-2035).
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">📝</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Novedades Operativas</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Documenta informes de novedad (INF-N) o energía (INF-E) con análisis del evento, acciones correctivas, evidencias gráficas y dashboard de tiempos de recuperación clasificados por rango.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">📦</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Inventario</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Sistema de inventario propio por cada sede: productos, movimientos de stock, alertas de inventario bajo y reportes — integrado directamente dentro de la plataforma.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">🌐</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Multi-sede</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Una sola plataforma para todas las operaciones: Zipaquirá, Soacha, Antioquia, México y Perú — cada una con su propia hoja de cálculo, moneda local e inventario independiente.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-top:4px solid var(--accent)">
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:30px;margin-bottom:8px">🔒</div>
+          <div style="font-weight:800;color:var(--brand);font-size:15px;margin-bottom:6px">Acceso Seguro</div>
+          <div style="font-size:12.5px;color:var(--text2);line-height:1.5">
+            Inicio de sesión con Google, secciones administrativas protegidas con contraseña, y datos respaldados en tiempo real en Google Sheets de cada sede.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Llamado a la acción -->
+    <div style="text-align:center;padding:24px 0 12px">
+      <button class="btn btn-primary" style="padding:12px 28px;font-size:14px" onclick="showPanel('pendientes')">⏳ Ir a Órdenes Pendientes</button>
+      <button class="btn btn-ghost" style="padding:12px 28px;font-size:14px;margin-left:10px" onclick="showPanel('dashboard')">📊 Ver Dashboard</button>
+    </div>
+  </div>
 
   <!-- ════════════ PANEL: NUEVA ORDEN ════════════ -->
   <div id="panel-nueva" class="panel">
@@ -781,7 +888,7 @@ body.inv-activo .container { max-width: 1700px; }
   </div>
 
   <!-- ════════════ PANEL: PENDIENTES ════════════ -->
-  <div id="panel-pendientes" class="panel active">
+  <div id="panel-pendientes" class="panel">
 
     <!-- ── Vista: lista de pendientes ── -->
     <div id="subpanel-pend-lista">
@@ -1375,7 +1482,7 @@ body.inv-activo .container { max-width: 1700px; }
 </div><!-- /container -->
 
 <!-- Contenedor del informe de Novedades, solo visible al imprimir/exportar PDF -->
-<div id="novedadesInformeImprimible" style="display:none;padding:24px;max-width:900px;margin:0 auto;font-family:'Segoe UI',sans-serif"></div>
+<div id="novedadesInformeImprimible" style="display:none;padding:24px;max-width:760px;margin:0 auto;font-family:'Segoe UI',sans-serif"></div>
 
 
 <!-- ════════════════════════════════════════════════════
@@ -1506,6 +1613,16 @@ function renderSidebarOperaciones() {
   }).join('');
 
   sidebar.innerHTML = `
+    <div onclick="showPanel('inicio')"
+      style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;font-size:13px;font-weight:700;
+             color:white;background:${document.getElementById('panel-inicio')?.classList.contains('active') ? 'rgba(232,112,26,.22)' : 'transparent'};
+             border-left:3px solid ${document.getElementById('panel-inicio')?.classList.contains('active') ? 'var(--accent)' : 'transparent'}"
+      onmouseover="this.style.background='rgba(232,112,26,.14)'"
+      onmouseout="this.style.background='${document.getElementById('panel-inicio')?.classList.contains('active') ? 'rgba(232,112,26,.22)' : 'transparent'}'">
+      <span style="font-size:18px">🚀</span>
+      <span style="flex:1;line-height:1.25">Sistema Optimizado</span>
+    </div>
+    <div style="border-top:1px solid rgba(255,255,255,.12);margin:8px 0"></div>
     <div style="padding:10px 16px 6px;font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.45);text-transform:uppercase">🌐 Operaciones</div>
     ${items}
     <div style="border-top:1px solid rgba(255,255,255,.12);margin:8px 0"></div>
@@ -1740,6 +1857,9 @@ window.addEventListener('load', async () => {
   document.getElementById('userInitials').textContent = currentUser.initials;
   document.getElementById('f_solicitadaPor').value    = currentUser.name;
 
+  const portadaLogo = document.getElementById('portadaLogoImg');
+  if (portadaLogo) portadaLogo.src = getLogoDataUrl();
+
   cargarOrdenes().then(renderPendientes);
 });
 
@@ -1762,7 +1882,7 @@ function showPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
-  const tabs = { nueva:0, pendientes:1, realizadas:2, lista:3, dashboard:4, novedades:5 };
+  const tabs = { nueva:0, pendientes:1, realizadas:2, lista:3, dashboard:4, novedades:5, inicio:-1 };
   const t = document.querySelectorAll('.nav-tab')[tabs[name]];
   if (t) t.classList.add('active');
 
@@ -1771,6 +1891,7 @@ function showPanel(name) {
   if (name === 'lista')        cargarOrdenes();
   if (name === 'dashboard')    cargarDashboard();
   if (name === 'novedades')    inicializarPanelNovedades();
+  if (typeof renderSidebarOperaciones === 'function') renderSidebarOperaciones();
 }
 
 /* ══════════════════════════════════════════════
@@ -3779,6 +3900,9 @@ async function verDetalle(id) {
 
   let html = '';
 
+  // ── Encabezado con logo (igual en todos los PDFs del sistema) ──
+  html += _encabezadoPdfHtml('Orden de Trabajo', OPERACIONES[operacionActual]?.nombre || 'SolucionAIRE · Atera');
+
   // ── Título simple (sin timeline, eso solo aparece en "Completar") ──
   html += '<div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
   html += '<div style="font-size:15px;font-weight:600">' + esc(orden.Title||'—') + '</div>';
@@ -4494,6 +4618,28 @@ function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/** Devuelve el logo de SolucionAIRE/Atera ya cargado en el header de la app
+ *  (evita duplicar el base64 gigante en otra parte del código). */
+function getLogoDataUrl() {
+  const img = document.querySelector('.header-logo-img');
+  return img ? img.src : '';
+}
+
+/** Encabezado profesional con logo arriba a la izquierda, para usar en
+ *  cualquier PDF generado por el sistema (Órdenes de Trabajo y Novedades). */
+function _encabezadoPdfHtml(titulo, subtitulo) {
+  const logo = getLogoDataUrl();
+  return `
+    <div style="display:flex;align-items:center;gap:16px;border-bottom:4px solid var(--accent);padding-bottom:14px;margin-bottom:22px">
+      ${logo ? `<img src="${logo}" style="height:48px;object-fit:contain;flex-shrink:0">` : ''}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;color:var(--brand);font-size:18px;line-height:1.25">${esc(titulo)}</div>
+        ${subtitulo ? `<div style="font-size:12.5px;color:#666;margin-top:2px">${esc(subtitulo)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
 function fmtFecha(f) {
   if (!f || f==='null' || f==='') return '—';
   try { return new Date(f).toLocaleDateString('es-CO',{year:'numeric',month:'2-digit',day:'2-digit'}); }
@@ -5279,7 +5425,7 @@ function renderGraficasNovedades() {
 async function _construirHtmlInformeNovedad(n, incluirEncabezadoMarca) {
   let html = '';
   if (incluirEncabezadoMarca) {
-    html += `<div style="text-align:right;font-size:12px;color:#666;margin-bottom:4px">${esc(n.Codigo)}</div>`;
+    html += _encabezadoPdfHtml('Informe de Novedad', n.Codigo);
   }
   html += `
     <h1 style="color:var(--brand);font-size:19px;text-align:center;margin-bottom:18px">${esc(n.Titulo)}</h1>
@@ -5291,20 +5437,20 @@ async function _construirHtmlInformeNovedad(n, incluirEncabezadoMarca) {
       <b>Tiempo total de recuperación:</b> ${esc(n.TiempoTotalMin)} minutos
     </div>
 
-    <h3 style="color:var(--brand);font-size:14px;margin:14px 0 6px">Descripción del problema</h3>
+    <h3 style="color:var(--brand);font-size:14px;margin:18px 0 8px;border-left:4px solid var(--accent);padding-left:8px">Descripción del problema</h3>
     <div style="font-size:13px;line-height:1.5;text-align:justify">${esc(n.DescripcionProblema).replace(/\n/g,'<br>')}</div>
 
-    ${n.AnalisisEvento ? `<h3 style="color:var(--brand);font-size:14px;margin:14px 0 6px">Análisis del evento</h3>
+    ${n.AnalisisEvento ? `<h3 style="color:var(--brand);font-size:14px;margin:18px 0 8px;border-left:4px solid var(--accent);padding-left:8px">Análisis del evento</h3>
     <div style="font-size:13px;line-height:1.5;text-align:justify">${esc(n.AnalisisEvento).replace(/\n/g,'<br>')}</div>` : ''}
 
-    ${n.Consecuencias ? `<h3 style="color:var(--brand);font-size:14px;margin:14px 0 6px">Consecuencias del evento</h3>
+    ${n.Consecuencias ? `<h3 style="color:var(--brand);font-size:14px;margin:18px 0 8px;border-left:4px solid var(--accent);padding-left:8px">Consecuencias del evento</h3>
     ${_viñetasHtml(n.Consecuencias)}` : ''}
 
-    ${n.AccionesEjecutadas ? `<h3 style="color:var(--brand);font-size:14px;margin:14px 0 6px">Acciones ejecutadas durante la contingencia</h3>
+    ${n.AccionesEjecutadas ? `<h3 style="color:var(--brand);font-size:14px;margin:18px 0 8px;border-left:4px solid var(--accent);padding-left:8px">Acciones ejecutadas durante la contingencia</h3>
     ${_viñetasHtml(n.AccionesEjecutadas)}` : ''}`;
 
   if (n.fotos && n.fotos.length) {
-    html += `<h3 style="color:var(--brand);font-size:14px;margin:14px 0 8px;page-break-before:always">Evidencias gráficas del evento</h3>
+    html += `<h3 style="color:var(--brand);font-size:14px;margin:18px 0 8px;border-left:4px solid var(--accent);padding-left:8px;page-break-before:always">Evidencias gráficas del evento</h3>
       <div style="display:flex;flex-wrap:wrap;gap:12px">`;
     for (const f of n.fotos) {
       let dataUrl = f.urlVer;
@@ -5324,10 +5470,10 @@ async function _construirHtmlInformeNovedad(n, incluirEncabezadoMarca) {
   }
 
   html += `
-    ${n.AccionesCorrectivas ? `<h3 style="color:var(--brand);font-size:14px;margin:14px 0 6px">Acciones correctivas</h3>
+    ${n.AccionesCorrectivas ? `<h3 style="color:var(--brand);font-size:14px;margin:18px 0 8px;border-left:4px solid var(--accent);padding-left:8px">Acciones correctivas</h3>
     ${_viñetasHtml(n.AccionesCorrectivas)}` : ''}
 
-    ${n.AccionesMejora ? `<h3 style="color:var(--brand);font-size:14px;margin:14px 0 6px">Acciones de mejora</h3>
+    ${n.AccionesMejora ? `<h3 style="color:var(--brand);font-size:14px;margin:18px 0 8px;border-left:4px solid var(--accent);padding-left:8px">Acciones de mejora</h3>
     ${_viñetasHtml(n.AccionesMejora)}` : ''}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:30px;font-size:12px;color:#000">
@@ -5430,10 +5576,7 @@ async function exportarInformeIndividual(codigo) {
   const { imgDona, total, rango } = await _crearMiniDashboardNovedad(n);
 
   let html = `
-    <div style="text-align:center;border-bottom:3px solid var(--brand);padding-bottom:14px;margin-bottom:20px">
-      <h1 style="color:var(--brand);font-size:20px;margin-bottom:4px">📝 Informe de Novedad — ${esc(n.Codigo)}</h1>
-      <div style="color:#666;font-size:13px">${esc(OPERACIONES[operacionActual].nombre)} · Generado el ${new Date().toLocaleDateString('es-CO')}</div>
-    </div>
+    ${_encabezadoPdfHtml('Informe de Novedad — ' + n.Codigo, OPERACIONES[operacionActual].nombre + ' · Generado el ' + new Date().toLocaleDateString('es-CO'))}
 
     <h2 style="color:var(--brand);font-size:16px;margin:14px 0 14px;text-align:center">⏱ Tiempo de Recuperación de esta Novedad</h2>
     <div style="max-width:380px;margin:0 auto 6px">
@@ -5467,11 +5610,9 @@ async function generarInformeConsolidado() {
   const etiquetaFiltro = [mesSel ? mesNombres[mesSel] : '', anioSel].filter(Boolean).join(' de ') || 'Todos los periodos';
 
   let html = `
-    <div style="text-align:center;border-bottom:3px solid var(--brand);padding-bottom:14px;margin-bottom:20px">
-      <h1 style="color:var(--brand);font-size:22px;margin-bottom:4px">📝 Informes de Novedades Operativas de Planta</h1>
-      <div style="color:#666;font-size:13px">${esc(OPERACIONES[operacionActual].nombre)} · Generado el ${new Date().toLocaleDateString('es-CO')}</div>
-      <div style="color:var(--brand);font-size:13px;font-weight:700;margin-top:4px">Periodo: ${esc(etiquetaFiltro)} · ${novedadesFiltradasActual.length} informe(s)</div>
-    </div>
+    ${_encabezadoPdfHtml('Informes de Novedades Operativas de Planta',
+      OPERACIONES[operacionActual].nombre + ' · Generado el ' + new Date().toLocaleDateString('es-CO') +
+      ' · Periodo: ' + etiquetaFiltro + ' · ' + novedadesFiltradasActual.length + ' informe(s)')}
 
     <h2 style="color:var(--brand);font-size:16px;margin:18px 0 10px">⏱ Dashboard de Tiempos</h2>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">
@@ -5483,7 +5624,7 @@ async function generarInformeConsolidado() {
 
   let primero = true;
   for (const n of novedadesFiltradasActual) {
-    html += `<div style="${primero ? '' : 'page-break-before:always;'}padding-top:10px">` + await _construirHtmlInformeNovedad(n, true) + `</div>`;
+    html += `<div style="${primero ? '' : 'page-break-before:always;'}padding-top:10px">` + await _construirHtmlInformeNovedad(n, !primero) + `</div>`;
     primero = false;
   }
 
