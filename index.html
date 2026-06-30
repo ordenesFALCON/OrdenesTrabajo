@@ -1660,6 +1660,18 @@ const INVENTARIO_CONFIG = {
   peru:      'https://script.google.com/macros/s/AKfycbxjTe-hz1bTaEY36OtBkaa-lbsyL7NsO-WFab51pyLWPYUZNzAVxLc0brL9Nypja0If/exec',
 };
 
+/* ══════════════════════════════════════════════
+   FOTOS (Órdenes y Novedades) — Apps Script APARTE
+   del de Inventario. Sube y sirve las fotos siempre
+   desde la misma cuenta dueña del proyecto, así que
+   CUALQUIER persona que abra el sistema puede verlas
+   y subir las suyas, sin depender de su propio login
+   ni permisos de Google Drive.
+   ► Pega aquí la URL "/exec" una vez despliegues el
+     Apps Script de fotos (ver fotos-apps-script.gs).
+══════════════════════════════════════════════ */
+const FOTOS_CONFIG_URL = 'https://script.google.com/macros/s/AKfycbwMjjruMMWN1GnNaC4ERdzhMdh8Bvi02BtRJuD_1BOifNCiGqZuQ6UTa_v69GsazH-UqQ/exec';
+
 // Filtra el listado de Stock por "Grupo" según el ítem del menú elegido
 const INVENTARIO_FILTROS_GRUPO = {
   stockGeneral:   null, // sin filtro: muestra todo
@@ -2567,6 +2579,17 @@ function descargarOrdenPDF(id) {
 <div class="section-title">Medidas de Seguridad</div>
 <div style="padding:10px;background:#f5f5f5;border-radius:4px;margin-bottom:16px;white-space:pre-wrap;font-size:12px">${esc(o.MedidasSeguridad||'—')}</div>
 
+${(Array.isArray(o.fotos) && o.fotos.length) ? `<div class="section-title">Registro Fotográfico</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px">
+  ${o.fotos.map(f => `
+    <div style="width:260px;text-align:center;page-break-inside:avoid">
+      <div style="width:100%;height:220px;border:1px solid #ddd;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">
+        <img src="${_urlFoto(f.driveFileId)}" style="max-width:100%;max-height:100%;object-fit:contain">
+      </div>
+      ${f.tareaDescripcion ? `<div style="font-size:10px;color:#666;margin-top:4px">${esc(f.tareaDescripcion)}</div>` : ''}
+    </div>`).join('')}
+</div>` : ''}
+
 ${o.FirmaCreador ? `<div class="section-title">Firma del solicitante</div>
 <div style="padding:10px;background:#f5f5f5;border-radius:4px;margin-bottom:16px">
   <img src="${o.FirmaCreador}" style="max-height:70px;max-width:260px">
@@ -3197,32 +3220,46 @@ async function _driveHacerPublico(fileId) {
  * @returns {Object} fila de foto guardada { driveFileId, urlVer, urlDescarga, tareaDescripcion, subidoPor, fecha }
  */
 async function subirFotoOrden(file, numeroOrden, tareaDescripcion) {
-  if (!googleAccessToken) throw new Error('Sin token Google — vuelve a iniciar sesión');
   if (!file.type.startsWith('image/')) throw new Error('El archivo seleccionado no es una imagen');
 
-  // 1. Carpeta raíz "Fotos OT" y subcarpeta por número de orden
-  const carpetaRaiz  = await _driveBuscarOCrearCarpeta('Fotos OT - ' + OPERACIONES[operacionActual].nombre, null);
-  const carpetaOrden = await _driveBuscarOCrearCarpeta(numeroOrden, carpetaRaiz);
+  // 1. Convertir el archivo a base64 (se manda al Apps Script, no a Drive directo)
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
-  // 2. Subir archivo
-  const nombreArchivo = `${numeroOrden}_${Date.now()}.jpg`;
-  const subida = await _driveSubirArchivo(file, carpetaOrden, nombreArchivo);
+  const subidoPor = currentUser?.name || currentUser?.email || '';
+  const fecha     = new Date().toISOString();
 
-  // 3. Hacerlo visible por link (cualquiera con el enlace puede ver)
-  await _driveHacerPublico(subida.id);
+  // 2. Subirla al Apps Script de fotos: la guarda SIEMPRE en la misma cuenta
+  //    dueña del proyecto, sin importar quién la suba.
+  const resp = await fetch(FOTOS_CONFIG_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      accion: 'subirFoto',
+      tipo: 'orden',
+      codigo: numeroOrden,
+      nombreArchivo: `${numeroOrden}_${Date.now()}.jpg`,
+      mimeType: file.type || 'image/jpeg',
+      base64,
+      tareaDescripcion: tareaDescripcion || '',
+      subidoPor,
+      correo: currentUser?.email || ''
+    })
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error(data.mensaje || 'Error al subir la foto');
 
-  const urlVer      = `https://drive.google.com/thumbnail?id=${subida.id}&sz=w1000`;
-  const urlDescarga = `https://drive.google.com/uc?export=download&id=${subida.id}`;
-  const fecha       = new Date().toISOString();
-  const subidoPor   = currentUser.name || currentUser.email || '';
-
-  // 4. Registrar fila en hoja Fotos
+  // 3. Registrar fila en hoja Fotos (igual que antes)
   await asegurarHoja(SH.fotos, FOTOS_COLS);
   await appendHoja(SH.fotos, [[
-    numeroOrden, '', subida.id, urlVer, urlDescarga, tareaDescripcion || '', subidoPor, fecha
+    numeroOrden, '', data.driveFileId, data.urlVer, data.urlVer, tareaDescripcion || '', subidoPor, fecha
   ]]);
 
-  return { driveFileId: subida.id, urlVer, urlDescarga, tareaDescripcion: tareaDescripcion||'', subidoPor, fecha };
+  return { driveFileId: data.driveFileId, urlVer: data.urlVer, urlDescarga: data.urlVer, tareaDescripcion: tareaDescripcion||'', subidoPor, fecha };
 }
 
 /**
@@ -3273,39 +3310,30 @@ async function eliminarFotoOrden(ordenId, driveFileId, contId) {
   guardarLocal();
   renderFotosOrden(o, contId, false);
 
-  // Borrar también de Drive (best-effort, no bloquea si falla)
+  // Borrar también del Drive central (best-effort, no bloquea si falla)
   try {
-    await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}`, {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer ' + googleAccessToken }
+    await fetch(FOTOS_CONFIG_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ accion: 'eliminarFoto', driveFileId, correo: currentUser?.email || '' })
     });
-  } catch(e) { console.warn('No se pudo borrar de Drive:', e.message); }
+  } catch(e) { console.warn('No se pudo borrar la foto:', e.message); }
 }
 
-/** Caché de blobs ya descargados, para no volver a pedir la misma foto a Drive */
-const _fotoBlobCache = {};
+/** Devuelve la URL pública (vía Apps Script) para ver una foto por su driveFileId.
+ *  No requiere login de Google ni token: el script siempre tiene acceso. */
+function _urlFoto(driveFileId) {
+  if (!driveFileId) return '';
+  return FOTOS_CONFIG_URL + '?id=' + encodeURIComponent(driveFileId);
+}
 
-/** Descarga el contenido binario de una foto desde Drive usando el token de la sesión
- *  (no depende de que el archivo sea público) y la pinta en el <img> indicado. */
-async function _cargarFotoEnImg(driveFileId, imgEl) {
+/** Pinta la foto en el <img> indicado. Como ahora se sirve a través del Apps
+ *  Script (no de la API de Drive con token), basta con asignar el src — el
+ *  navegador la carga igual que cualquier imagen normal, sin login de Google. */
+function _cargarFotoEnImg(driveFileId, imgEl) {
   if (!driveFileId || !imgEl) return;
-  try {
-    if (_fotoBlobCache[driveFileId]) {
-      imgEl.src = _fotoBlobCache[driveFileId];
-      return;
-    }
-    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
-      headers: { Authorization: 'Bearer ' + googleAccessToken }
-    });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    _fotoBlobCache[driveFileId] = url;
-    imgEl.src = url;
-  } catch (e) {
-    console.warn('No se pudo cargar la foto', driveFileId, e.message);
-    if (imgEl) imgEl.alt = '⚠️ No se pudo cargar';
-  }
+  imgEl.src = _urlFoto(driveFileId);
+  imgEl.onerror = () => { imgEl.alt = '⚠️ No se pudo cargar'; };
 }
 
 /** Renderiza (o re-renderiza) la galería de fotos. contId permite usarla en distintos
@@ -3331,7 +3359,7 @@ function renderFotosOrden(orden, contId, readonly) {
   let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(${minColW}px,1fr));gap:14px;margin-top:8px">`;
   fotos.forEach((f, i) => {
     const imgId   = `foto-img-${contId}-${i}`;
-    const verLink = f.driveFileId ? `https://drive.google.com/file/d/${f.driveFileId}/view` : f.urlVer;
+    const verLink = f.driveFileId ? _urlFoto(f.driveFileId) : f.urlVer;
     html += `
       <div style="position:relative;border:1px solid var(--border);border-radius:6px;overflow:hidden;page-break-inside:avoid">
         <a href="${esc(verLink)}" target="_blank" rel="noopener">
@@ -3346,7 +3374,7 @@ function renderFotosOrden(orden, contId, readonly) {
   html += '</div>';
   cont.innerHTML = html;
 
-  // Cargar cada imagen de forma asíncrona usando el token de Google (autenticado)
+  // Cargar cada imagen — ya no necesita token, se sirve vía el Apps Script de fotos
   fotos.forEach((f, i) => {
     const imgEl = document.getElementById(`foto-img-${contId}-${i}`);
     _cargarFotoEnImg(f.driveFileId, imgEl);
@@ -5500,24 +5528,41 @@ async function eliminarNovedad(codigo) {
 /* ── Fotos / Evidencias gráficas (con título y descripción por imagen) ── */
 
 async function subirFotoNovedad(file, codigo, titulo, descripcion) {
-  const carpetaRaiz = await _driveBuscarOCrearCarpeta('Novedades de Planta - ' + OPERACIONES[operacionActual].nombre, null);
-  const carpetaNov  = await _driveBuscarOCrearCarpeta(codigo, carpetaRaiz);
-  const nombreArchivo = codigo + '_' + Date.now() + '_' + file.name;
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
-  const subida = await _driveSubirArchivo(file, carpetaNov, nombreArchivo);
-  await _driveHacerPublico(subida.id);
-
-  const urlVer = `https://drive.google.com/thumbnail?id=${subida.id}&sz=w1000`;
-  const urlDescarga = `https://drive.google.com/uc?export=download&id=${subida.id}`;
   const subidoPor = currentUser?.email || 'Usuario';
   const fecha = new Date().toISOString();
 
+  const resp = await fetch(FOTOS_CONFIG_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      accion: 'subirFoto',
+      tipo: 'novedad',
+      codigo,
+      nombreArchivo: codigo + '_' + Date.now() + '_' + file.name,
+      mimeType: file.type || 'image/jpeg',
+      base64,
+      titulo: titulo || '',
+      descripcion: descripcion || '',
+      subidoPor,
+      correo: currentUser?.email || ''
+    })
+  });
+  const data = await resp.json();
+  if (!data.ok) throw new Error(data.mensaje || 'Error al subir la foto');
+
   await asegurarHoja(SH.fotosNovedades, FOTOS_NOVEDADES_COLS);
   await appendHoja(SH.fotosNovedades, [[
-    codigo, '', subida.id, urlVer, urlDescarga, titulo || '', descripcion || '', subidoPor, fecha
+    codigo, '', data.driveFileId, data.urlVer, data.urlVer, titulo || '', descripcion || '', subidoPor, fecha
   ]]);
 
-  return { driveFileId: subida.id, urlVer, titulo: titulo||'', descripcion: descripcion||'', subidoPor, fecha };
+  return { driveFileId: data.driveFileId, urlVer: data.urlVer, titulo: titulo||'', descripcion: descripcion||'', subidoPor, fecha };
 }
 
 /** Pide título y descripción antes de subir la foto a un informe */
@@ -5665,13 +5710,9 @@ async function _construirHtmlInformeNovedad(n, incluirEncabezadoMarca) {
     html += `<h3 style="color:var(--brand);font-size:14px;margin:18px 0 10px;border-left:4px solid var(--accent);padding-left:8px;page-break-inside:avoid">Evidencias gráficas del evento</h3>
       <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-bottom:6px">`;
     for (const f of n.fotos) {
-      let dataUrl = f.urlVer;
-      try {
-        const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${f.driveFileId}?alt=media`,
-          { headers: { Authorization: 'Bearer ' + googleAccessToken } });
-        const blob = await resp.blob();
-        dataUrl = await new Promise(res => { const rd = new FileReader(); rd.onload = () => res(rd.result); rd.readAsDataURL(blob); });
-      } catch(_) {}
+      // Se sirve vía el Apps Script de fotos: no depende del token de quien genera
+      // el informe, así que nunca queda en blanco por temas de sesión/permisos.
+      const dataUrl = _urlFoto(f.driveFileId) || f.urlVer;
       html += `<div style="width:300px;text-align:center;page-break-inside:avoid">
         <div style="width:100%;height:280px;border:1px solid #ccc;border-radius:4px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">
           <img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain">
