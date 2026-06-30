@@ -596,6 +596,7 @@ body.inv-activo .container { max-width: 1700px; }
   <button class="nav-tab" onclick="showPanel('lista')">📋 Todas las Órdenes</button>
   <button class="nav-tab" onclick="showPanel('dashboard')">📊 Dashboard</button>
   <button class="nav-tab" onclick="showPanel('novedades')">📝 Novedades</button>
+  <button class="nav-tab" onclick="showPanel('historico')">📜 Histórico por Equipo</button>
 </nav>
 
 <!-- ════════════ SIDEBAR FIJO DE OPERACIONES ════════════ -->
@@ -1456,6 +1457,54 @@ body.inv-activo .container { max-width: 1700px; }
     </div>
   </div>
 
+  <!-- ════════════ PANEL: HISTÓRICO POR EQUIPO ════════════ -->
+  <div id="panel-historico" class="panel">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <div style="flex:1;font-weight:800;color:var(--brand);font-size:16px">📜 Histórico de Órdenes por Equipo</div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
+        <input id="histBuscarEquipo" placeholder="Buscar equipo..." oninput="filtrarListaEquiposHistorico()" style="flex:1;min-width:180px">
+        <select id="histFiltroMes" onchange="renderHistoricoEquipoSeleccionado()" style="min-width:140px">
+          <option value="">Todos los meses</option>
+          <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+          <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+          <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+        <select id="histFiltroAnio" onchange="renderHistoricoEquipoSeleccionado()" style="min-width:110px">
+          <option value="">Todos los años</option>
+          <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
+          <option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option>
+          <option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option>
+          <option value="2035">2035</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:start">
+      <!-- Lista de equipos -->
+      <div class="card">
+        <div class="card-head">🔧 Equipos</div>
+        <div class="card-body" style="padding:0;max-height:560px;overflow-y:auto">
+          <div id="histListaEquipos"></div>
+        </div>
+      </div>
+
+      <!-- Órdenes del equipo seleccionado -->
+      <div class="card">
+        <div class="card-head" id="histTituloEquipo">📋 Selecciona un equipo</div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <div id="histTablaOrdenes" style="padding:20px;color:var(--text3);font-size:13px;text-align:center">
+            Elige un equipo de la lista para ver su historial de órdenes.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ════════════ PANEL: DETALLE ════════════ -->
   <div id="panel-detalle" class="panel">
     <div id="detalle-btn-bar" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -1886,7 +1935,7 @@ window.addEventListener('load', async () => {
 const PANELES_PROTEGIDOS = ['nueva', 'dashboard'];
 const CLAVE_ACCESO = 'Admin123';
 
-const PANELES_DE_DATOS = ['nueva', 'pendientes', 'realizadas', 'lista', 'dashboard', 'novedades'];
+const PANELES_DE_DATOS = ['nueva', 'pendientes', 'realizadas', 'lista', 'dashboard', 'novedades', 'historico'];
 
 function showPanel(name) {
   // Sin importar qué sede quedó guardada de antes, hay que volver a entrar
@@ -1909,7 +1958,7 @@ function showPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
-  const tabs = { nueva:0, pendientes:1, realizadas:2, lista:3, dashboard:4, novedades:5, inicio:-1 };
+  const tabs = { nueva:0, pendientes:1, realizadas:2, lista:3, dashboard:4, novedades:5, historico:6, inicio:-1 };
   const t = document.querySelectorAll('.nav-tab')[tabs[name]];
   if (t) t.classList.add('active');
 
@@ -1918,6 +1967,7 @@ function showPanel(name) {
   if (name === 'lista')        cargarOrdenes();
   if (name === 'dashboard')    cargarDashboard();
   if (name === 'novedades')    inicializarPanelNovedades();
+  if (name === 'historico')    inicializarPanelHistorico();
   if (typeof renderSidebarOperaciones === 'function') renderSidebarOperaciones();
 }
 
@@ -5676,6 +5726,163 @@ async function generarInformeConsolidado() {
     window.print();
     setTimeout(() => document.body.classList.remove('imprimiendo-novedades'), 500);
   }, 200);
+}
+
+/* ══════════════════════════════════════════════
+   MÓDULO: HISTÓRICO DE ÓRDENES POR EQUIPO
+══════════════════════════════════════════════ */
+let equipoHistoricoSeleccionado = null;
+
+/** Se llama al entrar a la pestaña Histórico por Equipo */
+async function inicializarPanelHistorico() {
+  const listaEl = document.getElementById('histListaEquipos');
+  listaEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text3);font-size:13px">⏳ Cargando equipos...</div>';
+  try {
+    await cargarOrdenes();
+  } catch (e) {
+    listaEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--danger);font-size:13px">⚠️ ' + esc(e.message) + '</div>';
+    return;
+  }
+  equipoHistoricoSeleccionado = null;
+  document.getElementById('histTituloEquipo').textContent = '📋 Selecciona un equipo';
+  document.getElementById('histTablaOrdenes').innerHTML =
+    '<div style="padding:20px;color:var(--text3);font-size:13px;text-align:center">Elige un equipo de la lista para ver su historial de órdenes.</div>';
+  renderListaEquiposHistorico();
+}
+
+/** Saca la lista de equipos únicos que tienen al menos una orden registrada */
+function _equiposUnicosConOrdenes() {
+  const set = new Set();
+  allOrdenes.forEach(o => { if (o.Equipo && o.Equipo.trim()) set.add(o.Equipo.trim()); });
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+function renderListaEquiposHistorico() {
+  const equipos = _equiposUnicosConOrdenes();
+  const wrap = document.getElementById('histListaEquipos');
+
+  if (!equipos.length) {
+    wrap.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text3);font-size:13px">No hay equipos con órdenes registradas todavía.</div>';
+    return;
+  }
+
+  wrap.innerHTML = equipos.map(eq => {
+    const totalOrdenes = allOrdenes.filter(o => (o.Equipo || '').trim() === eq).length;
+    const activo = eq === equipoHistoricoSeleccionado;
+    return `
+      <div onclick="seleccionarEquipoHistorico('${esc(eq).replace(/'/g, "\\'")}')"
+        style="display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;font-size:13px;
+               background:${activo ? 'rgba(20,60,110,.08)' : 'white'};font-weight:${activo ? '700' : '400'};
+               border-left:3px solid ${activo ? 'var(--accent)' : 'transparent'};border-bottom:1px solid var(--border)"
+        onmouseover="this.style.background='rgba(20,60,110,.08)'"
+        onmouseout="this.style.background='${activo ? 'rgba(20,60,110,.08)' : 'white'}'">
+        <span style="flex:1;color:var(--brand);line-height:1.3">${esc(eq)}</span>
+        <span class="badge" style="background:var(--surface2);color:var(--text3)">${totalOrdenes}</span>
+      </div>`;
+  }).join('');
+}
+
+/** Filtra la lista de equipos por el texto del buscador (sin tocar el filtro de mes/año) */
+function filtrarListaEquiposHistorico() {
+  const texto = (document.getElementById('histBuscarEquipo').value || '').toLowerCase().trim();
+  const equipos = _equiposUnicosConOrdenes().filter(eq => eq.toLowerCase().includes(texto));
+  const wrap = document.getElementById('histListaEquipos');
+
+  if (!equipos.length) {
+    wrap.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text3);font-size:13px">Ningún equipo coincide con la búsqueda.</div>';
+    return;
+  }
+
+  wrap.innerHTML = equipos.map(eq => {
+    const totalOrdenes = allOrdenes.filter(o => (o.Equipo || '').trim() === eq).length;
+    const activo = eq === equipoHistoricoSeleccionado;
+    return `
+      <div onclick="seleccionarEquipoHistorico('${esc(eq).replace(/'/g, "\\'")}')"
+        style="display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;font-size:13px;
+               background:${activo ? 'rgba(20,60,110,.08)' : 'white'};font-weight:${activo ? '700' : '400'};
+               border-left:3px solid ${activo ? 'var(--accent)' : 'transparent'};border-bottom:1px solid var(--border)"
+        onmouseover="this.style.background='rgba(20,60,110,.08)'"
+        onmouseout="this.style.background='${activo ? 'rgba(20,60,110,.08)' : 'white'}'">
+        <span style="flex:1;color:var(--brand);line-height:1.3">${esc(eq)}</span>
+        <span class="badge" style="background:var(--surface2);color:var(--text3)">${totalOrdenes}</span>
+      </div>`;
+  }).join('');
+}
+
+function seleccionarEquipoHistorico(equipo) {
+  equipoHistoricoSeleccionado = equipo;
+  renderListaEquiposHistorico();
+  renderHistoricoEquipoSeleccionado();
+}
+
+/** Pinta la tabla de órdenes del equipo elegido, aplicando el filtro de mes/año */
+function renderHistoricoEquipoSeleccionado() {
+  if (!equipoHistoricoSeleccionado) return;
+
+  const mesFiltro  = document.getElementById('histFiltroMes').value;
+  const anioFiltro = document.getElementById('histFiltroAnio').value;
+
+  function ordenEnPeriodo(o) {
+    if (!mesFiltro && !anioFiltro) return true;
+    const fecha = o.FechaInicio || o.FechaCreacion || o.FechaCierre || '';
+    if (!fecha) return false;
+    const d = new Date(fecha);
+    if (isNaN(d)) return false;
+    const mes  = String(d.getMonth() + 1).padStart(2, '0');
+    const anio = String(d.getFullYear());
+    if (mesFiltro  && mes  !== mesFiltro)  return false;
+    if (anioFiltro && anio !== anioFiltro) return false;
+    return true;
+  }
+
+  const ordenes = allOrdenes
+    .filter(o => (o.Equipo || '').trim() === equipoHistoricoSeleccionado)
+    .filter(ordenEnPeriodo)
+    .sort((a, b) => (b.FechaInicio || b.FechaCreacion || '').localeCompare(a.FechaInicio || a.FechaCreacion || ''));
+
+  document.getElementById('histTituloEquipo').textContent = `🔧 ${equipoHistoricoSeleccionado} — ${ordenes.length} orden(es)`;
+
+  const wrap = document.getElementById('histTablaOrdenes');
+  if (!ordenes.length) {
+    wrap.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;text-align:center">No hay órdenes de este equipo en el período seleccionado.</div>';
+    return;
+  }
+
+  const badgeEstado = {
+    'Pendiente': 'background:#fff4e0;color:#b56a00',
+    'En ejecución': 'background:#e0f2fe;color:#0369a1',
+    'Cerrada': 'background:#e6f4ea;color:#1e7e34',
+    'Aprobada': 'background:#e6f4ea;color:#1e7e34',
+    'Rechazada': 'background:#fdecea;color:#c62828',
+  };
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--surface2)">
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">N° Orden</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Título</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Tipo</th>
+      <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">Fecha</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)">Estado</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)">Costo</th>
+      <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--border)"></th>
+    </tr></thead><tbody>`;
+
+  ordenes.forEach(o => {
+    const estilo = badgeEstado[o.Estado] || 'background:#eee;color:#555';
+    const costo  = Number(o.CostoReal || o.CostoTotal || 0);
+    html += `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 10px;font-family:'Courier New',monospace;font-weight:700;color:var(--brand)">${esc(o.NumeroOrden)}</td>
+      <td style="padding:7px 10px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(o.Title)}">${esc(o.Title)}</td>
+      <td style="padding:7px 10px">${esc(o.TipoMantenimiento)}</td>
+      <td style="padding:7px 10px">${fmtFecha(o.FechaInicio || o.FechaCreacion)}</td>
+      <td style="padding:7px 10px;text-align:center"><span class="badge" style="${estilo}">${esc(o.Estado)}</span></td>
+      <td style="padding:7px 10px;text-align:center">${costo ? fmtCOP(costo) : '—'}</td>
+      <td style="padding:7px 10px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')">👁 Ver</button></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
 }
 </script>
 </body>
