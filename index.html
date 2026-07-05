@@ -1714,16 +1714,38 @@ const INVENTARIO_CONFIG = {
 };
 
 /* ══════════════════════════════════════════════
-   FOTOS (Órdenes y Novedades) — Apps Script APARTE
-   del de Inventario. Sube y sirve las fotos siempre
-   desde la misma cuenta dueña del proyecto, así que
-   CUALQUIER persona que abra el sistema puede verlas
-   y subir las suyas, sin depender de su propio login
-   ni permisos de Google Drive.
-   ► Pega aquí la URL "/exec" una vez despliegues el
-     Apps Script de fotos (ver fotos-apps-script.gs).
+   FOTOS (Órdenes y Novedades) — un Apps Script
+   INDEPENDIENTE por sede (mismo patrón que
+   INVENTARIO_CONFIG), en vez de uno solo compartido
+   entre todas las sedes/países. Cada uno sube y sirve
+   las fotos siempre desde la misma cuenta dueña del
+   proyecto, así que CUALQUIER persona de esa sede puede
+   verlas y subir las suyas, sin depender de su propio
+   login ni permisos de Google Drive — y sin competir
+   por la misma cuota diaria de Google con las demás sedes.
+   ► El código del Apps Script (fotos-apps-script.gs) es
+     EXACTAMENTE el mismo para las 5 — solo hay que crear
+     un proyecto nuevo en script.google.com por cada sede,
+     pegar el mismo código, y desplegarlo. Pega aquí abajo
+     la URL "/exec" que te dé cada despliegue.
 ══════════════════════════════════════════════ */
-const FOTOS_CONFIG_URL = 'https://script.google.com/macros/s/AKfycbwMjjruMMWN1GnNaC4ERdzhMdh8Bvi02BtRJuD_1BOifNCiGqZuQ6UTa_v69GsazH-UqQ/exec';
+const FOTOS_CONFIG = {
+  zipaquira: 'https://script.google.com/macros/s/AKfycbyelRTh-H9IgENKDgKuLjo9SfTnNAoJX09na7rago1vn26Fe2j4K8wPItqGriyHiJxM/exec',
+  soacha:    'https://script.google.com/macros/s/AKfycbxiSDtJ8d1np_M279DB6LS_o6vCfgd-_tHbsPAVdDtCu6WUsFXBh81M_EKhhJSYnHFg/exec',
+  antioquia: 'https://script.google.com/macros/s/AKfycbwqrvBJJlVna0_olP62toSJTPi78SLHvBEEbNCVJV4nugzykgu_Gk472jnN5RX5sHsy/exec',
+  mexico:    'https://script.google.com/macros/s/AKfycbw0I8dXseBTda-yhrWmvQQiXa_20JXBf21-NPhrT-WFFMrVungmd1XpoG-jDmnhiZg1FA/exec',
+  peru:      'https://script.google.com/macros/s/AKfycbyc-Gwc30Xn8W46am21oHIWSO91tB0Xn6ek9D70iHu05kMe82Oum4UAf5n0eoEESTlD/exec',
+};
+
+/** Devuelve la URL del Apps Script de fotos de la sede activa — con aviso
+ *  claro en consola si a esa sede todavía le falta desplegar el suyo. */
+function _fotosUrlSede() {
+  const url = FOTOS_CONFIG[operacionActual];
+  if (!url || url.startsWith('PEGA_AQUI')) {
+    throw new Error('Aún no se configuró el Apps Script de fotos para esta sede (' + operacionActual + ').');
+  }
+  return url;
+}
 
 // Filtra el listado de Stock por "Grupo" según el ítem del menú elegido
 const INVENTARIO_FILTROS_GRUPO = {
@@ -3336,7 +3358,7 @@ async function appendHoja(nombre, rows) {
 
 /* ══════════════════════════════════════════════
    REGISTRO FOTOGRÁFICO — vía Apps Script de fotos
-   (ver FOTOS_CONFIG_URL). Sube y sirve las fotos
+   (ver FOTOS_CONFIG). Sube y sirve las fotos
    siempre desde la cuenta dueña del proyecto, no
    desde el Drive personal de quien las suba — así
    cualquiera puede subir/ver sin depender de su
@@ -3366,7 +3388,7 @@ async function subirFotoOrden(file, numeroOrden, tareaDescripcion) {
 
   // 2. Subirla al Apps Script de fotos: la guarda SIEMPRE en la misma cuenta
   //    dueña del proyecto, sin importar quién la suba.
-  const resp = await fetch(FOTOS_CONFIG_URL, {
+  const resp = await fetch(_fotosUrlSede(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
@@ -3443,7 +3465,7 @@ async function eliminarFotoOrden(ordenId, driveFileId, contId) {
 
   // Borrar también del Drive central (best-effort, no bloquea si falla)
   try {
-    await fetch(FOTOS_CONFIG_URL, {
+    await fetch(_fotosUrlSede(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ accion: 'eliminarFoto', driveFileId, correo: currentUser?.email || '' })
@@ -3462,7 +3484,7 @@ async function _obtenerDataUrlFoto(driveFileId) {
   if (!driveFileId) return '';
   if (_fotoDataUrlCache[driveFileId]) return _fotoDataUrlCache[driveFileId];
   try {
-    const resp = await fetch(FOTOS_CONFIG_URL + '?id=' + encodeURIComponent(driveFileId));
+    const resp = await fetch(_fotosUrlSede() + '?id=' + encodeURIComponent(driveFileId));
     const data = await resp.json();
     if (!data.ok) throw new Error(data.mensaje || 'Respuesta inválida del servidor');
     const dataUrl = `data:${data.mimeType};base64,${data.base64}`;
@@ -5701,7 +5723,7 @@ async function subirFotoNovedad(file, codigo, titulo, descripcion) {
   const subidoPor = currentUser?.email || 'Usuario';
   const fecha = new Date().toISOString();
 
-  const resp = await fetch(FOTOS_CONFIG_URL, {
+  const resp = await fetch(_fotosUrlSede(), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({
