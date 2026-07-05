@@ -1667,11 +1667,11 @@ const GOOGLE_CONFIG = {
      la hoja de cálculo de esa sede.
 ══════════════════════════════════════════════ */
 const OPERACIONES = {
-  zipaquira: { nombre: 'O-I ZIPAQUIRA',               bandera: '🇨🇴', clave: 'wpg2GxXJd8', spreadsheetId: '1lezTqQJFl_qDftkDJbkk26Pe-u34MO2MA338Gj99zqk' },
-  soacha:    { nombre: 'O-I SOACHA',                   bandera: '🇨🇴', clave: 'JsQuCZXGQS', spreadsheetId: '1Dv4veJWQPP2tZkYXRXLPo0MQmu8cR843TBO3D0uChP8' },
-  antioquia: { nombre: 'SERVICIOTECNICO-ANTIOQUIA',   bandera: '🇨🇴', clave: 'd6cfVGj7j4', spreadsheetId: '1cqMzlHEBbzKy9d_GDkVTVarvzL0Es2J1_bSXeKpkHYs' },
-  mexico:    { nombre: 'PAVISA-MEXICO',                bandera: '🇲🇽', clave: 'v6F99EAjkh', spreadsheetId: '13kf6xZPfdnxDJmCyKJ0q-1z7ijRak7oMNhzemzq2KpI' },
-  peru:      { nombre: 'O-I PERU',                     bandera: '🇵🇪', clave: 'BxxfhSdjWj', spreadsheetId: '1UbN_mnzJZBxpaL0mZqE-z0U_CIA-MbGwPiokpmKRjvI' },
+  zipaquira: { nombre: 'O-I ZIPAQUIRA',               bandera: '🇨🇴', spreadsheetId: '1lezTqQJFl_qDftkDJbkk26Pe-u34MO2MA338Gj99zqk' },
+  soacha:    { nombre: 'O-I SOACHA',                   bandera: '🇨🇴', spreadsheetId: '1Dv4veJWQPP2tZkYXRXLPo0MQmu8cR843TBO3D0uChP8' },
+  antioquia: { nombre: 'SERVICIOTECNICO-ANTIOQUIA',   bandera: '🇨🇴', spreadsheetId: '1cqMzlHEBbzKy9d_GDkVTVarvzL0Es2J1_bSXeKpkHYs' },
+  mexico:    { nombre: 'PAVISA-MEXICO',                bandera: '🇲🇽', spreadsheetId: '13kf6xZPfdnxDJmCyKJ0q-1z7ijRak7oMNhzemzq2KpI' },
+  peru:      { nombre: 'O-I PERU',                     bandera: '🇵🇪', spreadsheetId: '1UbN_mnzJZBxpaL0mZqE-z0U_CIA-MbGwPiokpmKRjvI' },
 };
 
 // Operación activa (se recuerda entre sesiones en este equipo, solo como
@@ -1976,18 +1976,47 @@ function renderSidebarOperaciones() {
     }).join('')}`;
 }
 
-/** Pide contraseña antes de cambiar de operación/sede */
-function seleccionarOperacion(key) {
+/** Pide contraseña antes de cambiar de operación/sede. La clave YA NO vive
+ *  en este archivo (nadie puede leerla con "Ver código fuente") — se valida
+ *  contra el Apps Script de inventario de esa sede, que la guarda del lado
+ *  del servidor. */
+async function seleccionarOperacion(key) {
   if (!OPERACIONES[key]) return;
   if (key === operacionActual && operacionAutenticada) return; // ya estás adentro esta sesión, nada que hacer
 
   const pass = prompt(`🔒 Ingresa la contraseña para entrar a "${OPERACIONES[key].nombre}":`);
   if (pass === null) return; // canceló
-  if (pass !== OPERACIONES[key].clave) {
+
+  let valida;
+  try {
+    valida = await _validarClaveSede(key, pass);
+  } catch (e) {
+    alert('⚠️ No se pudo validar la contraseña en este momento (' + e.message + '). Intenta de nuevo.');
+    return;
+  }
+  if (!valida) {
     alert('❌ Contraseña incorrecta.');
     return;
   }
   cambiarOperacion(key);
+}
+
+/** Le pregunta al Apps Script de INVENTARIO de esa sede (ya está separado
+ *  por sede, así que reutilizamos ese mismo backend en vez de crear uno
+ *  nuevo) si la clave ingresada es la correcta. El código real de la clave
+ *  nunca sale del servidor — esta función solo recibe true/false. */
+async function _validarClaveSede(key, clave) {
+  const base = INVENTARIO_CONFIG[key];
+  if (!base || base.startsWith('PEGA_AQUI')) {
+    throw new Error('El inventario de esta sede aún no está configurado.');
+  }
+  const resp = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ accion: 'validarClave', clave })
+  });
+  const data = await resp.json();
+  return !!data.valida;
 }
 
 /** Cambia de operación/sede: guarda la elección, marca esta sesión del
