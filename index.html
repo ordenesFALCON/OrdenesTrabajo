@@ -1820,6 +1820,64 @@ async function _inventarioPostSede(operacion, accion, payload) {
   return data;
 }
 
+/* ══════════════════════════════════════════════
+   AUTOCOMPLETADO DE REPUESTOS/INSUMOS EN LA ORDEN
+   Al escribir el código o el nombre en una fila de
+   repuesto/insumo, busca si ya existe en el inventario
+   de la sede activa y, si lo encuentra, autocompleta el
+   resto de la fila (código, nombre, valor unidad). Si no
+   lo encuentra, solo avisa — nunca bloquea ni borra lo
+   que el usuario ya escribió.
+══════════════════════════════════════════════ */
+let _stockInventarioCache = null;
+let _stockInventarioCacheSede = null;
+
+/** Trae el stock de inventario de la sede activa, cacheado en memoria para
+ *  no volver a pedirlo cada vez que el usuario escribe en otra fila. */
+async function _obtenerStockSedeActual() {
+  if (_stockInventarioCache && _stockInventarioCacheSede === operacionActual) return _stockInventarioCache;
+  const stock = await _inventarioGetSede(operacionActual, 'obtenerStock');
+  _stockInventarioCache = stock || [];
+  _stockInventarioCacheSede = operacionActual;
+  return _stockInventarioCache;
+}
+
+/** Handler del input de código/nombre de una fila de repuesto/insumo.
+ *  campo: 'codigo' o 'nombre' — cuál de los dos escribió el usuario. */
+async function buscarProductoEnInventario(inputEl, campo) {
+  const tr = inputEl.closest('tr');
+  if (!tr) return;
+  const valor = inputEl.value.trim();
+  const hint  = tr.querySelector('.rep-ins-hint');
+  if (!valor) { if (hint) hint.style.display = 'none'; return; }
+
+  let stock;
+  try {
+    stock = await _obtenerStockSedeActual();
+  } catch (e) {
+    return; // Sin inventario configurado para esta sede — no interrumpe al usuario con esto
+  }
+
+  const buscado  = valor.toLowerCase();
+  const producto = stock.find(p =>
+    (campo === 'codigo' && (p.codigo || '').toLowerCase() === buscado) ||
+    (campo === 'nombre' && (p.nombre || '').toLowerCase() === buscado)
+  );
+
+  const inputs   = tr.querySelectorAll('input');
+  const inCodigo = inputs[0], inNombre = inputs[1], inCosto = inputs[3];
+
+  if (producto) {
+    if (inCodigo) inCodigo.value = producto.codigo;
+    if (inNombre) inNombre.value = producto.nombre;
+    if (inCosto && producto.precioUnitario) inCosto.value = producto.precioUnitario;
+    if (hint) hint.style.display = 'none';
+  } else if (hint) {
+    hint.textContent  = '⚠️ No existe en inventario — puedes escribirlo igual';
+    hint.style.display = 'block';
+  }
+}
+
 /** Al cerrar una orden de trabajo, descuenta automáticamente del inventario
  *  cada repuesto/insumo de la orden que tenga match en el inventario de la
  *  sede activa (por código exacto, o si no hay código, por nombre exacto).
@@ -2451,8 +2509,10 @@ function abrirModalCompletar(id) {
   repuestos.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" placeholder="COD-001" value="${esc(r.codigo||'')}"></td>
-      <td><input type="text" placeholder="Nombre" value="${esc(r.nombre||'')}"></td>
+      <td><input type="text" placeholder="COD-001" value="${esc(r.codigo||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'codigo')"></td>
+      <td><input type="text" placeholder="Nombre" value="${esc(r.nombre||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'nombre')">
+        <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
+      </td>
       <td><input type="number" placeholder="0" min="0" step="any" value="${esc(r.cantidad||'')}"></td>
       <td><select>
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${r.unidades===u?'selected':''}>${u}</option>`).join('')}
@@ -2469,8 +2529,10 @@ function abrirModalCompletar(id) {
   insumos.forEach(i => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" placeholder="COD-001" value="${esc(i.codigo||'')}"></td>
-      <td><input type="text" placeholder="Nombre" value="${esc(i.nombre||'')}"></td>
+      <td><input type="text" placeholder="COD-001" value="${esc(i.codigo||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'codigo')"></td>
+      <td><input type="text" placeholder="Nombre" value="${esc(i.nombre||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'nombre')">
+        <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
+      </td>
       <td><input type="number" placeholder="0" min="0" step="any" value="${esc(i.cantidad||'')}"></td>
       <td><select>
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${i.unidades===u?'selected':''}>${u}</option>`).join('')}
@@ -2918,8 +2980,10 @@ function addRow(tbodyId, tipo) {
       <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
   } else {
     tr.innerHTML = `
-      <td><input type="text" placeholder="COD-001"></td>
-      <td><input type="text" placeholder="Nombre"></td>
+      <td><input type="text" placeholder="COD-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'codigo')"></td>
+      <td><input type="text" placeholder="Nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'nombre')">
+        <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
+      </td>
       <td><input type="number" placeholder="0" min="0" step="any"></td>
       <td>
         <select>
