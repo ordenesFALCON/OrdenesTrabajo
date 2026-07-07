@@ -4805,9 +4805,11 @@ async function cargarDashboard() {
   const cerradas = ordenesFiltradas.filter(o => o.Estado === 'Cerrada').length;
   const urgentes = ordenesFiltradas.filter(o => o.Prioridad === 'Urgente' && o.Estado !== 'Cerrada').length;
 
-  // ── Costos de repuestos e insumos ──
+  // ── Costos de repuestos e insumos — SOLO de órdenes ya CERRADAS
+  //    (no cuenta lo que está Pendiente ni En ejecución, porque esos
+  //    repuestos/insumos todavía no se han usado de verdad) ──
   let costoRep = 0, costoIns = 0;
-  ordenesFiltradas.forEach(o => {
+  ordenesFiltradas.filter(o => o.Estado === 'Cerrada').forEach(o => {
     const reps = Array.isArray(o.repuestos) ? o.repuestos : [];
     const inss = Array.isArray(o.insumos)   ? o.insumos   : [];
     reps.forEach(r => { costoRep += (Number(r.cantidad||0) * Number(r.costoUnitario||r.costoUnit||0)); });
@@ -4828,8 +4830,8 @@ async function cargarDashboard() {
   // Actualizar subtítulo de KPIs de costo
   const kpiRepSub = document.querySelector('#kpi_costo_rep')?.closest('.kpi-card')?.querySelector('.kpi-sub');
   const kpiInsSub = document.querySelector('#kpi_costo_ins')?.closest('.kpi-card')?.querySelector('.kpi-sub');
-  if (kpiRepSub) kpiRepSub.textContent = periodoLabel;
-  if (kpiInsSub) kpiInsSub.textContent = periodoLabel;
+  if (kpiRepSub) kpiRepSub.textContent = periodoLabel + ' · solo cerradas';
+  if (kpiInsSub) kpiInsSub.textContent = periodoLabel + ' · solo cerradas';
 
   // Colores
   const colores = {
@@ -4870,10 +4872,10 @@ async function cargarDashboard() {
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } } }, cutout: '60%' }
   });
 
-  // ── Gráfica 3: Costos por tipo de mantenimiento ──
+  // ── Gráfica 3: Costos por tipo de mantenimiento (solo órdenes cerradas) ──
   const costoRepTipo = TIPOS.map(t => {
     let s = 0;
-    ordenesFiltradas.filter(o => o.TipoMantenimiento === t).forEach(o => {
+    ordenesFiltradas.filter(o => o.TipoMantenimiento === t && o.Estado === 'Cerrada').forEach(o => {
       (Array.isArray(o.repuestos)?o.repuestos:[]).forEach(r => { s += Number(r.cantidad||0)*Number(r.costoUnitario||r.costoUnit||0); });
       (Array.isArray(o.insumos)?o.insumos:[]).forEach(i => { s += Number(i.cantidad||0)*Number(i.costoUnitario||i.costoUnit||0); });
     });
@@ -4908,9 +4910,9 @@ async function cargarDashboard() {
       scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
 
-  // ── Gráfica 6: Costos por Equipo ──
+  // ── Gráfica 6: Costos por Equipo (solo órdenes cerradas) ──
   const costosPorEquipo = {};
-  ordenesFiltradas.forEach(o => {
+  ordenesFiltradas.filter(o => o.Estado === 'Cerrada').forEach(o => {
     const eq = (o.Equipo||'Sin equipo').trim();
     if (!costosPorEquipo[eq]) costosPorEquipo[eq] = { rep: 0, ins: 0 };
     (Array.isArray(o.repuestos)?o.repuestos:[]).forEach(r => {
@@ -5016,8 +5018,9 @@ function renderGraficasAntioquia(ordenesFiltradas) {
   }
 
   // Costo total acumulado por código de equipo (sin importar a qué empresa pertenece)
+  // Solo de órdenes ya CERRADAS, igual que el resto de las tarjetas/gráficas de costo.
   const costoPorEquipo = {};
-  ordenesFiltradas.forEach(o => {
+  ordenesFiltradas.filter(o => o.Estado === 'Cerrada').forEach(o => {
     const eq = (o.Equipo || '').trim();
     if (!eq) return;
     costoPorEquipo[eq] = (costoPorEquipo[eq] || 0) + costoOrden(o);
