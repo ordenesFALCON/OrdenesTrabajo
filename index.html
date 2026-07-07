@@ -1608,6 +1608,13 @@ body.inv-activo .container { max-width: 1700px; }
 <!-- Contenedor del informe de Novedades, solo visible al imprimir/exportar PDF -->
 <div id="novedadesInformeImprimible" style="display:none;padding:24px;max-width:760px;margin:0 auto;font-family:'Segoe UI',sans-serif"></div>
 
+<!-- ════════════ BARRA FIJA "INSTALAR APP" (abajo, en cualquier pestaña) ════════════ -->
+<div id="barraInstalarApp" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:300;background:var(--brand);color:#fff;padding:10px 14px;align-items:center;justify-content:center;gap:14px;box-shadow:0 -3px 14px rgba(0,0,0,.2);flex-wrap:wrap">
+  <span style="font-size:13px;font-weight:500">📲 Instala esta app en tu dispositivo para un acceso más rápido</span>
+  <button class="btn btn-primary" style="padding:7px 18px;font-size:13px" onclick="instalarAppPWA()">Instalar</button>
+  <button onclick="cerrarBarraInstalar()" title="Cerrar" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:0 6px;line-height:1;opacity:.8">✕</button>
+</div>
+
 
 <!-- ════════════════════════════════════════════════════
      CHART.JS (mini dashboard)
@@ -1628,24 +1635,69 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── Botón "Instalar app" en la portada (solo aparece si el navegador lo permite) ──
+// ══════════════════════════════════════════════
+// BARRA DE "INSTALAR APP" — fija abajo, visible en
+// cualquier pestaña (no solo en el inicio). Funciona
+// tanto en Android/Chrome (con el prompt nativo) como
+// en iPhone (con instrucciones, porque iOS no tiene
+// prompt nativo de instalación).
+// ══════════════════════════════════════════════
 let _deferredInstallPrompt = null;
+
+function _appYaInstalada() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function _esIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+function _mostrarBarraInstalar() {
+  if (_appYaInstalada()) return; // ya está instalada, no molestar
+  const descartadoHasta = Number(localStorage.getItem('barraInstalarDescartadaHasta') || 0);
+  if (Date.now() < descartadoHasta) return; // el usuario la cerró hace poco
+  const barra = document.getElementById('barraInstalarApp');
+  if (barra) barra.style.display = 'flex';
+  document.body.style.paddingBottom = '54px';
+}
+function cerrarBarraInstalar() {
+  const barra = document.getElementById('barraInstalarApp');
+  if (barra) barra.style.display = 'none';
+  document.body.style.paddingBottom = '';
+  // No volver a mostrarla por 7 días, para no ser insistentes
+  localStorage.setItem('barraInstalarDescartadaHasta', String(Date.now() + 7*24*60*60*1000));
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _deferredInstallPrompt = e;
   const btn = document.getElementById('btnInstalarApp');
   if (btn) btn.style.display = 'inline-flex';
+  _mostrarBarraInstalar();
 });
+
 function instalarAppPWA() {
+  if (_esIOS()) {
+    alert('📲 Para instalar la app en iPhone:\n\n1. Toca el ícono de Compartir (el cuadrito con la flecha hacia arriba)\n2. Baja y elige "Agregar a pantalla de inicio"\n3. Confirma');
+    return;
+  }
   if (!_deferredInstallPrompt) return;
   _deferredInstallPrompt.prompt();
   _deferredInstallPrompt.userChoice.then(() => { _deferredInstallPrompt = null; });
   const btn = document.getElementById('btnInstalarApp');
   if (btn) btn.style.display = 'none';
+  cerrarBarraInstalar();
 }
 window.addEventListener('appinstalled', () => {
   const btn = document.getElementById('btnInstalarApp');
   if (btn) btn.style.display = 'none';
+  cerrarBarraInstalar();
+});
+
+// En iPhone nunca se dispara "beforeinstallprompt" (iOS no lo soporta),
+// así que ahí mostramos la barra igual, apenas cargue la página, si no
+// está ya instalada — para que la gente encuentre cómo instalarla.
+window.addEventListener('load', () => {
+  if (_esIOS() && !_appYaInstalada()) _mostrarBarraInstalar();
 });
 
 /* ══════════════════════════════════════════════
@@ -3016,6 +3068,33 @@ const EQUIPOS_LISTADO_GENERAL = {
   'Compresores Decorado':        ['COMPRESOR DECORADO NX55','COMPRESOR DECORADO NX18','SCDECORADO'],
 };
 
+// Lista de equipos activos exclusiva de PAVISA México (no afecta a las demás sedes)
+// Agrupada por área real de la planta; cada opción muestra el código y el tipo de equipo.
+const EQUIPOS_MEXICO = {
+  'Sistema de Enfriamiento (SE)': [
+    ['B01','Bomba'], ['B02','Bomba'], ['B03','Bomba'],
+    ['SEV01','Variador'], ['SEV02','Variador'], ['SEV03','Variador'],
+    ['SED01','Drycooler 1'], ['SED02','Drycooler 2'], ['SED03','Drycooler 3'],
+  ],
+  'Sistema de Secado (SS)': [
+    ['SA','Secador'], ['SB','Secador'], ['SC','Secador'], ['SD','Secador'], ['SE','Secador'],
+  ],
+  'Sala de Compresores (SC)': [
+    ['HW3AP','SM3100'], ['HW1MP','SM5100'], ['HW2MP','SM5100'],
+    ['UPSHW3','UPS'], ['UPSHW2','UPS'], ['UPSHW1','UPS'],
+    ['KAE03','KAESER'],
+  ],
+  'Compresores Sala Antigua': [
+    ['ZH560',''], ['TA11000',''], ['TAC2000',''], ['QUAT2000',''], ['KAISER Q',''], ['KAISER 2',''],
+  ],
+  'Infraestructura': [
+    ['INFRAESTRUCTURA PISO COMPRESORES',''],
+    ['INFRAESTRUCTURA PISO SECADORES',''],
+    ['INFRAESTRUCTURA ARRANCADORES',''],
+    ['INFRAESTRUCTURA DRYCOOLERS',''],
+  ],
+};
+
 // Datos de prueba: Empresa 1 → 123, Empresa 2 → 456, Empresa 3 → 789, etc. (+333 cada vez)
 const EQUIPOS_POR_EMPRESA_ANTIOQUIA = {};
 for (let i = 1; i <= 15; i++) {
@@ -3047,6 +3126,19 @@ function inicializarCampoEquipo() {
       <label>Equipo / Activo *</label>
       <select id="f_equipo">
         <option value="">Seleccionar equipo...</option>
+      </select>`;
+  } else if (operacionActual === 'mexico') {
+    wrap.innerHTML = `
+      <label>Equipo / Activo *</label>
+      <select id="f_equipo">
+        <option value="">Seleccionar equipo...</option>
+        ${Object.keys(EQUIPOS_MEXICO).map(grupo =>
+          `<optgroup label="${esc(grupo)}">` +
+          EQUIPOS_MEXICO[grupo].map(([codigo, tipo]) =>
+            `<option value="${esc(codigo)}">${esc(codigo)}${tipo ? ' — ' + esc(tipo) : ''}</option>`
+          ).join('') +
+          `</optgroup>`
+        ).join('')}
       </select>`;
   } else {
     wrap.innerHTML = `
