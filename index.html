@@ -1418,13 +1418,13 @@ body.inv-activo .container { max-width: 1700px; }
       <div class="card">
         <div class="card-head">Órdenes por Tipo de Mantenimiento</div>
         <div class="card-body" style="padding:16px">
-          <canvas id="chartTipo" height="220"></canvas>
+          <div style="position:relative;height:280px"><canvas id="chartTipo"></canvas></div>
         </div>
       </div>
       <div class="card">
         <div class="card-head">Órdenes por Estado</div>
         <div class="card-body" style="padding:16px">
-          <canvas id="chartEstado" height="220"></canvas>
+          <div style="position:relative;height:280px"><canvas id="chartEstado"></canvas></div>
         </div>
       </div>
     </div>
@@ -1434,13 +1434,13 @@ body.inv-activo .container { max-width: 1700px; }
       <div class="card">
         <div class="card-head">Costos por Tipo de Mantenimiento</div>
         <div class="card-body" style="padding:16px">
-          <canvas id="chartCostoTipo" height="220"></canvas>
+          <div style="position:relative;height:280px"><canvas id="chartCostoTipo"></canvas></div>
         </div>
       </div>
       <div class="card">
         <div class="card-head">Repuestos vs Insumos — Costo total</div>
         <div class="card-body" style="padding:16px;display:flex;align-items:center;justify-content:center">
-          <canvas id="chartCostoRep" height="220"></canvas>
+          <div style="position:relative;height:280px;width:100%"><canvas id="chartCostoRep"></canvas></div>
         </div>
       </div>
     </div>
@@ -1449,7 +1449,7 @@ body.inv-activo .container { max-width: 1700px; }
     <div class="card">
       <div class="card-head">Órdenes por Prioridad</div>
       <div class="card-body" style="padding:16px">
-        <canvas id="chartPrioridad" height="100"></canvas>
+        <div style="position:relative;height:220px"><canvas id="chartPrioridad"></canvas></div>
       </div>
     </div>
 
@@ -1457,7 +1457,7 @@ body.inv-activo .container { max-width: 1700px; }
     <div class="card" style="margin-top:16px">
       <div class="card-head">💰 Gasto total por Equipo</div>
       <div class="card-body" style="padding:16px">
-        <canvas id="chartCostoEquipo" height="180"></canvas>
+        <div style="position:relative;height:320px"><canvas id="chartCostoEquipo"></canvas></div>
       </div>
     </div>
 
@@ -1474,7 +1474,7 @@ body.inv-activo .container { max-width: 1700px; }
       <div class="card" style="margin-bottom:16px">
         <div class="card-head">🏢 Gasto General por Empresa (1 a 15)</div>
         <div class="card-body" style="padding:16px">
-          <canvas id="chartGastoEmpresaGeneral" height="180"></canvas>
+          <div style="position:relative;height:280px"><canvas id="chartGastoEmpresaGeneral"></canvas></div>
         </div>
       </div>
 
@@ -1519,11 +1519,11 @@ body.inv-activo .container { max-width: 1700px; }
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:16px">
       <div class="card">
         <div class="card-head">⏱ Distribución de Tiempos de Recuperación</div>
-        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposDona" height="220"></canvas><div id="novLeyendaRangos"></div></div>
+        <div class="card-body" style="padding:14px"><div style="position:relative;height:260px"><canvas id="chartNovTiemposDona"></canvas></div><div id="novLeyendaRangos"></div></div>
       </div>
       <div class="card">
         <div class="card-head">📊 Tiempo de Recuperación por Informe (min)</div>
-        <div class="card-body" style="padding:14px"><canvas id="chartNovTiemposBarras" height="220"></canvas></div>
+        <div class="card-body" style="padding:14px"><div style="position:relative;height:260px"><canvas id="chartNovTiemposBarras"></canvas></div></div>
       </div>
     </div>
 
@@ -4858,7 +4858,7 @@ async function cargarDashboard() {
     type: 'bar',
     data: { labels: TIPOS, datasets: [{ label: 'Órdenes', data: tipoData,
       backgroundColor: TIPOS.map(t => colores[t]||'#797775'), borderRadius: 6, borderSkipped: false }] },
-    options: { responsive: true, plugins: { legend: { display: false } },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
 
@@ -4868,7 +4868,7 @@ async function cargarDashboard() {
     type: 'doughnut',
     data: { labels: ESTADOS, datasets: [{ data: estadoData,
       backgroundColor: ESTADOS.map(e => colEstado[e]||'#ccc'), borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }] },
-    options: { responsive: true,
+    options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } } }, cutout: '60%' }
   });
 
@@ -4885,7 +4885,7 @@ async function cargarDashboard() {
     type: 'bar',
     data: { labels: TIPOS, datasets: [{ label: 'Costo ($)', data: costoRepTipo,
       backgroundColor: TIPOS.map(t => colores[t]||'#797775'), borderRadius: 6, borderSkipped: false }] },
-    options: { responsive: true,
+    options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } } },
       scales: { y: { beginAtZero: true, ticks: { callback: v => fmtCOP(v) } } } }
   });
@@ -4895,7 +4895,7 @@ async function cargarDashboard() {
     type: 'pie',
     data: { labels: ['Repuestos','Insumos'], datasets: [{ data: [costoRep, costoIns],
       backgroundColor: ['#7719aa','#0078d4'], borderWidth: 2, borderColor: '#fff', hoverOffset: 10 }] },
-    options: { responsive: true,
+    options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 13 } } },
         tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } } } }
   });
@@ -4906,7 +4906,7 @@ async function cargarDashboard() {
     type: 'bar',
     data: { labels: PRIORIDAD, datasets: [{ label: 'Órdenes', data: prioData,
       backgroundColor: PRIORIDAD.map(p => colPrio[p]||'#ccc'), borderRadius: 6, borderSkipped: false }] },
-    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
       scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
 
@@ -4942,7 +4942,7 @@ async function cargarDashboard() {
       ]
     },
     options: {
-      indexAxis: 'y', responsive: true,
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } },
         tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } }
@@ -5050,7 +5050,7 @@ function renderGraficasAntioquia(ordenesFiltradas) {
         backgroundColor: '#0d2a52', borderRadius: 6, borderSkipped: false }]
     },
     options: {
-      responsive: true,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } } },
       scales: { y: { beginAtZero: true, ticks: { callback: v => fmtCOP(v) } } }
     }
@@ -5064,7 +5064,7 @@ function renderGraficasAntioquia(ordenesFiltradas) {
     <div class="card">
       <div class="card-head">Empresa ${n}</div>
       <div class="card-body" style="padding:14px">
-        <canvas id="chartEmpresaAntioquia_${n}" height="160"></canvas>
+        <div style="position:relative;height:220px"><canvas id="chartEmpresaAntioquia_${n}"></canvas></div>
       </div>
     </div>`).join('');
 
@@ -5079,7 +5079,7 @@ function renderGraficasAntioquia(ordenesFiltradas) {
           backgroundColor: '#e8701a', borderRadius: 5, borderSkipped: false }]
       },
       options: {
-        responsive: true,
+        responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } } },
         scales: { y: { beginAtZero: true, ticks: { callback: v => fmtCOP(v) } } }
       }
@@ -6062,7 +6062,7 @@ function renderGraficasNovedades() {
     type: 'doughnut',
     data: { labels: RANGOS_NOVEDAD.map(r => r.nombre), datasets: [{ data: conteoRangos,
       backgroundColor: RANGOS_NOVEDAD.map(r => r.color) }] },
-    options: { responsive: true, plugins: { legend: { display: false } } }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
   const leyendaDiv = document.getElementById('novLeyendaRangos');
   if (leyendaDiv) leyendaDiv.innerHTML = _leyendaRangosHtml();
@@ -6074,7 +6074,7 @@ function renderGraficasNovedades() {
     data: { labels: ordenadas.map(n => n.Codigo), datasets: [{ label: 'Minutos',
       data: ordenadas.map(n => Number(n.TiempoTotalMin) || 0),
       backgroundColor: ordenadas.map(n => _colorPorMinutos(n.TiempoTotalMin)), borderRadius: 5 }] },
-    options: { responsive: true, plugins: { legend: { display: false } },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
   });
 }
