@@ -629,6 +629,11 @@ body.inv-activo .container { max-width: 1700px; }
 </head>
 <body>
 
+<!-- Indicador de versión — discreto, en una esquina, para detectar de un
+     vistazo si alguien quedó con una copia vieja en caché. Sube este
+     número cada vez que publiques un cambio importante. -->
+<div id="appVersionTag" style="position:fixed;top:2px;right:6px;font-size:10px;color:rgba(0,0,0,.35);z-index:250;pointer-events:none;user-select:none;font-family:monospace">v1.0</div>
+
 <!-- ════════════ HEADER ════════════ -->
 <header class="app-header">
   <div class="header-logo-area">
