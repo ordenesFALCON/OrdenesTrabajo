@@ -3112,6 +3112,43 @@ function actualizarEquiposPorEmpresa() {
 }
 
 /** Pinta el campo Equipo según la operación activa. */
+/* ══════════════════════════════════════════════
+   EQUIPOS POR SEDE — un solo lugar centralizado.
+   Cada sede puede tener su propia lista de equipos
+   (agrupada, con [código, tipo] como en México) o,
+   si todavía no tiene la suya propia, usa la lista
+   general compartida (EQUIPOS_LISTADO_GENERAL) como
+   respaldo mientras se define.
+
+   Para agregar la lista real de otra sede (Zipaquirá,
+   Soacha o Perú), se agrega aquí, con el mismo formato
+   que ya tiene EQUIPOS_MEXICO, y una línea más abajo:
+     zipaquira: EQUIPOS_ZIPAQUIRA,
+══════════════════════════════════════════════ */
+const EQUIPOS_POR_SEDE = {
+  mexico: EQUIPOS_MEXICO,
+  // zipaquira: EQUIPOS_ZIPAQUIRA,  // ← pendiente: agregar cuando tengamos su lista real
+  // soacha:    EQUIPOS_SOACHA,     // ← pendiente: agregar cuando tengamos su lista real
+  // peru:      EQUIPOS_PERU,       // ← pendiente: agregar cuando tengamos su lista real
+};
+
+/** Arma el HTML de <optgroup>/<option> para un objeto de grupos de equipos.
+ *  Admite dos formatos de ítem dentro de cada grupo:
+ *    - ['CODIGO','Tipo']  → <option value="CODIGO">CODIGO — Tipo</option>
+ *    - 'NOMBRE COMPLETO'  → <option>NOMBRE COMPLETO</option>  (lista general) */
+function _renderOptionsGrupo(grupos) {
+  return Object.keys(grupos).map(grupo => {
+    const items = grupos[grupo].map(item => {
+      if (Array.isArray(item)) {
+        const [codigo, tipo] = item;
+        return `<option value="${esc(codigo)}">${esc(codigo)}${tipo ? ' — ' + esc(tipo) : ''}</option>`;
+      }
+      return `<option>${esc(item)}</option>`;
+    }).join('');
+    return `<optgroup label="${esc(grupo)}">${items}</optgroup>`;
+  }).join('');
+}
+
 function inicializarCampoEquipo() {
   const wrap = document.getElementById('campoEquipoWrap');
   if (!wrap) return;
@@ -3127,31 +3164,18 @@ function inicializarCampoEquipo() {
       <select id="f_equipo">
         <option value="">Seleccionar equipo...</option>
       </select>`;
-  } else if (operacionActual === 'mexico') {
-    wrap.innerHTML = `
-      <label>Equipo / Activo *</label>
-      <select id="f_equipo">
-        <option value="">Seleccionar equipo...</option>
-        ${Object.keys(EQUIPOS_MEXICO).map(grupo =>
-          `<optgroup label="${esc(grupo)}">` +
-          EQUIPOS_MEXICO[grupo].map(([codigo, tipo]) =>
-            `<option value="${esc(codigo)}">${esc(codigo)}${tipo ? ' — ' + esc(tipo) : ''}</option>`
-          ).join('') +
-          `</optgroup>`
-        ).join('')}
-      </select>`;
-  } else {
-    wrap.innerHTML = `
-      <label>Equipo / Activo *</label>
-      <select id="f_equipo">
-        <option value="">Seleccionar equipo...</option>
-        ${Object.keys(EQUIPOS_LISTADO_GENERAL).map(grupo =>
-          `<optgroup label="${esc(grupo)}">` +
-          EQUIPOS_LISTADO_GENERAL[grupo].map(eq => `<option>${esc(eq)}</option>`).join('') +
-          `</optgroup>`
-        ).join('')}
-      </select>`;
+    return;
   }
+
+  // Sede con lista propia ya definida (EQUIPOS_POR_SEDE) — si aún no la
+  // tiene, cae de vuelta a la lista general compartida como respaldo.
+  const grupos = EQUIPOS_POR_SEDE[operacionActual] || EQUIPOS_LISTADO_GENERAL;
+  wrap.innerHTML = `
+    <label>Equipo / Activo *</label>
+    <select id="f_equipo">
+      <option value="">Seleccionar equipo...</option>
+      ${_renderOptionsGrupo(grupos)}
+    </select>`;
 }
 
 function initDefaultRows() {
