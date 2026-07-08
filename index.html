@@ -213,6 +213,23 @@ body.inv-activo .container { max-width: 1700px; }
      dejaría tapada o mal alineada. */
   .nav-tabs { position: static; top: auto; }
   .nav-tab { padding: 11px 14px; font-size: 12px; }
+
+  /* El indicador de versión (fecha/hora, fijo arriba a la derecha) se monta
+     encima del encabezado cuando este se acomoda en 2 filas — en celular
+     no hay una esquina libre segura para dejarlo, así que se oculta. */
+  #appVersionTag { display: none; }
+
+  /* Pista visual de que la barra de pestañas se puede deslizar hacia la
+     derecha (hay más pestañas de las que caben en la pantalla). */
+  .nav-tabs { position: relative; }
+  .nav-tabs::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 28px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.95));
+    pointer-events: none;
+  }
 }
 
 /* ── Panels ── */
