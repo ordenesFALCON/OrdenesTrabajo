@@ -5300,9 +5300,6 @@ const MONEDAS_POR_OPERACION = {
 function fmtCOP(valor) {
   const n = Number(valor) || 0;
   const m = MONEDAS_POR_OPERACION[operacionActual] || MONEDAS_POR_OPERACION.zipaquira;
-  if (n === 0) return m.simbolo + ' 0' + m.sufijo;
-  if (n >= 1000000000) return m.simbolo + ' ' + (n / 1000000000).toFixed(2).replace(/\.?0+$/, '') + ' MM' + m.sufijo;
-  if (n >= 1000000)    return m.simbolo + ' ' + (n / 1000000).toFixed(2).replace(/\.?0+$/, '') + ' M' + m.sufijo;
   return m.simbolo + ' ' + n.toLocaleString(m.locale) + m.sufijo;
 }
 
