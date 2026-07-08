@@ -632,7 +632,7 @@ body.inv-activo .container { max-width: 1700px; }
 <!-- Indicador de versión — discreto, en una esquina, para detectar de un
      vistazo si alguien quedó con una copia vieja en caché. Sube este
      número cada vez que publiques un cambio importante. -->
-<div id="appVersionTag" style="position:fixed;top:4px;right:8px;font-size:10px;color:rgba(255,255,255,.55);z-index:250;pointer-events:none;user-select:none;font-family:monospace">v1.0</div>
+<div id="appVersionTag" style="position:fixed;top:4px;right:8px;font-size:10px;color:rgba(255,255,255,.55);z-index:250;pointer-events:none;user-select:none;font-family:monospace">…</div>
 
 <!-- ════════════ HEADER ════════════ -->
 <header class="app-header">
@@ -1627,6 +1627,31 @@ body.inv-activo .container { max-width: 1700px; }
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
+/* ══════════════════════════════════════════════
+   INDICADOR DE VERSIÓN — automático, no manual.
+   En vez de un número que hay que acordarse de subir
+   a mano, le pregunta al propio archivo publicado en
+   GitHub Pages cuándo fue la última vez que cambió
+   (usa el encabezado "Last-Modified" que el navegador
+   ya trae de fábrica) y muestra esa fecha/hora. Así,
+   cada vez que se sube un index.html nuevo, el número
+   cambia solo — nadie tiene que acordarse de nada.
+══════════════════════════════════════════════ */
+(function actualizarIndicadorVersion() {
+  const tag = document.getElementById('appVersionTag');
+  if (!tag) return;
+  fetch(location.pathname, { method: 'HEAD', cache: 'no-store' })
+    .then(resp => {
+      const lm = resp.headers.get('Last-Modified');
+      if (!lm) { tag.textContent = ''; return; }
+      const f = new Date(lm);
+      tag.textContent = f.toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'2-digit' })
+        + ' ' + f.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
+      tag.title = 'Última actualización del sistema';
+    })
+    .catch(() => { tag.textContent = ''; }); // si falla, simplemente no se muestra nada — no interrumpe al usuario
+})();
+
 /* ══════════════════════════════════════════════
    PWA: registrar el Service Worker
    Permite "instalar" el sistema como app y que cargue
