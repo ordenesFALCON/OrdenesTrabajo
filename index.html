@@ -820,7 +820,7 @@ body.inv-activo .container { max-width: 1700px; }
           <div class="field">
             <label>Prioridad</label>
             <select id="f_prioridad">
-              <option value="Normal">Normal</option>
+              <option value="Media">Media</option>
               <option value="Alta">Alta</option>
               <option value="Urgente">Urgente</option>
               <option value="Baja">Baja</option>
@@ -1090,7 +1090,7 @@ body.inv-activo .container { max-width: 1700px; }
             <div class="field">
               <label>Prioridad</label>
               <select id="e_prioridad">
-                <option value="Normal">Normal</option>
+                <option value="Media">Media</option>
                 <option value="Alta">Alta</option>
                 <option value="Urgente">Urgente</option>
                 <option value="Baja">Baja</option>
@@ -2527,7 +2527,7 @@ function abrirModalCompletar(id) {
   document.getElementById('e_descripcion').value   = o.Title || '';
   document.getElementById('e_equipo').value         = o.Equipo || '';
   document.getElementById('e_tipo').value           = o.TipoMantenimiento || '';
-  document.getElementById('e_prioridad').value      = o.Prioridad || 'Normal';
+  document.getElementById('e_prioridad').value      = o.Prioridad || 'Media';
   document.getElementById('e_solicitadaPor').value  = o.SolicitadaPor || '';
   document.getElementById('e_autorizadaPor').value  = o.AutorizadaPor || '';
 
@@ -3866,6 +3866,7 @@ async function cargarOrdenesDeSheets() {
     const obj = { _row: i + 2 };
     ordenCols.forEach((c, j) => { obj[c] = row[j] || ''; });
     obj.id = obj.NumeroOrden || ('local-' + i);
+    if (obj.Prioridad === 'Normal') obj.Prioridad = 'Media'; // compatibilidad con órdenes guardadas antes del cambio de nombre
     obj.tareas    = [];
     obj.repuestos = [];
     obj.insumos   = [];
@@ -4211,6 +4212,7 @@ function cargarLocal() {
     const data = JSON.parse(raw);
     // Deduplicar repuestos e insumos en cada orden al cargar
     data.forEach(o => {
+      if (o.Prioridad === 'Normal') o.Prioridad = 'Media'; // compatibilidad con órdenes guardadas antes del cambio de nombre
       if (Array.isArray(o.repuestos)) o.repuestos = deduplicarItems(o.repuestos, 'nombre');
       if (Array.isArray(o.insumos))   o.insumos   = deduplicarItems(o.insumos,   'nombre');
     });
@@ -4249,7 +4251,7 @@ function limpiarFormulario() {
     if (el) el.value = '';
   });
   document.getElementById('f_tipo').value     = '';
-  document.getElementById('f_prioridad').value = 'Normal';
+  document.getElementById('f_prioridad').value = 'Media';
   document.getElementById('f_fechaInicio').value = '';
   document.getElementById('f_fechaFin').value    = '';
   document.getElementById('f_solicitadaPor').value = currentUser.name;
