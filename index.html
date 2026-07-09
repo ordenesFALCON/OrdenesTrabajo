@@ -1947,7 +1947,7 @@ const GOOGLE_CONFIG = {
   clientId:      '418486085956-n09evlttjt7qad6ur1j22c52b9nr0fg2.apps.googleusercontent.com', // ← Tu Google OAuth Client ID
   spreadsheetId: '1TGz9MSbcVlK2GYCzsliKQK6-BxUnuF7B_f9gqxH1fjw', // ← se sobreescribe según la operación elegida (ver OPERACIONES)
   sheetName:     'Ordenes', // ← Nombre de la hoja
-  scopes:        'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive.file',
+  scopes:        'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive',
 };
 
 /* ══════════════════════════════════════════════
@@ -2243,38 +2243,122 @@ async function validarClaveSedeDirecto(sede, clave) {
   return hashIngresado === hashGuardado;
 }
 
-/* ══════════════════════════════════════════════
-   FOTOS (Órdenes y Novedades) — un Apps Script
-   INDEPENDIENTE por sede (mismo patrón que
-   INVENTARIO_CONFIG), en vez de uno solo compartido
-   entre todas las sedes/países. Cada uno sube y sirve
-   las fotos siempre desde la misma cuenta dueña del
-   proyecto, así que CUALQUIER persona de esa sede puede
-   verlas y subir las suyas, sin depender de su propio
-   login ni permisos de Google Drive — y sin competir
-   por la misma cuota diaria de Google con las demás sedes.
-   ► El código del Apps Script (fotos-apps-script.gs) es
-     EXACTAMENTE el mismo para las 5 — solo hay que crear
-     un proyecto nuevo en script.google.com por cada sede,
-     pegar el mismo código, y desplegarlo. Pega aquí abajo
-     la URL "/exec" que te dé cada despliegue.
-══════════════════════════════════════════════ */
-const FOTOS_CONFIG = {
-  zipaquira: 'https://script.google.com/macros/s/AKfycbyelRTh-H9IgENKDgKuLjo9SfTnNAoJX09na7rago1vn26Fe2j4K8wPItqGriyHiJxM/exec',
-  soacha:    'https://script.google.com/macros/s/AKfycbxiSDtJ8d1np_M279DB6LS_o6vCfgd-_tHbsPAVdDtCu6WUsFXBh81M_EKhhJSYnHFg/exec',
-  antioquia: 'https://script.google.com/macros/s/AKfycbwqrvBJJlVna0_olP62toSJTPi78SLHvBEEbNCVJV4nugzykgu_Gk472jnN5RX5sHsy/exec',
-  mexico:    'https://script.google.com/macros/s/AKfycbw0I8dXseBTda-yhrWmvQQiXa_20JXBf21-NPhrT-WFFMrVungmd1XpoG-jDmnhiZg1FA/exec',
-  peru:      'https://script.google.com/macros/s/AKfycbyc-Gwc30Xn8W46am21oHIWSO91tB0Xn6ek9D70iHu05kMe82Oum4UAf5n0eoEESTlD/exec',
+// ⚠️ FOTOS_CONFIG (Apps Script) — YA NO SE USA. Se deja comentado solo como
+// referencia histórica; las fotos ahora se suben/leen directo en Google
+// Drive (ver DRIVE_FOTOS_CARPETAS más abajo), sin pasar por Apps Script.
+// const FOTOS_CONFIG = {
+//   zipaquira: 'https://script.google.com/macros/s/AKfycbyelRTh-H9IgENKDgKuLjo9SfTnNAoJX09na7rago1vn26Fe2j4K8wPItqGriyHiJxM/exec',
+//   soacha:    'https://script.google.com/macros/s/AKfycbxiSDtJ8d1np_M279DB6LS_o6vCfgd-_tHbsPAVdDtCu6WUsFXBh81M_EKhhJSYnHFg/exec',
+//   antioquia: 'https://script.google.com/macros/s/AKfycbwqrvBJJlVna0_olP62toSJTPi78SLHvBEEbNCVJV4nugzykgu_Gk472jnN5RX5sHsy/exec',
+//   mexico:    'https://script.google.com/macros/s/AKfycbw0I8dXseBTda-yhrWmvQQiXa_20JXBf21-NPhrT-WFFMrVungmd1XpoG-jDmnhiZg1FA/exec',
+//   peru:      'https://script.google.com/macros/s/AKfycbyc-Gwc30Xn8W46am21oHIWSO91tB0Xn6ek9D70iHu05kMe82Oum4UAf5n0eoEESTlD/exec',
+// };
+
+/* ══════════════════════════════════════════════════════════════
+   FOTOS — MIGRADO A GOOGLE DRIVE DIRECTO (SIN APPS SCRIPT)
+   ══════════════════════════════════════════════════════════════
+   Cada sede sigue con su propia carpeta raíz de Drive, separada de
+   las demás. Ahora se sube/lee/borra con la MISMA cuenta de Google
+   de quien esté usando el sistema (por eso el permiso de Drive tuvo
+   que ampliarse) — ya no depende de ningún Apps Script externo.
+   ⚠️ Requisito: la carpeta de cada sede debe estar COMPARTIDA como
+   Editor con el correo de Google de cada persona que vaya a subir o
+   ver fotos — si no, Drive le va a negar el acceso a esa persona.
+══════════════════════════════════════════════════════════════ */
+
+// Pega aquí el ID real de la carpeta raíz de fotos de cada sede (el mismo
+// que estaba en "CARPETA_RAIZ_ID" dentro del fotos-apps-script.gs viejo).
+const DRIVE_FOTOS_CARPETAS = {
+  zipaquira: '1-Ysde9szWvdopMXhPtOor4JBSlx4ZD-u',
+  soacha:    '1R6MEWd49Lv9j_EchNDwKFQ0RVgL86Cxn',
+  antioquia: '16GK5qbYw8ajtHXLIfuqIJBORXHZlrsND',
+  mexico:    '1dl34z9BthK2sxZykoyaJqMaq_i6jJ_i4',
+  peru:      '1Yy872LBH6YWRFbv1sI9gbNj8G1OoX9uJ',
 };
 
-/** Devuelve la URL del Apps Script de fotos de la sede activa — con aviso
- *  claro en consola si a esa sede todavía le falta desplegar el suyo. */
-function _fotosUrlSede() {
-  const url = FOTOS_CONFIG[operacionActual];
-  if (!url || url.startsWith('PEGA_AQUI')) {
-    throw new Error('Aún no se configuró el Apps Script de fotos para esta sede (' + operacionActual + ').');
+function _driveFotosCarpetaRaiz(sede) {
+  const id = DRIVE_FOTOS_CARPETAS[sede];
+  if (!id || id.startsWith('PEGA_AQUI')) {
+    throw new Error('Aún no se configuró la carpeta de Drive de fotos para esta sede (' + sede + ').');
   }
-  return url;
+  return id;
+}
+
+/** Busca una subcarpeta por nombre dentro de otra; si no existe, la crea.
+ *  Con esto se arma solo la estructura "Fotos OT/[NumeroOrden]/" o
+ *  "Novedades de Planta/[Codigo]/", igual que hacía antes el Apps Script. */
+async function _driveBuscarOCrearCarpeta(parentId, nombre) {
+  const nombreEscapado = nombre.replace(/'/g, "\\'");
+  const q = encodeURIComponent(`'${parentId}' in parents and name = '${nombreEscapado}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
+  const resp = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + googleAccessToken }
+  });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  if (!resp.ok) { const t = await resp.text(); throw new Error('Error buscando carpeta en Drive: ' + t); }
+  const data = await resp.json();
+  if (data.files && data.files.length) return data.files[0].id;
+
+  const createResp = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: nombre, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
+  });
+  if (!createResp.ok) { const t = await createResp.text(); throw new Error('No se pudo crear la carpeta "' + nombre + '": ' + t); }
+  const createData = await createResp.json();
+  return createData.id;
+}
+
+/** Sube un archivo (en base64) a una carpeta de Drive, usando el formato
+ *  "multipart" que exige la API para mandar metadata + contenido juntos. */
+async function _driveSubirBase64(folderId, nombreArchivo, mimeType, base64) {
+  const boundary = '-------solucionaire' + Date.now();
+  const metadata = { name: nombreArchivo, parents: [folderId] };
+  const body =
+    `--${boundary}\r\n` +
+    `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+    JSON.stringify(metadata) + `\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Type: ${mimeType}\r\n` +
+    `Content-Transfer-Encoding: base64\r\n\r\n` +
+    base64 + `\r\n` +
+    `--${boundary}--`;
+
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  if (!resp.ok) { const t = await resp.text(); throw new Error('Error subiendo la foto a Drive: ' + t); }
+  const data = await resp.json();
+  return data.id;
+}
+
+/** Descarga el contenido de un archivo de Drive y lo devuelve como base64
+ *  listo para usar en un data:URL — reemplaza lo que antes hacía el
+ *  Apps Script (que tenía que envolver la imagen en JSON). */
+async function _driveLeerBase64(fileId) {
+  const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: 'Bearer ' + googleAccessToken }
+  });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  if (!resp.ok) throw new Error('No se pudo leer la foto desde Drive (código ' + resp.status + ')');
+  const blob = await resp.blob();
+  const mimeType = blob.type || 'image/jpeg';
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  return { mimeType, base64 };
+}
+
+async function _driveEliminarArchivo(fileId) {
+  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer ' + googleAccessToken }
+  });
 }
 
 // Filtra el listado de Stock por "Grupo" según el ítem del menú elegido
@@ -4076,7 +4160,6 @@ async function appendHoja(nombre, rows) {
 async function subirFotoOrden(file, numeroOrden, tareaDescripcion) {
   if (!file.type.startsWith('image/')) throw new Error('El archivo seleccionado no es una imagen');
 
-  // 1. Convertir el archivo a base64 (se manda al Apps Script, no a Drive directo)
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload  = () => resolve(reader.result.split(',')[1]);
@@ -4087,33 +4170,21 @@ async function subirFotoOrden(file, numeroOrden, tareaDescripcion) {
   const subidoPor = currentUser?.name || currentUser?.email || '';
   const fecha     = new Date().toISOString();
 
-  // 2. Subirla al Apps Script de fotos: la guarda SIEMPRE en la misma cuenta
-  //    dueña del proyecto, sin importar quién la suba.
-  const resp = await fetch(_fotosUrlSede(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      accion: 'subirFoto',
-      tipo: 'orden',
-      codigo: numeroOrden,
-      nombreArchivo: `${numeroOrden}_${Date.now()}.jpg`,
-      mimeType: file.type || 'image/jpeg',
-      base64,
-      tareaDescripcion: tareaDescripcion || '',
-      subidoPor,
-      correo: currentUser?.email || ''
-    })
-  });
-  const data = await resp.json();
-  if (!data.ok) throw new Error(data.mensaje || 'Error al subir la foto');
+  // 1. Armar/encontrar la estructura "Fotos OT/[NumeroOrden]/" y subir ahí
+  const raiz         = _driveFotosCarpetaRaiz(operacionActual);
+  const carpetaFotos = await _driveBuscarOCrearCarpeta(raiz, 'Fotos OT');
+  const carpetaOrden = await _driveBuscarOCrearCarpeta(carpetaFotos, numeroOrden);
+  const nombreArchivo = `${numeroOrden}_${Date.now()}.jpg`;
+  const driveFileId = await _driveSubirBase64(carpetaOrden, nombreArchivo, file.type || 'image/jpeg', base64);
+  const urlVer = `https://drive.google.com/file/d/${driveFileId}/view`;
 
-  // 3. Registrar fila en hoja Fotos (igual que antes)
+  // 2. Registrar fila en hoja Fotos (igual que antes)
   await asegurarHoja(SH.fotos, FOTOS_COLS);
   await appendHoja(SH.fotos, [[
-    numeroOrden, '', data.driveFileId, data.urlVer, data.urlVer, tareaDescripcion || '', subidoPor, fecha
+    numeroOrden, '', driveFileId, urlVer, urlVer, tareaDescripcion || '', subidoPor, fecha
   ]]);
 
-  return { driveFileId: data.driveFileId, urlVer: data.urlVer, urlDescarga: data.urlVer, tareaDescripcion: tareaDescripcion||'', subidoPor, fecha };
+  return { driveFileId, urlVer, urlDescarga: urlVer, tareaDescripcion: tareaDescripcion||'', subidoPor, fecha };
 }
 
 /**
@@ -4164,31 +4235,23 @@ async function eliminarFotoOrden(ordenId, driveFileId, contId) {
   guardarLocal();
   renderFotosOrden(o, contId, false);
 
-  // Borrar también del Drive central (best-effort, no bloquea si falla)
+  // Borrar también de Drive (best-effort, no bloquea si falla)
   try {
-    await fetch(_fotosUrlSede(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ accion: 'eliminarFoto', driveFileId, correo: currentUser?.email || '' })
-    });
+    await _driveEliminarArchivo(driveFileId);
   } catch(e) { console.warn('No se pudo borrar la foto:', e.message); }
 }
 
 /** Caché en memoria: una vez traída una foto, no se vuelve a pedir. */
 const _fotoDataUrlCache = {};
 
-/** Le pide la foto al Apps Script (que la entrega como JSON con el
- *  contenido en base64, porque un Web App de Apps Script no puede
- *  devolver una imagen binaria directa desde doGet) y arma un
- *  data:URL listo para usar como src de una imagen. */
+/** Descarga la foto directo de Drive y arma un data:URL listo para usar
+ *  como src de una imagen. */
 async function _obtenerDataUrlFoto(driveFileId) {
   if (!driveFileId) return '';
   if (_fotoDataUrlCache[driveFileId]) return _fotoDataUrlCache[driveFileId];
   try {
-    const resp = await fetch(_fotosUrlSede() + '?id=' + encodeURIComponent(driveFileId));
-    const data = await resp.json();
-    if (!data.ok) throw new Error(data.mensaje || 'Respuesta inválida del servidor');
-    const dataUrl = `data:${data.mimeType};base64,${data.base64}`;
+    const { mimeType, base64 } = await _driveLeerBase64(driveFileId);
+    const dataUrl = `data:${mimeType};base64,${base64}`;
     _fotoDataUrlCache[driveFileId] = dataUrl;
     return dataUrl;
   } catch (e) {
@@ -6684,31 +6747,19 @@ async function subirFotoNovedad(file, codigo, titulo, descripcion) {
   const subidoPor = currentUser?.email || 'Usuario';
   const fecha = new Date().toISOString();
 
-  const resp = await fetch(_fotosUrlSede(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      accion: 'subirFoto',
-      tipo: 'novedad',
-      codigo,
-      nombreArchivo: codigo + '_' + Date.now() + '_' + file.name,
-      mimeType: file.type || 'image/jpeg',
-      base64,
-      titulo: titulo || '',
-      descripcion: descripcion || '',
-      subidoPor,
-      correo: currentUser?.email || ''
-    })
-  });
-  const data = await resp.json();
-  if (!data.ok) throw new Error(data.mensaje || 'Error al subir la foto');
+  const raiz          = _driveFotosCarpetaRaiz(operacionActual);
+  const carpetaNov     = await _driveBuscarOCrearCarpeta(raiz, 'Novedades de Planta');
+  const carpetaCodigo  = await _driveBuscarOCrearCarpeta(carpetaNov, codigo);
+  const nombreArchivo  = codigo + '_' + Date.now() + '_' + file.name;
+  const driveFileId    = await _driveSubirBase64(carpetaCodigo, nombreArchivo, file.type || 'image/jpeg', base64);
+  const urlVer         = `https://drive.google.com/file/d/${driveFileId}/view`;
 
   await asegurarHoja(SH.fotosNovedades, FOTOS_NOVEDADES_COLS);
   await appendHoja(SH.fotosNovedades, [[
-    codigo, '', data.driveFileId, data.urlVer, data.urlVer, titulo || '', descripcion || '', subidoPor, fecha
+    codigo, '', driveFileId, urlVer, urlVer, titulo || '', descripcion || '', subidoPor, fecha
   ]]);
 
-  return { driveFileId: data.driveFileId, urlVer: data.urlVer, titulo: titulo||'', descripcion: descripcion||'', subidoPor, fecha };
+  return { driveFileId, urlVer, titulo: titulo||'', descripcion: descripcion||'', subidoPor, fecha };
 }
 
 /** Pide título y descripción antes de subir la foto a un informe */
