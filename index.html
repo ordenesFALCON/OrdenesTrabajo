@@ -272,6 +272,18 @@ body.inv-activo .container { max-width: 1700px; }
   box-shadow: 0 2px 16px rgba(13,42,82,.09);
   transition: box-shadow .2s;
 }
+.inv-subtab {
+  background: none; border: none; padding: 9px 14px; font-size: 13px; font-weight: 600;
+  color: var(--text2); cursor: pointer; border-radius: 6px 6px 0 0; white-space: nowrap;
+}
+.inv-subtab:hover { background: var(--surface2); }
+.inv-subtab.active { color: var(--brand); background: var(--surface2); border-bottom: 2px solid var(--brand); margin-bottom: -2px; }
+.inv-subpanel { display: none; }
+.inv-subpanel.active { display: block; }
+.inv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.inv-table th { background: var(--surface2); padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text2); white-space: nowrap; }
+.inv-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.inv-badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
 .card:hover { box-shadow: 0 6px 28px rgba(13,42,82,.15); }
 .section-header {
   background: linear-gradient(90deg, var(--brand) 0%, #1a4a8a 100%);
@@ -1645,18 +1657,125 @@ body.inv-activo .container { max-width: 1700px; }
   <!-- ════════════ PANEL DE INVENTARIO ════════════ -->
   <div id="panel-inventario" class="panel">
     <div style="max-width:1300px;margin:0 auto;width:100%">
-      <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <div id="invTituloVista" style="font-weight:700;color:var(--brand);font-size:15px;flex:1">📦 Inventario</div>
-        <button class="btn btn-primary" onclick="abrirInventarioEnPestana()">🔗 Abrir en pestaña nueva</button>
         <button class="btn btn-ghost" onclick="volverDeInventario()">← Volver</button>
       </div>
-      <div style="background:#eaf2ff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--text2)">
-        ℹ️ Si el panel de abajo aparece en blanco o no carga, usa el botón <strong>"🔗 Abrir en pestaña nueva"</strong> — es la forma más confiable de entrar al inventario.
+      <div id="invMsg" style="font-size:13px;margin-bottom:8px"></div>
+
+      <!-- Sub-navegación del inventario -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:2px">
+        <button class="inv-subtab active" data-invtab="dashboard" onclick="invMostrarSubTab('dashboard')">📊 Dashboard</button>
+        <button class="inv-subtab" data-invtab="producto" onclick="invMostrarSubTab('producto')">➕ Nuevo Producto</button>
+        <button class="inv-subtab" data-invtab="movimiento" onclick="invMostrarSubTab('movimiento')">🔄 Movimientos</button>
+        <button class="inv-subtab" data-invtab="stock" onclick="invMostrarSubTab('stock')">📋 Stock</button>
+        <button class="inv-subtab" data-invtab="reportes" onclick="invMostrarSubTab('reportes')">📈 Reportes</button>
       </div>
-      <div id="invMsg" style="font-size:13px;color:var(--text3);margin-bottom:8px"></div>
-      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white">
-        <iframe id="invIframe" style="width:100%;height:calc(100vh - 230px);min-height:520px;border:none;display:block"></iframe>
+
+      <!-- ── Sub-panel: Dashboard ── -->
+      <div id="invSub-dashboard" class="inv-subpanel active">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+          <div class="card" style="margin:0;padding:16px;border-left:4px solid var(--brand)">
+            <div style="font-size:24px;font-weight:800;color:var(--brand)" id="invKpiTotal">—</div>
+            <div style="font-size:12px;color:var(--text3)">Total Productos</div>
+          </div>
+          <div class="card" style="margin:0;padding:16px;border-left:4px solid #dc2626">
+            <div style="font-size:24px;font-weight:800;color:#dc2626" id="invKpiSinStock">—</div>
+            <div style="font-size:12px;color:var(--text3)">Sin Stock</div>
+          </div>
+          <div class="card" style="margin:0;padding:16px;border-left:4px solid #ca8a04">
+            <div style="font-size:24px;font-weight:800;color:#ca8a04" id="invKpiBajo">—</div>
+            <div style="font-size:12px;color:var(--text3)">Stock Bajo</div>
+          </div>
+          <div class="card" style="margin:0;padding:16px;border-left:4px solid #7719aa">
+            <div style="font-size:20px;font-weight:800;color:#7719aa" id="invKpiValorRep">—</div>
+            <div style="font-size:12px;color:var(--text3)">Valor Repuestos</div>
+          </div>
+          <div class="card" style="margin:0;padding:16px;border-left:4px solid #0078d4">
+            <div style="font-size:20px;font-weight:800;color:#0078d4" id="invKpiValorIns">—</div>
+            <div style="font-size:12px;color:var(--text3)">Valor Insumos</div>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-head">⚠️ Alertas de Stock</div>
+          <div style="padding:14px" id="invAlertas"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
+        </div>
       </div>
+
+      <!-- ── Sub-panel: Nuevo Producto ── -->
+      <div id="invSub-producto" class="inv-subpanel">
+        <div class="card" style="margin:0">
+          <div class="card-head">➕ Registrar Producto Nuevo</div>
+          <div style="padding:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+              <div class="field"><label>Código *</label><input id="invp_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
+              <div class="field"><label>Nombre *</label><input id="invp_nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del producto"></div>
+              <div class="field"><label>Unidad</label><input id="invp_unidad" value="Unidades"></div>
+              <div class="field"><label>Grupo</label><input id="invp_grupo" value="General"></div>
+              <div class="field"><label>Stock Mínimo</label><input id="invp_stockmin" type="number" min="0" value="0"></div>
+              <div class="field"><label>Precio por Unidad</label><input id="invp_precio" type="number" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field"><label>Tipo</label>
+                <select id="invp_tipo"><option value="Repuesto">Repuesto</option><option value="Insumo">Insumo</option></select>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="invRegistrarProducto()">✔ Registrar Producto</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Sub-panel: Movimientos ── -->
+      <div id="invSub-movimiento" class="inv-subpanel">
+        <div class="card" style="margin:0">
+          <div class="card-head">🔄 Nuevo Movimiento</div>
+          <div style="padding:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+              <div class="field"><label>Código del Producto *</label><input id="invm_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
+              <div class="field"><label>Fecha *</label><input id="invm_fecha" type="date"></div>
+              <div class="field"><label>Tipo *</label>
+                <select id="invm_tipo" onchange="invHandleTipoChange()">
+                  <option value="INGRESO">Ingreso</option><option value="SALIDA">Salida</option>
+                  <option value="AJUSTE_POSITIVO">Ajuste Positivo</option><option value="AJUSTE_NEGATIVO">Ajuste Negativo</option>
+                </select>
+              </div>
+              <div class="field"><label>Cantidad *</label><input id="invm_cantidad" type="number" min="0.01" step="0.01" placeholder="0"></div>
+              <div class="field"><label>Responsable *</label><input id="invm_responsable" placeholder="Nombre completo"></div>
+              <div class="field" id="invm_grupoEquipo"><label>Equipo Destino <span id="invm_equipoMarca">*</span></label><input id="invm_equipo" placeholder="Ej: CB2"></div>
+              <div class="field" style="grid-column:1/-1"><label>Observaciones</label><input id="invm_obs" placeholder="Opcional"></div>
+            </div>
+            <button class="btn btn-primary" onclick="invRegistrarMovimiento()">💾 Guardar Movimiento</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Sub-panel: Stock ── -->
+      <div id="invSub-stock" class="inv-subpanel">
+        <div class="card" style="margin:0">
+          <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+            <span>📋 Stock Actual</span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="invCargarStock()">🔄 Actualizar</button>
+          </div>
+          <div style="padding:0;overflow-x:auto" id="invStockTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
+        </div>
+      </div>
+
+      <!-- ── Sub-panel: Reportes ── -->
+      <div id="invSub-reportes" class="inv-subpanel">
+        <div class="card" style="margin:0">
+          <div class="card-head">📈 Historial de Movimientos</div>
+          <div style="padding:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:14px">
+              <div class="field"><label>Desde</label><input id="invr_desde" type="date"></div>
+              <div class="field"><label>Hasta</label><input id="invr_hasta" type="date"></div>
+              <div class="field"><label>Tipo</label>
+                <select id="invr_tipo"><option value="">Todos</option><option value="INGRESO">Ingreso</option><option value="SALIDA">Salida</option><option value="AJUSTE_POSITIVO">Ajuste +</option><option value="AJUSTE_NEGATIVO">Ajuste −</option></select>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="invCargarHistorial()">📊 Generar Reporte</button>
+            <div style="overflow-x:auto;margin-top:14px" id="invHistorialTabla"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1839,13 +1958,252 @@ let inventarioTabActual = 'dashboard';
    ► Pega aquí la URL "/exec" de cada Apps Script
      una vez lo despliegues como Web App.
 ══════════════════════════════════════════════ */
-const INVENTARIO_CONFIG = {
-  zipaquira: 'https://script.google.com/macros/s/AKfycbwlCXJRAmqTUOkD0T9JTUNO0JNTBVSUgnK_LxPYXQueGhmADIKpKOtMNLn9CguLBLjz/exec',
-  soacha:    'https://script.google.com/macros/s/AKfycbygFzy4G_Iy_DA4PRRU7vhm7eBnkahfzIzXkwO2p_bfMrrgm3ggQuD4KdosIVXN4pgmxA/exec',
-  antioquia: 'https://script.google.com/macros/s/AKfycbwxgaViJVFOH7SiZhGG9JmjGAokapALoFsrkiQyA_cKKbtgiz4zORPSBT28mXw9NL_ZUw/exec',
-  mexico:    'https://script.google.com/macros/s/AKfycbxazUEsZmHo7XddMlwugP2NL-b9HfYVqglV1LId9wMG5GHz5xM4iH0VaFIt6BNIrLyO/exec',
-  peru:      'https://script.google.com/macros/s/AKfycbxjTe-hz1bTaEY36OtBkaa-lbsyL7NsO-WFab51pyLWPYUZNzAVxLc0brL9Nypja0If/exec',
+// ⚠️ INVENTARIO_CONFIG (Apps Script) — YA NO SE USA. Se deja comentado
+// solo como referencia histórica; el inventario ahora habla directo con
+// Google Sheets (ver INVENTARIO_SHEETS más abajo), sin pasar por Apps Script.
+// const INVENTARIO_CONFIG = {
+//   zipaquira: 'https://script.google.com/macros/s/AKfycbwlCXJRAmqTUOkD0T9JTUNO0JNTBVSUgnK_LxPYXQueGhmADIKpKOtMNLn9CguLBLjz/exec',
+//   soacha:    'https://script.google.com/macros/s/AKfycbygFzy4G_Iy_DA4PRRU7vhm7eBnkahfzIzXkwO2p_bfMrrgm3ggQuD4KdosIVXN4pgmxA/exec',
+//   antioquia: 'https://script.google.com/macros/s/AKfycbwxgaViJVFOH7SiZhGG9JmjGAokapALoFsrkiQyA_cKKbtgiz4zORPSBT28mXw9NL_ZUw/exec',
+//   mexico:    'https://script.google.com/macros/s/AKfycbxazUEsZmHo7XddMlwugP2NL-b9HfYVqglV1LId9wMG5GHz5xM4iH0VaFIt6BNIrLyO/exec',
+//   peru:      'https://script.google.com/macros/s/AKfycbxjTe-hz1bTaEY36OtBkaa-lbsyL7NsO-WFab51pyLWPYUZNzAVxLc0brL9Nypja0If/exec',
+// };
+
+/* ══════════════════════════════════════════════════════════════
+   INVENTARIO — MIGRADO A GOOGLE SHEETS DIRECTO (SIN APPS SCRIPT)
+   ══════════════════════════════════════════════════════════════
+   Cada sede sigue con su propia hoja de cálculo de inventario,
+   totalmente separada de las demás e independiente de la hoja de
+   Órdenes de Trabajo — pero ahora se lee y se escribe con la MISMA
+   API de Google Sheets que ya usa el resto del sistema, sin pasar
+   por ningún Apps Script externo. Esto elimina de raíz el problema
+   de hoy (Google bloqueando su propia pantalla dentro de un iframe).
+══════════════════════════════════════════════════════════════ */
+
+// Pega aquí el ID real de la hoja de cálculo de INVENTARIO de cada sede
+// (lo encuentras en la línea "SPREADSHEET_ID" del Apps Script viejo de
+// cada una — cada sede tiene el suyo propio, no lo mezcles con el de Órdenes).
+const INVENTARIO_SHEETS = {
+  zipaquira: '1YqwLocx7dYOnBMrwtyBLiZadJ2j4UOrDZAaM2-CBIVE',
+  soacha:    '1WpunyOSCJDDoIHgz-JKmJ_uNkHCloCQtIM36lm1RWdk',
+  antioquia: '1Dj12a7g7s25A6bTb-oR54-FQY9qs0ffFHDtNq64q4fk',
+  mexico:    '1TEwFSN-p-XcPiKHqiv-dqp8B2eefB-0Ecui5KcFU_VI',
+  peru:      '15LoJbWh1aB2cJLLRDLTadbFjeU-U7nFW54K7eM5M6Fc',
 };
+
+const INV_PRODUCTOS_COLS   = ['Código','Nombre','Unidad','Grupo','Stock Mínimo','Fecha Creación','Precio Unitario','Tipo'];
+const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante'];
+const INV_TIPOS_MOVIMIENTO = ['INGRESO','SALIDA','AJUSTE_POSITIVO','AJUSTE_NEGATIVO'];
+
+function _invSpreadsheetId(sede) {
+  const id = INVENTARIO_SHEETS[sede];
+  if (!id || id.startsWith('PEGA_AQUI')) {
+    throw new Error('El inventario de esta sede aún no está configurado (falta el ID de su hoja de cálculo).');
+  }
+  return id;
+}
+
+// ── Helpers genéricos de Sheets API para inventario — cada uno recibe el
+//    spreadsheetId de forma explícita, porque cada sede usa una hoja distinta
+//    (a diferencia de Órdenes, que siempre usa GOOGLE_CONFIG.spreadsheetId). ──
+async function _invGet(spreadsheetId, rango) {
+  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(rango)}`,
+    { headers: { Authorization: 'Bearer ' + googleAccessToken } });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  if (!resp.ok) { const t = await resp.text(); throw new Error('Error leyendo inventario: ' + t); }
+  const d = await resp.json();
+  return d.values || [];
+}
+
+async function _invAppend(spreadsheetId, hoja, rows) {
+  if (!rows || !rows.length) return;
+  const colFin = numToCol(rows[0].length - 1);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(hoja + '!A:' + colFin)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+  const resp = await fetch(url, { method: 'POST', headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ values: rows }) });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  if (!resp.ok) { const t = await resp.text(); throw new Error('Error guardando en inventario: ' + t); }
+}
+
+async function _invAsegurarHoja(spreadsheetId, nombre, cols) {
+  let existing = [];
+  try {
+    const r = await _invGet(spreadsheetId, nombre + '!A1:' + numToCol(cols.length - 1) + '1');
+    existing = r[0] || [];
+  } catch (e) { existing = []; }
+  if (existing.length === 0) {
+    try {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: [{ addSheet: { properties: { title: nombre } } }] })
+      });
+    } catch (e) { /* puede que ya exista la pestaña, seguimos */ }
+    const colFin = numToCol(cols.length - 1);
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(nombre + '!A1:' + colFin + '1')}?valueInputOption=RAW`, {
+      method: 'PUT', headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [cols] })
+    });
+  }
+}
+
+/** Calcula el stock actual de TODOS los productos de una sede, leyendo
+ *  Productos + Movimientos y sumando/restando en el navegador (mismo
+ *  cálculo que antes hacía el Apps Script, ahora hecho aquí). */
+async function obtenerStockInventarioDirecto(sede) {
+  const spreadsheetId = _invSpreadsheetId(sede);
+  const [productos, movimientos] = await Promise.all([
+    _invGet(spreadsheetId, 'Productos!A2:H100000'),
+    _invGet(spreadsheetId, 'Movimientos!A2:D100000'),
+  ]);
+
+  const stockPorCodigo = {};
+  movimientos.forEach(row => {
+    const codigo = (row[0] || '').toString().trim().toUpperCase();
+    if (!codigo) return;
+    const tipo     = (row[2] || '').toString().trim().toUpperCase();
+    const cantidad = parseFloat(row[3]) || 0;
+    if (!(codigo in stockPorCodigo)) stockPorCodigo[codigo] = 0;
+    if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') stockPorCodigo[codigo] += cantidad;
+    else if (tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') stockPorCodigo[codigo] -= cantidad;
+  });
+
+  const stock = productos.filter(row => row[0] && row[1]).map(row => {
+    const codigo   = row[0].toString().trim();
+    const cantidad = Math.max(0, Math.round((stockPorCodigo[codigo.toUpperCase()] || 0) * 100) / 100);
+    const precio   = Math.max(0, parseFloat(row[6]) || 0);
+    return {
+      codigo, nombre: row[1] || '', unidad: row[2] || 'Unidades', grupo: row[3] || 'General',
+      stockMin: Math.max(0, parseInt(row[4]) || 0), cantidad, precioUnitario: precio,
+      tipo: row[7] || '', valorTotal: Math.round(cantidad * precio * 100) / 100,
+    };
+  });
+  return stock.sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+async function registrarProductoInventarioDirecto(sede, producto) {
+  const spreadsheetId = _invSpreadsheetId(sede);
+  await _invAsegurarHoja(spreadsheetId, 'Productos', INV_PRODUCTOS_COLS);
+
+  const codigo = (producto.codigo || '').toString().trim().toUpperCase();
+  const nombre = (producto.nombre || '').toString().trim().toUpperCase();
+  if (!codigo || !nombre) throw new Error('Código y nombre son obligatorios');
+
+  const existentes = await _invGet(spreadsheetId, 'Productos!A2:A100000');
+  if (existentes.some(r => (r[0] || '').toString().trim().toUpperCase() === codigo)) {
+    throw new Error('Ya existe un producto con este código');
+  }
+
+  const fila = [
+    codigo, nombre, producto.unidad || 'Unidades', producto.grupo || 'General',
+    Math.max(0, parseInt(producto.stockMin) || 0),
+    new Date().toISOString(),
+    Math.max(0, parseFloat(producto.precioUnitario) || 0),
+    producto.tipo === 'Insumo' ? 'Insumo' : (producto.tipo === 'Repuesto' ? 'Repuesto' : ''),
+  ];
+  await _invAppend(spreadsheetId, 'Productos', [fila]);
+}
+
+async function _invStockDeUnProducto(spreadsheetId, codigo) {
+  const movimientos = await _invGet(spreadsheetId, 'Movimientos!A2:D100000');
+  let cantidad = 0;
+  const cod = codigo.toUpperCase();
+  movimientos.forEach(row => {
+    if ((row[0] || '').toString().trim().toUpperCase() !== cod) return;
+    const tipo = (row[2] || '').toString().trim().toUpperCase();
+    const val  = parseFloat(row[3]) || 0;
+    if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') cantidad += val;
+    else if (tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') cantidad -= val;
+  });
+  return Math.max(0, Math.round(cantidad * 100) / 100);
+}
+
+async function registrarMovimientoInventarioDirecto(sede, mov) {
+  const spreadsheetId = _invSpreadsheetId(sede);
+  await _invAsegurarHoja(spreadsheetId, 'Movimientos', INV_MOVIMIENTOS_COLS);
+
+  const codigo   = (mov.codigo || '').toString().trim().toUpperCase();
+  const cantidad = parseFloat(mov.cantidad) || 0;
+  const tipo     = (mov.tipo || '').toString().trim().toUpperCase();
+  if (!codigo || cantidad <= 0) throw new Error('Código y cantidad son obligatorios');
+  if (!INV_TIPOS_MOVIMIENTO.includes(tipo)) throw new Error('Tipo de movimiento inválido: ' + tipo);
+
+  const productos = await _invGet(spreadsheetId, 'Productos!A2:A100000');
+  if (!productos.some(r => (r[0] || '').toString().trim().toUpperCase() === codigo)) {
+    throw new Error('El producto no existe. Regístrelo primero.');
+  }
+
+  const stockActual = await _invStockDeUnProducto(spreadsheetId, codigo);
+  if ((tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') && stockActual < cantidad) {
+    throw new Error(`Stock insuficiente. Disponible: ${stockActual}, Solicitado: ${cantidad}`);
+  }
+
+  let stockResultante = stockActual;
+  if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') stockResultante += cantidad;
+  else stockResultante -= cantidad;
+  stockResultante = Math.max(0, stockResultante);
+
+  const fila = [
+    codigo,
+    mov.fecha || new Date().toISOString().split('T')[0],
+    tipo,
+    cantidad,
+    (typeof currentUser !== 'undefined' && currentUser?.email) || 'Sistema',
+    new Date().toISOString(),
+    mov.responsable || '',
+    mov.equipo || '',
+    mov.observaciones || '',
+    stockResultante,
+  ];
+  await _invAppend(spreadsheetId, 'Movimientos', [fila]);
+  return { stockResultante };
+}
+
+async function obtenerHistorialInventarioDirecto(sede, filtros) {
+  filtros = filtros || {};
+  const spreadsheetId = _invSpreadsheetId(sede);
+  const [productos, movimientos] = await Promise.all([
+    _invGet(spreadsheetId, 'Productos!A2:B100000'),
+    _invGet(spreadsheetId, 'Movimientos!A2:J100000'),
+  ]);
+  const prodMap = {};
+  productos.forEach(r => { if (r[0]) prodMap[r[0].toString().trim().toUpperCase()] = r[1] || ''; });
+
+  const fechaDesde = filtros.fechaDesde ? new Date(filtros.fechaDesde + 'T00:00:00') : null;
+  const fechaHasta = filtros.fechaHasta ? new Date(filtros.fechaHasta + 'T23:59:59') : null;
+
+  return movimientos.filter(row => row[0] && row[1]).map(row => ({
+    codigo: row[0], fecha: row[1], tipo: (row[2] || '').toUpperCase(), cantidad: parseFloat(row[3]) || 0,
+    usuario: row[4] || '', responsable: row[6] || '', equipo: row[7] || '', observaciones: row[8] || '',
+    producto: prodMap[row[0].toString().trim().toUpperCase()] || 'Producto no encontrado',
+  })).filter(m => {
+    if (filtros.tipo && m.tipo !== filtros.tipo.toUpperCase()) return false;
+    if (fechaDesde || fechaHasta) {
+      const f = new Date(m.fecha);
+      if (fechaDesde && f < fechaDesde) return false;
+      if (fechaHasta && f > fechaHasta) return false;
+    }
+    return true;
+  }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+}
+
+// ── VALIDACIÓN DE CLAVE DE SEDE, SIN APPS SCRIPT ──
+// La clave real nunca viaja ni se guarda en texto plano — se guarda un
+// "hash" (huella digital, imposible de revertir) en la pestaña "Config"
+// de la hoja de inventario de cada sede (celda A1), y aquí se compara
+// huella contra huella, nunca la clave en sí.
+async function _sha256Hex(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function validarClaveSedeDirecto(sede, clave) {
+  const spreadsheetId = _invSpreadsheetId(sede);
+  const filas = await _invGet(spreadsheetId, 'Config!A1:A1');
+  const hashGuardado = (filas[0] && filas[0][0]) ? filas[0][0].toString().trim() : '';
+  if (!hashGuardado) throw new Error('Esta sede aún no tiene configurada su clave de acceso (falta la pestaña "Config", celda A1, con el hash).');
+  const hashIngresado = await _sha256Hex(clave);
+  return hashIngresado === hashGuardado;
+}
 
 /* ══════════════════════════════════════════════
    FOTOS (Órdenes y Novedades) — un Apps Script
@@ -1970,7 +2328,7 @@ let _stockInventarioCacheSede = null;
  *  no volver a pedirlo cada vez que el usuario escribe en otra fila. */
 async function _obtenerStockSedeActual() {
   if (_stockInventarioCache && _stockInventarioCacheSede === operacionActual) return _stockInventarioCache;
-  const stock = await _inventarioGetSede(operacionActual, 'obtenerStock');
+  const stock = await obtenerStockInventarioDirecto(operacionActual);
   _stockInventarioCache = stock || [];
   _stockInventarioCacheSede = operacionActual;
   return _stockInventarioCache;
@@ -2032,9 +2390,9 @@ async function descontarInventarioPorCierreOrden(o) {
 
   let stock;
   try {
-    stock = await _inventarioGetSede(operacionActual, 'obtenerStock');
+    stock = await obtenerStockInventarioDirecto(operacionActual);
   } catch (e) {
-    // No se pudo ni consultar el inventario (sede sin Apps Script configurado, etc.)
+    // No se pudo ni consultar el inventario (sede sin hoja configurada, etc.)
     // — no bloquea el cierre de la orden, solo se reporta.
     items.forEach(it => resultado.noEncontrados.push(`${it.nombre||it.codigo} (no se pudo consultar el inventario: ${e.message})`));
     return resultado;
@@ -2061,21 +2419,15 @@ async function descontarInventarioPorCierreOrden(o) {
       continue;
     }
 
-    const observaciones = [
-      `Responsable: ${o.NumeroOrden}`,
-      o.Equipo ? `Equipo: ${o.Equipo}` : '',
-      `Obs: Salida automática por cierre de orden de trabajo`,
-    ].filter(Boolean).join(' | ');
-
     try {
-      await _inventarioPostSede(operacionActual, 'registrarMovimiento', {
-        mov: {
-          codigo: producto.codigo,
-          fecha,
-          tipo: 'SALIDA',
-          cantidad: it.cantidad,
-          observaciones,
-        }
+      await registrarMovimientoInventarioDirecto(operacionActual, {
+        codigo: producto.codigo,
+        fecha,
+        tipo: 'SALIDA',
+        cantidad: it.cantidad,
+        responsable: o.NumeroOrden,
+        equipo: o.Equipo || '',
+        observaciones: 'Salida automática por cierre de orden de trabajo',
       });
       resultado.descontados.push(`${producto.nombre} (${it.cantidad})`);
     } catch (e) {
@@ -2216,17 +2568,7 @@ async function seleccionarOperacion(key) {
  *  nuevo) si la clave ingresada es la correcta. El código real de la clave
  *  nunca sale del servidor — esta función solo recibe true/false. */
 async function _validarClaveSede(key, clave) {
-  const base = INVENTARIO_CONFIG[key];
-  if (!base || base.startsWith('PEGA_AQUI')) {
-    throw new Error('El inventario de esta sede aún no está configurado.');
-  }
-  const resp = await fetch(base, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ accion: 'validarClave', clave })
-  });
-  const data = await resp.json();
-  return !!data.valida;
+  return await validarClaveSedeDirecto(key, clave);
 }
 
 /** Cambia de operación/sede: guarda la elección, marca esta sesión del
@@ -5402,10 +5744,11 @@ function fmtCOP(valor) {
    MÓDULO DE INVENTARIO
 ══════════════════════════════════════════════ */
 const INVENTARIO_CHIPS = [
-  { key:'stockGeneral',   label:'📊 Stock general' },
-  { key:'repuestos',      label:'🔧 Repuestos' },
-  { key:'materiales',     label:'📦 Materiales' },
-  { key:'equiposActivos', label:'🖥️ Equipos / Activos' },
+  { key:'dashboard',  label:'📊 Dashboard' },
+  { key:'producto',   label:'➕ Nuevo Producto' },
+  { key:'movimiento', label:'🔄 Movimientos' },
+  { key:'stock',      label:'📋 Stock' },
+  { key:'reportes',   label:'📈 Reportes' },
 ];
 
 function abrirInventario(opKey) {
@@ -5419,11 +5762,6 @@ function abrirInventario(opKey) {
     return;
   }
   inventarioOperacionActual = opKey;
-  inventarioTabActual = 'dashboard';
-
-  const url = INVENTARIO_CONFIG[opKey];
-  const msg = document.getElementById('invMsg');
-  const iframe = document.getElementById('invIframe');
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
@@ -5435,67 +5773,16 @@ function abrirInventario(opKey) {
   if (navTabs) navTabs.style.display = 'none';
   document.body.classList.add('inv-activo');
 
-  if (!url || url.startsWith('PEGA_AQUI')) {
-    msg.innerHTML = '⚠️ Aún no se configuró la URL del Apps Script de inventario para esta sede.';
-    iframe.src = 'about:blank';
-  } else {
-    msg.textContent = '';
-    iframe.src = url;
-    _detectarFalloIframeInventario(iframe, url);
-  }
+  document.getElementById('invm_fecha').valueAsDate = new Date();
+  invHandleTipoChange();
+  invMostrarSubTab('dashboard');
 
   renderSidebarOperaciones();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/** Intenta detectar si Google bloqueó el iframe (por su propia pantalla de
- *  verificación, que nunca se puede incrustar) y, si es así, abre la
- *  pestaña nueva SOLA — sin que el usuario tenga que notar el error y
- *  darle clic al botón manual.
- *  Aviso honesto: esta detección es un "mejor esfuerzo", no 100% infalible
- *  en todos los navegadores — por eso el botón manual se deja siempre
- *  visible también, como respaldo garantizado. */
-function _detectarFalloIframeInventario(iframe, url) {
-  const idIntento = ++_invIntentoActual;
-  setTimeout(() => {
-    if (idIntento !== _invIntentoActual) return; // el usuario ya cambió de sede/salió, no hacer nada
-    let bloqueado = false;
-    try {
-      // Si Google bloqueó la carga, el iframe se queda en blanco (mismo
-      // origen, se puede leer sin error). Si sí cargó bien, esto lanza un
-      // error de "cross-origin" — eso es justo la señal de que SÍ funcionó.
-      const href = iframe.contentWindow.location.href;
-      if (href === 'about:blank') bloqueado = true;
-    } catch (e) {
-      bloqueado = false; // cross-origin = cargó bien, todo normal
-    }
-    if (bloqueado) {
-      const msg = document.getElementById('invMsg');
-      if (msg) msg.innerHTML = '⚠️ Google bloqueó la vista incrustada — abriendo en una pestaña nueva automáticamente...';
-      window.open(url, '_blank');
-    }
-  }, 2500);
-}
-let _invIntentoActual = 0;
-
-/** Abre el inventario de la sede que se está viendo actualmente en una
- *  pestaña nueva del navegador. Google bloquea sus propias pantallas de
- *  autenticación dentro de cualquier iframe (no solo el nuestro) — por
- *  eso esta es la forma más confiable de entrar, cuando el panel
- *  embebido no carga. */
-function abrirInventarioEnPestana() {
-  const url = INVENTARIO_CONFIG[inventarioOperacionActual];
-  if (!url || url.startsWith('PEGA_AQUI')) {
-    alert('⚠️ Aún no se configuró la URL del Apps Script de inventario para esta sede.');
-    return;
-  }
-  window.open(url, '_blank');
-}
-
 function volverDeInventario() {
-  _invIntentoActual++; // invalida cualquier detección de fallo que haya quedado pendiente
   inventarioOperacionActual = null;
-  document.getElementById('invIframe').src = 'about:blank';
   const navTabs = document.querySelector('.nav-tabs');
   if (navTabs) navTabs.style.display = 'flex';
   document.body.classList.remove('inv-activo');
@@ -5503,18 +5790,155 @@ function volverDeInventario() {
   renderSidebarOperaciones();
 }
 
+// ── Sub-navegación del inventario (Dashboard / Nuevo Producto / Movimientos / Stock / Reportes) ──
+function invMostrarSubTab(nombre) {
+  inventarioTabActual = nombre;
+  document.querySelectorAll('.inv-subpanel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.inv-subtab').forEach(b => b.classList.remove('active'));
+  document.getElementById('invSub-' + nombre).classList.add('active');
+  document.querySelector(`.inv-subtab[data-invtab="${nombre}"]`).classList.add('active');
+  if (nombre === 'dashboard') invCargarDashboard();
+  if (nombre === 'stock')     invCargarStock();
+}
+
+async function invCargarDashboard() {
+  const msg = document.getElementById('invMsg');
+  try {
+    const stock = await obtenerStockInventarioDirecto(inventarioOperacionActual);
+    _stockInventarioCache = stock; _stockInventarioCacheSede = inventarioOperacionActual; // reutiliza el mismo caché del autocompletado
+
+    document.getElementById('invKpiTotal').textContent    = stock.length;
+    document.getElementById('invKpiSinStock').textContent = stock.filter(p => p.cantidad <= 0).length;
+    document.getElementById('invKpiBajo').textContent     = stock.filter(p => p.cantidad > 0 && p.cantidad <= p.stockMin && p.stockMin > 0).length;
+
+    const valorRep = stock.filter(p => p.tipo === 'Repuesto').reduce((s,p) => s + p.valorTotal, 0);
+    const valorIns = stock.filter(p => p.tipo === 'Insumo').reduce((s,p) => s + p.valorTotal, 0);
+    document.getElementById('invKpiValorRep').textContent = fmtCOP(valorRep);
+    document.getElementById('invKpiValorIns').textContent = fmtCOP(valorIns);
+
+    const alertas = stock.filter(p => p.cantidad <= 0 || (p.cantidad <= p.stockMin && p.stockMin > 0));
+    const cont = document.getElementById('invAlertas');
+    if (!alertas.length) {
+      cont.innerHTML = '<div style="color:#15803d;font-size:13px">✔ No hay productos con alertas de stock</div>';
+    } else {
+      cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Mínimo</th><th>Estado</th></tr></thead><tbody>` +
+        alertas.map(p => `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${p.cantidad}</td><td>${p.stockMin}</td>
+          <td><span class="inv-badge" style="background:${p.cantidad<=0?'#fee2e2':'#fef9c3'};color:${p.cantidad<=0?'#b91c1c':'#a16207'}">${p.cantidad<=0?'Sin Stock':'Stock Bajo'}</span></td></tr>`).join('') +
+        `</tbody></table>`;
+    }
+    msg.textContent = '';
+  } catch (e) {
+    msg.innerHTML = `⚠️ ${esc(e.message)}`;
+  }
+}
+
+async function invRegistrarProducto() {
+  const msg = document.getElementById('invMsg');
+  const producto = {
+    codigo: document.getElementById('invp_codigo').value.trim(),
+    nombre: document.getElementById('invp_nombre').value.trim(),
+    unidad: document.getElementById('invp_unidad').value.trim() || 'Unidades',
+    grupo:  document.getElementById('invp_grupo').value.trim() || 'General',
+    stockMin: document.getElementById('invp_stockmin').value,
+    precioUnitario: document.getElementById('invp_precio').value,
+    tipo: document.getElementById('invp_tipo').value,
+  };
+  msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
+  try {
+    await registrarProductoInventarioDirecto(inventarioOperacionActual, producto);
+    msg.style.color = '#15803d'; msg.textContent = '✔ Producto registrado correctamente.';
+    ['invp_codigo','invp_nombre','invp_stockmin','invp_precio'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('invp_unidad').value = 'Unidades';
+    document.getElementById('invp_grupo').value = 'General';
+    _stockInventarioCache = null; // invalida el caché del autocompletado, para que vea el producto nuevo
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
+  }
+}
+
+function invHandleTipoChange() {
+  const tipo = document.getElementById('invm_tipo').value;
+  const requiere = tipo === 'SALIDA';
+  document.getElementById('invm_equipoMarca').style.display = requiere ? 'inline' : 'none';
+}
+
+async function invRegistrarMovimiento() {
+  const msg = document.getElementById('invMsg');
+  const tipo = document.getElementById('invm_tipo').value;
+  const equipo = document.getElementById('invm_equipo').value.trim();
+  const responsable = document.getElementById('invm_responsable').value.trim();
+
+  if (tipo === 'SALIDA' && !equipo) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ Para una salida, el equipo destino es obligatorio.'; return; }
+  if (!responsable) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ El responsable es obligatorio.'; return; }
+
+  msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
+  try {
+    await registrarMovimientoInventarioDirecto(inventarioOperacionActual, {
+      codigo: document.getElementById('invm_codigo').value.trim(),
+      fecha:  document.getElementById('invm_fecha').value,
+      tipo,
+      cantidad: document.getElementById('invm_cantidad').value,
+      responsable, equipo,
+      observaciones: document.getElementById('invm_obs').value.trim(),
+    });
+    msg.style.color = '#15803d'; msg.textContent = '✔ Movimiento registrado correctamente.';
+    ['invm_codigo','invm_cantidad','invm_responsable','invm_equipo','invm_obs'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('invm_fecha').valueAsDate = new Date();
+    _stockInventarioCache = null;
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
+  }
+}
+
+async function invCargarStock() {
+  const cont = document.getElementById('invStockTabla');
+  cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
+  try {
+    const stock = await obtenerStockInventarioDirecto(inventarioOperacionActual);
+    if (!stock.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay productos registrados</div>'; return; }
+    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Grupo</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
+      stock.map(p => {
+        let estado = 'Normal', color = '#dcfce7', tcolor = '#15803d';
+        if (p.cantidad <= 0) { estado = 'Sin Stock'; color = '#fee2e2'; tcolor = '#b91c1c'; }
+        else if (p.cantidad <= p.stockMin && p.stockMin > 0) { estado = 'Stock Bajo'; color = '#fef9c3'; tcolor = '#a16207'; }
+        return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.grupo)}</td>
+          <td>${p.stockMin}</td><td><strong>${p.cantidad}</strong></td><td>${fmtCOP(p.precioUnitario)}</td><td><strong>${fmtCOP(p.valorTotal)}</strong></td>
+          <td><span class="inv-badge" style="background:${color};color:${tcolor}">${estado}</span></td></tr>`;
+      }).join('') + `</tbody></table>`;
+  } catch (e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
+  }
+}
+
+async function invCargarHistorial() {
+  const cont = document.getElementById('invHistorialTabla');
+  cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando…</div>';
+  try {
+    const filtros = {
+      fechaDesde: document.getElementById('invr_desde').value,
+      fechaHasta: document.getElementById('invr_hasta').value,
+      tipo: document.getElementById('invr_tipo').value,
+    };
+    const historial = await obtenerHistorialInventarioDirecto(inventarioOperacionActual, filtros);
+    if (!historial.length) { cont.innerHTML = '<div style="color:var(--text3);font-size:13px">No hay movimientos en el período seleccionado</div>'; return; }
+    const tipoLabel = { INGRESO:'Ingreso', SALIDA:'Salida', AJUSTE_POSITIVO:'Ajuste +', AJUSTE_NEGATIVO:'Ajuste −' };
+    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th><th>Observaciones</th></tr></thead><tbody>` +
+      historial.map(m => `<tr><td>${esc(m.fecha)}</td><td><strong>${esc(m.codigo)}</strong></td><td>${esc(m.producto)}</td><td>${tipoLabel[m.tipo]||m.tipo}</td>
+        <td>${m.cantidad}</td><td>${esc(m.equipo)||'—'}</td><td>${esc(m.responsable)||'—'}</td><td>${esc(m.observaciones)}</td></tr>`).join('') +
+      `</tbody></table>`;
+  } catch (e) {
+    cont.innerHTML = `<div style="color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
+  }
+}
+
+
+
 /** Le dice al iframe del inventario qué pestaña mostrar.
  *  Apps Script sandboxea su HTML en un iframe interno propio que bloquea
  *  postMessage entre dominios, así que en vez de eso recargamos el iframe
  *  con el parámetro ?tab=, que el inventario lee al cargar. */
 function irATabInventario(tabKey) {
-  inventarioTabActual = tabKey;
-  const iframe = document.getElementById('invIframe');
-  const base = INVENTARIO_CONFIG[inventarioOperacionActual];
-  if (iframe && base && !base.startsWith('PEGA_AQUI')) {
-    const sep = base.includes('?') ? '&' : '?';
-    iframe.src = base + sep + 'tab=' + encodeURIComponent(tabKey);
-  }
+  invMostrarSubTab(tabKey);
   renderSidebarOperaciones();
 }
 
