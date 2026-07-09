@@ -1771,6 +1771,25 @@ body.inv-activo .container { max-width: 1700px; }
             <span>📋 Stock Actual</span>
             <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="invCargarStock()">🔄 Actualizar</button>
           </div>
+          <div style="padding:14px;display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+            <div class="field" style="flex:1;min-width:180px">
+              <label>Buscar</label>
+              <input id="invStockBuscar" placeholder="Código o nombre…" oninput="invFiltrarStock()">
+            </div>
+            <div class="field" style="min-width:150px">
+              <label>Grupo</label>
+              <select id="invStockFiltroGrupo" onchange="invFiltrarStock()"><option value="">Todos</option></select>
+            </div>
+            <div class="field" style="min-width:150px">
+              <label>Tipo</label>
+              <select id="invStockFiltroTipo" onchange="invFiltrarStock()">
+                <option value="">Todos</option>
+                <option value="Repuesto">Repuesto</option>
+                <option value="Insumo">Insumo</option>
+                <option value="__sinclasificar">Sin clasificar</option>
+              </select>
+            </div>
+          </div>
           <div style="padding:0;overflow-x:auto" id="invStockTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
       </div>
@@ -6004,24 +6023,57 @@ async function invRegistrarMovimiento() {
   }
 }
 
+let _invStockCacheTabla = [];
+
 async function invCargarStock() {
   const cont = document.getElementById('invStockTabla');
   cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
   try {
     const stock = await obtenerStockInventarioDirecto(inventarioOperacionActual);
-    if (!stock.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay productos registrados</div>'; return; }
-    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Grupo</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
-      stock.map(p => {
-        let estado = 'Normal', color = '#dcfce7', tcolor = '#15803d';
-        if (p.cantidad <= 0) { estado = 'Sin Stock'; color = '#fee2e2'; tcolor = '#b91c1c'; }
-        else if (p.cantidad <= p.stockMin && p.stockMin > 0) { estado = 'Stock Bajo'; color = '#fef9c3'; tcolor = '#a16207'; }
-        return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.grupo)}</td>
-          <td>${p.stockMin}</td><td><strong>${p.cantidad}</strong></td><td>${fmtCOP(p.precioUnitario)}</td><td><strong>${fmtCOP(p.valorTotal)}</strong></td>
-          <td><span class="inv-badge" style="background:${color};color:${tcolor}">${estado}</span></td></tr>`;
-      }).join('') + `</tbody></table>`;
+    _invStockCacheTabla = stock;
+
+    // Llenar el filtro de Grupo con los grupos que realmente existen
+    const selGrupo = document.getElementById('invStockFiltroGrupo');
+    const grupoActual = selGrupo.value;
+    const grupos = [...new Set(stock.map(p => p.grupo).filter(Boolean))].sort();
+    selGrupo.innerHTML = '<option value="">Todos</option>' + grupos.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
+    if (grupos.includes(grupoActual)) selGrupo.value = grupoActual;
+
+    invFiltrarStock();
   } catch (e) {
     cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
   }
+}
+
+/** Aplica los filtros (búsqueda, grupo, tipo) sobre el stock ya cargado en
+ *  caché — no vuelve a pedirle nada a Google Sheets, solo filtra en el
+ *  navegador para que sea instantáneo mientras se escribe. */
+function invFiltrarStock() {
+  const texto = (document.getElementById('invStockBuscar').value || '').toLowerCase().trim();
+  const grupo = document.getElementById('invStockFiltroGrupo').value;
+  const tipo  = document.getElementById('invStockFiltroTipo').value;
+
+  let lista = _invStockCacheTabla.slice();
+  if (texto) lista = lista.filter(p => (p.codigo||'').toLowerCase().includes(texto) || (p.nombre||'').toLowerCase().includes(texto));
+  if (grupo) lista = lista.filter(p => p.grupo === grupo);
+  if (tipo === '__sinclasificar') lista = lista.filter(p => !p.tipo);
+  else if (tipo) lista = lista.filter(p => p.tipo === tipo);
+
+  invRenderTablaStock(lista);
+}
+
+function invRenderTablaStock(stock) {
+  const cont = document.getElementById('invStockTabla');
+  if (!stock.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay productos que coincidan con el filtro</div>'; return; }
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Grupo</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
+    stock.map(p => {
+      let estado = 'Normal', color = '#dcfce7', tcolor = '#15803d';
+      if (p.cantidad <= 0) { estado = 'Sin Stock'; color = '#fee2e2'; tcolor = '#b91c1c'; }
+      else if (p.cantidad <= p.stockMin && p.stockMin > 0) { estado = 'Stock Bajo'; color = '#fef9c3'; tcolor = '#a16207'; }
+      return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.grupo)}</td>
+        <td>${p.stockMin}</td><td><strong>${p.cantidad}</strong></td><td>${fmtCOP(p.precioUnitario)}</td><td><strong>${fmtCOP(p.valorTotal)}</strong></td>
+        <td><span class="inv-badge" style="background:${color};color:${tcolor}">${estado}</span></td></tr>`;
+    }).join('') + `</tbody></table>`;
 }
 
 async function invCargarHistorial() {
