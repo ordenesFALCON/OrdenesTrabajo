@@ -1700,6 +1700,23 @@ body.inv-activo .container { max-width: 1700px; }
           <div class="card-head">⚠️ Alertas de Stock</div>
           <div style="padding:14px" id="invAlertas"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
+
+        <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:16px;margin-top:16px">
+          <div class="card" style="margin:0">
+            <div class="card-head">🕐 Actividad Reciente <span style="font-weight:400;text-transform:none;opacity:.8">· últimos 10 movimientos</span></div>
+            <div style="padding:0;overflow-x:auto;max-height:320px" id="invActividadReciente"><div style="padding:14px;color:var(--text3);font-size:13px">Cargando…</div></div>
+          </div>
+          <div class="card" style="margin:0">
+            <div class="card-head">🏭 Destino de Repuestos</div>
+            <div style="padding:14px" id="invDestinoChart"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-head">📊 Equipos — Consumo</div>
+          <div style="padding:14px" id="invEquiposChart"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
+        </div>
+
       </div>
 
       <!-- ── Sub-panel: Nuevo Producto ── -->
@@ -2521,20 +2538,7 @@ function renderSidebarOperaciones() {
           <span style="font-size:16px">${op.bandera}</span>
           <span style="flex:1;line-height:1.25">INV ${esc(op.nombre)}</span>
           ${habilitado ? '' : '<span style="font-size:14px">🔒</span>'}
-        </div>
-        ${activo ? `<div style="background:rgba(0,0,0,.15);padding:4px 0 6px">
-          ${INVENTARIO_TABS.map(t => `
-            <div onclick="irATabInventario('${t.key}')"
-              style="display:flex;align-items:center;gap:9px;padding:8px 16px 8px 30px;cursor:pointer;font-size:12.5px;
-                     color:${t.key === inventarioTabActual ? 'white' : 'rgba(255,255,255,.65)'};
-                     font-weight:${t.key === inventarioTabActual ? '700' : '400'};
-                     background:${t.key === inventarioTabActual ? 'rgba(255,255,255,.12)' : 'transparent'}"
-              onmouseover="this.style.background='rgba(255,255,255,.10)'"
-              onmouseout="this.style.background='${t.key === inventarioTabActual ? 'rgba(255,255,255,.12)' : 'transparent'}'">
-              <span style="font-size:13px">${t.icono}</span>
-              <span>${t.label}</span>
-            </div>`).join('')}
-        </div>` : ''}`;
+        </div>`;
     }).join('')}`;
 }
 
@@ -2980,6 +2984,7 @@ function abrirModalCompletar(id) {
   const tareas = o.tareas && o.tareas.length ? o.tareas : [{descripcion:'',tiempoEstimado:'',tiempoReal:'',ok:false,responsable:''},{descripcion:'',tiempoEstimado:'',tiempoReal:'',ok:false,responsable:''},{descripcion:'',tiempoEstimado:'',tiempoReal:'',ok:false,responsable:''}];
   tareas.forEach(t => {
     const tr = document.createElement('tr');
+    tr.className = 'tr-tarea-principal';
     tr.innerHTML = `
       <td><input type="text" placeholder="Descripción de la tarea" value="${esc(t.descripcion||'')}"></td>
       <td><input type="text" placeholder="2h" value="${esc(t.tiempoEstimado||'')}"></td>
@@ -2992,8 +2997,9 @@ function abrirModalCompletar(id) {
             onchange="manejarSubidaFotoTarea(this)">
         </label>
       </td>
-      <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
+      <td><button class="btn-del-row" onclick="this.closest('tr').nextElementSibling?.remove(); this.closest('tr').remove()">✕</button></td>`;
     eTareas.appendChild(tr);
+    eTareas.appendChild(_crearFilaObservacionFantasma(t.observacionFantasma || ''));
   });
 
   // ── 4. Repuestos
@@ -3141,11 +3147,13 @@ function clearSigCierre() {
 }
 
 function leerEditorDatos() {
-  const tareas = Array.from(document.getElementById('e_tbody_tareas').querySelectorAll('tr')).map(tr => {
+  const tareas = Array.from(document.getElementById('e_tbody_tareas').querySelectorAll('tr.tr-tarea-principal')).map(tr => {
     const ins = tr.querySelectorAll('input,select');
+    const filaObs = tr.nextElementSibling; // la fila de observación fantasma, siempre justo debajo
+    const obsInput = filaObs && filaObs.classList.contains('tr-tarea-obs') ? filaObs.querySelector('.input-obs-fantasma') : null;
     return { descripcion: ins[0]?.value||'', tiempoEstimado: ins[1]?.value||'',
              tiempoReal: ins[2]?.value||'', ok: ins[3]?.checked||false,
-             responsable: ins[4]?.value||'' };
+             responsable: ins[4]?.value||'', observacionFantasma: obsInput?.value||'' };
   }).filter(t => t.descripcion);
 
   const repuestos = Array.from(document.getElementById('e_tbody_repuestos').querySelectorAll('tr')).map(tr => {
@@ -3455,10 +3463,28 @@ function exportarRealizadasCSV() {
 /* ══════════════════════════════════════════════
    FILAS DINÁMICAS
 ══════════════════════════════════════════════ */
+/** Crea la fila de "observación fantasma" que va debajo de cada tarea, SOLO
+ *  en el editor (donde también se cierra la orden). Se llama "fantasma"
+ *  porque sirve para anotar por qué una tarea puntual no se pudo ejecutar
+ *  (ej. no llegó el repuesto a tiempo) mientras se revisa/cierra la orden —
+ *  pero nunca aparece en el PDF, en la impresión, ni en la vista de una
+ *  orden ya cerrada. Es una nota de trabajo, no parte del reporte final. */
+function _crearFilaObservacionFantasma(valor) {
+  const tr = document.createElement('tr');
+  tr.className = 'tr-tarea-obs';
+  tr.innerHTML = `
+    <td colspan="7" style="padding:2px 8px 10px 8px;background:#fffbea">
+      <input type="text" class="input-obs-fantasma" placeholder="👻 Observación (solo interna — por qué no se ha ejecutado esta tarea, ej: repuesto no ha llegado)"
+        value="${esc(valor||'')}" style="width:100%;font-size:12px;font-style:italic;border:1px dashed #d4a72c;background:#fffbea">
+    </td>`;
+  return tr;
+}
+
 function addRow(tbodyId, tipo) {
   const tbody = document.getElementById(tbodyId);
   const tr = document.createElement('tr');
   if (tipo === 'tarea') {
+    tr.className = 'tr-tarea-principal';
     tr.innerHTML = `
       <td><input type="text" placeholder="Descripción de la tarea"></td>
       <td><input type="text" placeholder="2h"></td>
@@ -3471,7 +3497,10 @@ function addRow(tbodyId, tipo) {
             onchange="manejarSubidaFotoTarea(this)">
         </label>
       </td>` : ''}
-      <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
+      <td><button class="btn-del-row" onclick="${tbodyId==='e_tbody_tareas' ? "this.closest('tr').nextElementSibling?.remove(); " : ''}this.closest('tr').remove()">✕</button></td>`;
+    tbody.appendChild(tr);
+    if (tbodyId === 'e_tbody_tareas') tbody.appendChild(_crearFilaObservacionFantasma(''));
+    return;
   } else {
     tr.innerHTML = `
       <td><input type="text" placeholder="COD-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'codigo')"></td>
@@ -3729,7 +3758,7 @@ const SHEETS_COLS = [
   'UserEmail','CostoTotal','FechaCierre','EjecutadoPor','TiempoReal',
   'CostoReal','ObsCierre','FechaCreacion','FirmaCreador','FirmaCierre'
 ];
-const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','TiempoReal','OK','Responsable'];
+const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','TiempoReal','OK','Responsable','ObservacionCierre'];
 const REPUESTOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const INSUMOS_COLS   = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const FOTOS_COLS     = ['NumeroOrden','#','DriveFileId','UrlVer','UrlDescarga','TareaDescripcion','SubidoPor','Fecha'];
@@ -4233,7 +4262,8 @@ async function guardarOrdenEnSheets(datos) {
         t.tiempoEstimado || '',
         t.tiempoReal || '',
         t.ok ? 'SI' : 'NO',
-        t.responsable || ''
+        t.responsable || '',
+        t.observacionFantasma || ''
       ]);
     if (filasTareas.length) await appendHoja(SH.tareas, filasTareas);
   }
@@ -4331,7 +4361,8 @@ async function cargarOrdenesDeSheets() {
         tiempoEstimado: r.TiempoEstimado || '',
         tiempoReal:     r.TiempoReal || '',
         ok:             r.OK === 'SI',
-        responsable:    r.Responsable || ''
+        responsable:    r.Responsable || '',
+        observacionFantasma: r.ObservacionCierre || ''
       });
     }
   });
@@ -4457,7 +4488,7 @@ async function actualizarOrdenEnSheets(numeroOrden, campos) {
     if (campos.tareas && Array.isArray(campos.tareas)) {
       const filas = campos.tareas
         .filter(t => (t.descripcion||'').trim())
-        .map((t, i) => [numeroOrden, i+1, t.descripcion||'', t.tiempoEstimado||'', t.tiempoReal||'', t.ok?'SI':'NO', t.responsable||'']);
+        .map((t, i) => [numeroOrden, i+1, t.descripcion||'', t.tiempoEstimado||'', t.tiempoReal||'', t.ok?'SI':'NO', t.responsable||'', t.observacionFantasma||'']);
       await reemplazarFilasOrden(SH.tareas, TAREAS_COLS, filas);
     }
 
@@ -5826,10 +5857,93 @@ async function invCargarDashboard() {
           <td><span class="inv-badge" style="background:${p.cantidad<=0?'#fee2e2':'#fef9c3'};color:${p.cantidad<=0?'#b91c1c':'#a16207'}">${p.cantidad<=0?'Sin Stock':'Stock Bajo'}</span></td></tr>`).join('') +
         `</tbody></table>`;
     }
+
+    // ── Actividad reciente + Destino de repuestos + Consumo por equipo ──
+    // (últimos 3 meses, para no traer todo el historial completo cada vez)
+    const desde = new Date(); desde.setMonth(desde.getMonth() - 3);
+    const historial = await obtenerHistorialInventarioDirecto(inventarioOperacionActual, {
+      fechaDesde: desde.toISOString().split('T')[0],
+      fechaHasta: new Date().toISOString().split('T')[0],
+    });
+    invRenderActividadReciente(historial);
+    invRenderDestinoChart(historial);
+    invRenderEquiposChart(historial);
+
     msg.textContent = '';
   } catch (e) {
     msg.innerHTML = `⚠️ ${esc(e.message)}`;
   }
+}
+
+function invRenderActividadReciente(historial) {
+  const cont = document.getElementById('invActividadReciente');
+  if (!cont) return;
+  if (!historial.length) { cont.innerHTML = '<div style="padding:14px;color:var(--text3);font-size:13px">No hay movimientos recientes</div>'; return; }
+  const recientes = historial.slice(0, 10);
+  const tipoColor = { INGRESO:'#16a34a', SALIDA:'#dc2626', AJUSTE_POSITIVO:'#0891b2', AJUSTE_NEGATIVO:'#ca8a04' };
+  const tipoLabel = { INGRESO:'Ingreso', SALIDA:'Salida', AJUSTE_POSITIVO:'Aj+', AJUSTE_NEGATIVO:'Aj−' };
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th></tr></thead><tbody>` +
+    recientes.map(m => {
+      const color = tipoColor[m.tipo] || '#64748b';
+      return `<tr><td style="font-size:12px;color:var(--text3)">${esc(m.fecha)}</td><td><strong>${esc(m.codigo)}</strong></td>
+        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${esc(m.producto)}</td>
+        <td><span class="inv-badge" style="background:${color}22;color:${color}">${tipoLabel[m.tipo]||m.tipo}</span></td>
+        <td><strong>${m.cantidad}</strong></td><td>${esc(m.equipo)||'—'}</td><td>${esc(m.responsable)||'—'}</td></tr>`;
+    }).join('') + `</tbody></table>`;
+}
+
+function invRenderDestinoChart(historial) {
+  const cont = document.getElementById('invDestinoChart');
+  if (!cont) return;
+  const conteo = {};
+  historial.filter(m => m.tipo === 'SALIDA' || m.tipo === 'AJUSTE_NEGATIVO').forEach(m => {
+    const eq = m.equipo || '—';
+    conteo[eq] = (conteo[eq] || 0) + m.cantidad;
+  });
+  const orden = Object.entries(conteo).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  if (!orden.length) { cont.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Sin salidas registradas en este período</div>'; return; }
+  const max = orden[0][1];
+  const colores = ['#0d2a52','#e8701a','#16a34a','#0891b2','#7c3aed','#dc2626','#ca8a04','#374151'];
+  cont.innerHTML = orden.map(([eq,cant],i) => {
+    const pct = Math.round((cant/max)*100);
+    const color = colores[i % colores.length];
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(eq)}">${esc(eq)}</span>
+        <span style="font-weight:700;color:${color}">${cant}</span>
+      </div>
+      <div style="background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:6px"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function invRenderEquiposChart(historial) {
+  const cont = document.getElementById('invEquiposChart');
+  if (!cont) return;
+  const conteo = {};
+  historial.filter(m => m.tipo === 'SALIDA' || m.tipo === 'AJUSTE_NEGATIVO').forEach(m => {
+    const eq = m.equipo || 'Sin equipo';
+    conteo[eq] = (conteo[eq] || 0) + 1;
+  });
+  const orden = Object.entries(conteo).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  if (!orden.length) { cont.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px">Sin datos</div>'; return; }
+  const total = orden.reduce((s,[,v]) => s+v, 0);
+  const colores = ['#0d2a52','#e8701a','#16a34a','#0891b2','#7c3aed','#dc2626'];
+  cont.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">` + orden.map(([eq,cnt],i) => {
+    const pct = Math.round((cnt/total)*100);
+    const color = colores[i % colores.length];
+    return `<div style="display:flex;align-items:center;gap:10px">
+      <div style="width:38px;height:38px;background:${color}18;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span style="font-size:11px;font-weight:800;color:${color}">${pct}%</span>
+      </div>
+      <div style="min-width:0">
+        <div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(eq)}">${esc(eq)}</div>
+        <div style="font-size:11px;color:var(--text3)">${cnt} movimiento${cnt!==1?'s':''}</div>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
 }
 
 async function invRegistrarProducto() {
