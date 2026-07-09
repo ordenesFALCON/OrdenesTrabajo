@@ -5441,11 +5441,42 @@ function abrirInventario(opKey) {
   } else {
     msg.textContent = '';
     iframe.src = url;
+    _detectarFalloIframeInventario(iframe, url);
   }
 
   renderSidebarOperaciones();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+/** Intenta detectar si Google bloqueó el iframe (por su propia pantalla de
+ *  verificación, que nunca se puede incrustar) y, si es así, abre la
+ *  pestaña nueva SOLA — sin que el usuario tenga que notar el error y
+ *  darle clic al botón manual.
+ *  Aviso honesto: esta detección es un "mejor esfuerzo", no 100% infalible
+ *  en todos los navegadores — por eso el botón manual se deja siempre
+ *  visible también, como respaldo garantizado. */
+function _detectarFalloIframeInventario(iframe, url) {
+  const idIntento = ++_invIntentoActual;
+  setTimeout(() => {
+    if (idIntento !== _invIntentoActual) return; // el usuario ya cambió de sede/salió, no hacer nada
+    let bloqueado = false;
+    try {
+      // Si Google bloqueó la carga, el iframe se queda en blanco (mismo
+      // origen, se puede leer sin error). Si sí cargó bien, esto lanza un
+      // error de "cross-origin" — eso es justo la señal de que SÍ funcionó.
+      const href = iframe.contentWindow.location.href;
+      if (href === 'about:blank') bloqueado = true;
+    } catch (e) {
+      bloqueado = false; // cross-origin = cargó bien, todo normal
+    }
+    if (bloqueado) {
+      const msg = document.getElementById('invMsg');
+      if (msg) msg.innerHTML = '⚠️ Google bloqueó la vista incrustada — abriendo en una pestaña nueva automáticamente...';
+      window.open(url, '_blank');
+    }
+  }, 2500);
+}
+let _invIntentoActual = 0;
 
 /** Abre el inventario de la sede que se está viendo actualmente en una
  *  pestaña nueva del navegador. Google bloquea sus propias pantallas de
@@ -5462,6 +5493,7 @@ function abrirInventarioEnPestana() {
 }
 
 function volverDeInventario() {
+  _invIntentoActual++; // invalida cualquier detección de fallo que haya quedado pendiente
   inventarioOperacionActual = null;
   document.getElementById('invIframe').src = 'about:blank';
   const navTabs = document.querySelector('.nav-tabs');
