@@ -183,32 +183,7 @@ body.inv-activo .container { max-width: 1700px; }
 @media (max-width: 900px) {
   .container { margin-left: 0; }
   .nav-tabs { margin-left: 0; }
-
-  /* El menú de "Operaciones/Inventario" (banderas + candados) ya NO se
-     oculta sin alternativa — se convierte en una bandeja deslizante,
-     abierta con el botón ☰ que aparece en el header (mismo punto de
-     quiebre en el que el sidebar deja de verse fijo, para que nunca
-     quede una franja de anchos donde no haya forma de abrirlo). */
-  #btnMenuMovil { display: inline-flex; align-items: center; justify-content: center; }
-  #sidebarOperaciones {
-    display: block !important;
-    top: 0 !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    width: 82vw !important;
-    max-width: 300px;
-    transform: translateX(-100%);
-    transition: transform .25s ease;
-    z-index: 400 !important;
-  }
-  #sidebarOperaciones.abierto { transform: translateX(0); }
-  #fondoSidebarMovil {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.45);
-    z-index: 390;
-  }
-  #fondoSidebarMovil.abierto { display: block; }
+  #sidebarOperaciones { display: none; }
 }
 
 /* ── Celular angosto: el header se acomoda en 2 filas en vez de
@@ -256,6 +231,30 @@ body.inv-activo .container { max-width: 1700px; }
      encima del encabezado cuando este se acomoda en 2 filas — en celular
      no hay una esquina libre segura para dejarlo, así que se oculta. */
   #appVersionTag { display: none; }
+
+  /* El menú de "Operaciones/Inventario" (banderas + candados) ya NO se
+     oculta sin alternativa — en celular se convierte en una bandeja
+     deslizante, abierta con el botón ☰ que aparece en el header. */
+  #btnMenuMovil { display: inline-flex; align-items: center; justify-content: center; }
+  #sidebarOperaciones {
+    display: block !important;
+    top: 0 !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: 82vw !important;
+    max-width: 300px;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    z-index: 400 !important;
+  }
+  #sidebarOperaciones.abierto { transform: translateX(0); }
+  #fondoSidebarMovil {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 390;
+  }
+  #fondoSidebarMovil.abierto { display: block; }
 }
 
 /* ── Panels ── */
@@ -1647,11 +1646,7 @@ body.inv-activo .container { max-width: 1700px; }
     <div style="max-width:1300px;margin:0 auto;width:100%">
       <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
         <div id="invTituloVista" style="font-weight:700;color:var(--brand);font-size:15px;flex:1">📦 Inventario</div>
-        <button class="btn btn-primary" onclick="abrirInventarioEnPestana()">🔗 Abrir en pestaña nueva</button>
         <button class="btn btn-ghost" onclick="volverDeInventario()">← Volver</button>
-      </div>
-      <div style="background:#eaf2ff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--text2)">
-        ℹ️ Si el panel de abajo aparece en blanco o no carga, usa el botón <strong>"🔗 Abrir en pestaña nueva"</strong> — es la forma más confiable de entrar al inventario.
       </div>
       <div id="invMsg" style="font-size:13px;color:var(--text3);margin-bottom:8px"></div>
       <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white">
@@ -5445,20 +5440,6 @@ function abrirInventario(opKey) {
 
   renderSidebarOperaciones();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/** Abre el inventario de la sede que se está viendo actualmente en una
- *  pestaña nueva del navegador. Google bloquea sus propias pantallas de
- *  autenticación dentro de cualquier iframe (no solo el nuestro) — por
- *  eso esta es la forma más confiable de entrar, cuando el panel
- *  embebido no carga. */
-function abrirInventarioEnPestana() {
-  const url = INVENTARIO_CONFIG[inventarioOperacionActual];
-  if (!url || url.startsWith('PEGA_AQUI')) {
-    alert('⚠️ Aún no se configuró la URL del Apps Script de inventario para esta sede.');
-    return;
-  }
-  window.open(url, '_blank');
 }
 
 function volverDeInventario() {
