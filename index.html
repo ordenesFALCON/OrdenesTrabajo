@@ -1756,7 +1756,9 @@ body.inv-activo .container { max-width: 1700px; }
               </div>
               <div class="field"><label>Cantidad *</label><input id="invm_cantidad" type="number" min="0.01" step="0.01" placeholder="0"></div>
               <div class="field"><label>Responsable *</label><input id="invm_responsable" placeholder="Nombre completo"></div>
-              <div class="field" id="invm_grupoEquipo"><label>Equipo Destino <span id="invm_equipoMarca">*</span></label><input id="invm_equipo" placeholder="Ej: CB2"></div>
+              <div class="field" id="invm_grupoEquipo"><label>Equipo Destino <span id="invm_equipoMarca">*</span></label>
+                <select id="invm_equipo"><option value="">Seleccionar equipo...</option></select>
+              </div>
               <div class="field" style="grid-column:1/-1"><label>Observaciones</label><input id="invm_obs" placeholder="Opcional"></div>
             </div>
             <button class="btn btn-primary" onclick="invRegistrarMovimiento()">💾 Guardar Movimiento</button>
@@ -5825,6 +5827,7 @@ function abrirInventario(opKey) {
 
   document.getElementById('invm_fecha').valueAsDate = new Date();
   invHandleTipoChange();
+  invPoblarEquipos();
   invMostrarSubTab('dashboard');
 
   renderSidebarOperaciones();
@@ -5987,6 +5990,17 @@ async function invRegistrarProducto() {
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
   }
+}
+
+/** Llena el desplegable de "Equipo Destino" en Movimientos con la lista real
+ *  de equipos de la sede activa — la MISMA lista que usa Órdenes de Trabajo
+ *  (EQUIPOS_POR_SEDE), para que los nombres coincidan exactamente entre los
+ *  dos sistemas y no se partan las gráficas de consumo por equipo. */
+function invPoblarEquipos() {
+  const sel = document.getElementById('invm_equipo');
+  if (!sel) return;
+  const grupos = EQUIPOS_POR_SEDE[inventarioOperacionActual] || EQUIPOS_LISTADO_GENERAL;
+  sel.innerHTML = '<option value="">Seleccionar equipo...</option>' + _renderOptionsGrupo(grupos);
 }
 
 function invHandleTipoChange() {
