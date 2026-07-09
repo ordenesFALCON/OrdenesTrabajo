@@ -1647,7 +1647,11 @@ body.inv-activo .container { max-width: 1700px; }
     <div style="max-width:1300px;margin:0 auto;width:100%">
       <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
         <div id="invTituloVista" style="font-weight:700;color:var(--brand);font-size:15px;flex:1">📦 Inventario</div>
+        <button class="btn btn-primary" onclick="abrirInventarioEnPestana()">🔗 Abrir en pestaña nueva</button>
         <button class="btn btn-ghost" onclick="volverDeInventario()">← Volver</button>
+      </div>
+      <div style="background:#eaf2ff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--text2)">
+        ℹ️ Si el panel de abajo aparece en blanco o no carga, usa el botón <strong>"🔗 Abrir en pestaña nueva"</strong> — es la forma más confiable de entrar al inventario.
       </div>
       <div id="invMsg" style="font-size:13px;color:var(--text3);margin-bottom:8px"></div>
       <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white">
@@ -5441,6 +5445,20 @@ function abrirInventario(opKey) {
 
   renderSidebarOperaciones();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Abre el inventario de la sede que se está viendo actualmente en una
+ *  pestaña nueva del navegador. Google bloquea sus propias pantallas de
+ *  autenticación dentro de cualquier iframe (no solo el nuestro) — por
+ *  eso esta es la forma más confiable de entrar, cuando el panel
+ *  embebido no carga. */
+function abrirInventarioEnPestana() {
+  const url = INVENTARIO_CONFIG[inventarioOperacionActual];
+  if (!url || url.startsWith('PEGA_AQUI')) {
+    alert('⚠️ Aún no se configuró la URL del Apps Script de inventario para esta sede.');
+    return;
+  }
+  window.open(url, '_blank');
 }
 
 function volverDeInventario() {
