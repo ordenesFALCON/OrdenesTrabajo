@@ -1600,45 +1600,80 @@ body.inv-activo .container { max-width: 1700px; }
   <div id="panel-historico" class="panel">
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <div style="flex:1;font-weight:800;color:var(--brand);font-size:16px">📜 Histórico de Órdenes por Equipo</div>
+      <select id="histSelectorVista" onchange="histCambiarVista()" style="min-width:220px;font-weight:600">
+        <option value="equipos">Equipos</option>
+        <option value="inventario">Inventario de Equipos</option>
+      </select>
     </div>
 
-    <!-- Filtros -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
-        <input id="histBuscarEquipo" placeholder="Buscar equipo..." oninput="filtrarListaEquiposHistorico()" style="flex:1;min-width:180px">
-        <select id="histFiltroMes" onchange="renderHistoricoEquipoSeleccionado()" style="min-width:140px">
-          <option value="">Todos los meses</option>
-          <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
-          <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
-          <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
-          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-        </select>
-        <select id="histFiltroAnio" onchange="renderHistoricoEquipoSeleccionado()" style="min-width:110px">
-          <option value="">Todos los años</option>
-          <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
-          <option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option>
-          <option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option>
-          <option value="2035">2035</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:start">
-      <!-- Lista de equipos -->
-      <div class="card">
-        <div class="card-head">🔧 Equipos</div>
-        <div class="card-body" style="padding:0;max-height:560px;overflow-y:auto">
-          <div id="histListaEquipos"></div>
+    <!-- ══════ VISTA: EQUIPOS (la de siempre) ══════ -->
+    <div id="histVistaEquipos">
+      <!-- Filtros -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
+          <input id="histBuscarEquipo" placeholder="Buscar equipo..." oninput="filtrarListaEquiposHistorico()" style="flex:1;min-width:180px">
+          <select id="histFiltroMes" onchange="renderHistoricoEquipoSeleccionado()" style="min-width:140px">
+            <option value="">Todos los meses</option>
+            <option value="01">Enero</option><option value="02">Febrero</option><option value="03">Marzo</option>
+            <option value="04">Abril</option><option value="05">Mayo</option><option value="06">Junio</option>
+            <option value="07">Julio</option><option value="08">Agosto</option><option value="09">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select id="histFiltroAnio" onchange="renderHistoricoEquipoSeleccionado()" style="min-width:110px">
+            <option value="">Todos los años</option>
+            <option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option>
+            <option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option>
+            <option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option>
+            <option value="2035">2035</option>
+          </select>
         </div>
       </div>
 
-      <!-- Órdenes del equipo seleccionado -->
-      <div class="card">
-        <div class="card-head" id="histTituloEquipo">📋 Selecciona un equipo</div>
-        <div class="card-body" style="padding:0;overflow-x:auto">
-          <div id="histTablaOrdenes" style="padding:20px;color:var(--text3);font-size:13px;text-align:center">
-            Elige un equipo de la lista para ver su historial de órdenes.
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:start">
+        <!-- Lista de equipos -->
+        <div class="card">
+          <div class="card-head">🔧 Equipos</div>
+          <div class="card-body" style="padding:0;max-height:560px;overflow-y:auto">
+            <div id="histListaEquipos"></div>
           </div>
+        </div>
+
+        <!-- Órdenes del equipo seleccionado -->
+        <div class="card">
+          <div class="card-head" id="histTituloEquipo">📋 Selecciona un equipo</div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <div id="histTablaOrdenes" style="padding:20px;color:var(--text3);font-size:13px;text-align:center">
+              Elige un equipo de la lista para ver su historial de órdenes.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ VISTA: INVENTARIO DE EQUIPOS (nueva) ══════ -->
+    <div id="histVistaInventario" style="display:none">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-head">➕ Registrar Equipo</div>
+        <div class="card-body" style="padding:18px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+            <div class="field"><label>Equipo *</label><input id="ie_equipo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del equipo"></div>
+            <div class="field"><label>Marca</label><input id="ie_marca" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="field"><label>Descripción Específica</label><input id="ie_descripcion" placeholder="Descripción del equipo"></div>
+            <div class="field"><label>Codificación</label><input id="ie_codificacion" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="field"><label>Ubicación</label><input id="ie_ubicacion" placeholder="Ej: Sala de compresores primer piso"></div>
+            <div class="field"><label>Año</label><select id="ie_anio"></select></div>
+          </div>
+          <button class="btn btn-primary" onclick="registrarInventarioEquipo()">✔ Agregar Equipo</button>
+          <div id="ieMsg" style="margin-top:10px;font-size:13px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+          <span>📋 Equipos Registrados</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="cargarInventarioEquipos()">🔄 Actualizar</button>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto" id="ieTabla">
+          <div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>
         </div>
       </div>
     </div>
@@ -3320,6 +3355,50 @@ function autocalcularCierre() {
   if (campoCosto) campoCosto.value = costoTotal.toFixed(2);
 }
 
+/** Antes de cerrar una orden, revisa que haya stock suficiente en el
+ *  inventario de la sede para cada repuesto/insumo que la orden va a
+ *  descontar (misma coincidencia por código o nombre que usa el descuento
+ *  automático). Si algo pide más de lo disponible, lo reporta — esto se
+ *  usa para BLOQUEAR el cierre antes de guardar nada, no después. */
+async function verificarStockSuficiente(o) {
+  const items = [
+    ...(Array.isArray(o.repuestos) ? o.repuestos : []),
+    ...(Array.isArray(o.insumos)   ? o.insumos   : []),
+  ].filter(it => (it.nombre || it.codigo) && Number(it.cantidad) > 0);
+
+  const faltantes = [];
+  if (!items.length) return faltantes;
+
+  let stock;
+  try {
+    stock = await obtenerStockInventarioDirecto(operacionActual);
+  } catch (e) {
+    return faltantes; // si ni se puede consultar el inventario, no bloquea — mismo criterio que el descuento automático
+  }
+
+  const porCodigo = new Map();
+  const porNombre = new Map();
+  (stock || []).forEach(p => {
+    if (p.codigo) porCodigo.set(String(p.codigo).trim().toLowerCase(), p);
+    if (p.nombre) porNombre.set(String(p.nombre).trim().toLowerCase(), p);
+  });
+
+  for (const it of items) {
+    const codigoBuscado = (it.codigo || '').trim().toLowerCase();
+    const nombreBuscado = (it.nombre || '').trim().toLowerCase();
+    const producto = (codigoBuscado && porCodigo.get(codigoBuscado))
+                   || (nombreBuscado && porNombre.get(nombreBuscado))
+                   || null;
+    if (!producto) continue; // no está en inventario — no bloquea, mismo criterio de siempre
+
+    const cantidadPedida = Number(it.cantidad) || 0;
+    if (cantidadPedida > producto.cantidad) {
+      faltantes.push({ nombre: producto.nombre || it.nombre || it.codigo, pedido: cantidadPedida, disponible: producto.cantidad });
+    }
+  }
+  return faltantes;
+}
+
 async function guardarCierre() {
   autocalcularCierre(); // recalcula con los datos más recientes, por si se agregó algo después de abrir
   const fechaEj  = document.getElementById('mFechaEjecucion').value;
@@ -3340,6 +3419,25 @@ async function guardarCierre() {
   let resumenInventario = '';
   if (o) {
     const yaEstabaCerrada = o.Estado === 'Cerrada';
+
+    // Antes de cerrar (solo la primera vez), verificar que haya stock
+    // suficiente para cada repuesto/insumo — si algo pide más de lo que
+    // hay disponible, NO se deja cerrar la orden.
+    if (!yaEstabaCerrada) {
+      alerta.className = 'alert alert-err show';
+      alerta.textContent = '⏳ Verificando stock disponible en inventario...';
+      const faltantes = await verificarStockSuficiente({ ...o, ...datos });
+      if (faltantes.length) {
+        alerta.className = 'alert alert-err show';
+        alerta.textContent = '⚠ No se puede cerrar la orden — stock insuficiente en inventario: ' +
+          faltantes.map(f => `${f.nombre} (pediste ${f.pedido}, solo hay ${f.disponible})`).join(' · ');
+        alerta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      alerta.className = '';
+      alerta.textContent = '';
+    }
+
     Object.assign(o, datos);
     const nuevaFirma = sigDataUrl('e_sigCanvas');
     if (nuevaFirma) o.FirmaCreador = nuevaFirma;
@@ -3856,7 +3954,9 @@ const SH = {
   fotos:     'Fotos',
   novedades: 'Novedades',
   fotosNovedades: 'FotosNovedades',
+  inventarioEquipos: 'InventarioEquipos',
 };
+const INVENTARIO_EQUIPOS_COLS = ['Equipo','Marca','DescripcionEspecifica','Codificacion','Ubicacion','Anio'];
 
 /** Modal centrado y amigable cuando el token de Google caduca (pasa cada
  *  ~1 hora si dejas la pestaña abierta). Reemplaza los errores técnicos en JSON. */
@@ -7147,6 +7247,95 @@ async function inicializarPanelHistorico() {
   document.getElementById('histTablaOrdenes').innerHTML =
     '<div style="padding:20px;color:var(--text3);font-size:13px;text-align:center">Elige un equipo de la lista para ver su historial de órdenes.</div>';
   renderListaEquiposHistorico();
+}
+
+/** Alterna entre la vista de "Equipos" (histórico de órdenes) y la nueva
+ *  vista de "Inventario de Equipos" (ficha de cada activo). */
+function histCambiarVista() {
+  const vista = document.getElementById('histSelectorVista').value;
+  document.getElementById('histVistaEquipos').style.display     = vista === 'equipos' ? 'block' : 'none';
+  document.getElementById('histVistaInventario').style.display  = vista === 'inventario' ? 'block' : 'none';
+  if (vista === 'inventario') {
+    _poblarSelectAnioInventarioEquipos();
+    cargarInventarioEquipos();
+  }
+}
+
+/** Llena el desplegable de Año con el rango pedido (2025 a 3025). */
+function _poblarSelectAnioInventarioEquipos() {
+  const sel = document.getElementById('ie_anio');
+  if (!sel || sel.options.length) return; // ya está lleno, no repetir 1000 opciones cada vez
+  const actual = new Date().getFullYear();
+  let html = '';
+  for (let a = 2025; a <= 3025; a++) {
+    html += `<option value="${a}" ${a === actual ? 'selected' : ''}>${a}</option>`;
+  }
+  sel.innerHTML = html;
+}
+
+/** Lee cualquier pestaña de la hoja de cálculo de la sede activa y la
+ *  devuelve como una lista de objetos (clave = nombre de columna). */
+async function leerHojaGenerica(nombre) {
+  const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+  const resp = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A:Z'), {
+    headers: { Authorization: 'Bearer ' + googleAccessToken }
+  });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado'); }
+  const d = await resp.json();
+  if (!d.values || d.values.length < 2) return [];
+  const cols = d.values[0];
+  return d.values.slice(1).map(row => {
+    const obj = {};
+    cols.forEach((c, j) => { obj[c] = row[j] || ''; });
+    return obj;
+  });
+}
+
+async function registrarInventarioEquipo() {
+  const msg = document.getElementById('ieMsg');
+  const equipo = document.getElementById('ie_equipo').value.trim();
+  if (!equipo) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ El nombre del equipo es obligatorio.'; return; }
+
+  const fila = [
+    equipo,
+    document.getElementById('ie_marca').value.trim(),
+    document.getElementById('ie_descripcion').value.trim(),
+    document.getElementById('ie_codificacion').value.trim(),
+    document.getElementById('ie_ubicacion').value.trim(),
+    document.getElementById('ie_anio').value,
+  ];
+
+  msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
+  try {
+    await asegurarHoja(SH.inventarioEquipos, INVENTARIO_EQUIPOS_COLS);
+    await appendHoja(SH.inventarioEquipos, [fila]);
+    msg.style.color = '#15803d'; msg.textContent = '✔ Equipo registrado correctamente.';
+    ['ie_equipo','ie_marca','ie_descripcion','ie_codificacion','ie_ubicacion'].forEach(id => document.getElementById(id).value = '');
+    cargarInventarioEquipos();
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
+  }
+}
+
+async function cargarInventarioEquipos() {
+  const cont = document.getElementById('ieTabla');
+  cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
+  try {
+    await asegurarHoja(SH.inventarioEquipos, INVENTARIO_EQUIPOS_COLS);
+    const filas = await leerHojaGenerica(SH.inventarioEquipos);
+    if (!filas.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Aún no has registrado ningún equipo.</div>'; return; }
+    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Equipo</th><th>Marca</th><th>Descripción Específica</th><th>Codificación</th><th>Ubicación</th><th>Año</th></tr></thead><tbody>` +
+      filas.map(f => `<tr>
+        <td><strong>${esc(f.Equipo)}</strong></td>
+        <td>${esc(f.Marca)}</td>
+        <td>${esc(f.DescripcionEspecifica)}</td>
+        <td>${esc(f.Codificacion)}</td>
+        <td>${esc(f.Ubicacion)}</td>
+        <td>${esc(f.Anio)}</td>
+      </tr>`).join('') + `</tbody></table>`;
+  } catch (e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
+  }
 }
 
 /** Saca la lista de equipos únicos que tienen al menos una orden registrada */
