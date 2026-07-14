@@ -1728,11 +1728,15 @@ body.inv-activo .container { max-width: 1700px; }
               <div class="field"><label>Código *</label><input id="invp_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
               <div class="field"><label>Nombre *</label><input id="invp_nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del producto"></div>
               <div class="field"><label>Unidad</label><input id="invp_unidad" value="Unidades"></div>
-              <div class="field"><label>Grupo</label><input id="invp_grupo" value="General"></div>
               <div class="field"><label>Stock Mínimo</label><input id="invp_stockmin" type="number" min="0" value="0"></div>
               <div class="field"><label>Precio por Unidad</label><input id="invp_precio" type="number" min="0" step="0.01" placeholder="0.00"></div>
               <div class="field"><label>Tipo</label>
-                <select id="invp_tipo"><option value="Repuesto">Repuesto</option><option value="Insumo">Insumo</option></select>
+                <select id="invp_tipo">
+                  <option value="Insumos">Insumos</option>
+                  <option value="Repuestos">Repuestos</option>
+                  <option value="Seguridad">Seguridad</option>
+                  <option value="Herramienta">Herramienta</option>
+                </select>
               </div>
             </div>
             <button class="btn btn-primary" onclick="invRegistrarProducto()">✔ Registrar Producto</button>
@@ -1779,15 +1783,13 @@ body.inv-activo .container { max-width: 1700px; }
               <input id="invStockBuscar" placeholder="Código o nombre…" oninput="invFiltrarStock()">
             </div>
             <div class="field" style="min-width:150px">
-              <label>Grupo</label>
-              <select id="invStockFiltroGrupo" onchange="invFiltrarStock()"><option value="">Todos</option></select>
-            </div>
-            <div class="field" style="min-width:150px">
               <label>Tipo</label>
               <select id="invStockFiltroTipo" onchange="invFiltrarStock()">
                 <option value="">Todos</option>
-                <option value="Repuesto">Repuesto</option>
-                <option value="Insumo">Insumo</option>
+                <option value="Insumos">Insumos</option>
+                <option value="Repuestos">Repuestos</option>
+                <option value="Seguridad">Seguridad</option>
+                <option value="Herramienta">Herramienta</option>
                 <option value="__sinclasificar">Sin clasificar</option>
               </select>
             </div>
@@ -2136,7 +2138,7 @@ async function registrarProductoInventarioDirecto(sede, producto) {
     Math.max(0, parseInt(producto.stockMin) || 0),
     new Date().toISOString(),
     Math.max(0, parseFloat(producto.precioUnitario) || 0),
-    producto.tipo === 'Insumo' ? 'Insumo' : (producto.tipo === 'Repuesto' ? 'Repuesto' : ''),
+    ['Insumos','Repuestos','Seguridad','Herramienta'].includes(producto.tipo) ? producto.tipo : '',
   ];
   await _invAppend(spreadsheetId, 'Productos', [fila]);
 }
@@ -3104,6 +3106,10 @@ function abrirModalCompletar(id) {
     cx2.strokeStyle = '#1a3a6b'; cx2.lineWidth = 2;
     cx2.lineCap = 'round'; cx2.lineJoin = 'round';
     setupCanvasEvents(c2, cx2);
+
+    // Tiempo Total y Costo Total del cierre, calculados solos a partir de
+    // las tareas y los repuestos/insumos que ya tiene la orden.
+    autocalcularCierre();
   }, 80);
 }
 
@@ -3258,7 +3264,64 @@ async function guardarEdicion() {
 
 function cerrarModal() { volverListaPendientes(); }
 
+/** Convierte un texto de tiempo tipo "2h 30min", "1h", "45min" o solo "3"
+ *  (se asume horas) a minutos totales — tolera los formatos que la gente
+ *  ya escribe a mano en el campo de Tiempo Real de cada tarea. */
+function _parsearTiempoAMinutos(texto) {
+  if (!texto) return 0;
+  texto = texto.toString().toLowerCase().trim();
+  const mHoras = texto.match(/(\d+(?:[.,]\d+)?)\s*h/);
+  const mMin   = texto.match(/(\d+(?:[.,]\d+)?)\s*m/);
+  let horas = 0, minutos = 0;
+  if (mHoras) horas = parseFloat(mHoras[1].replace(',','.'));
+  if (mMin)   minutos = parseFloat(mMin[1].replace(',','.'));
+  if (!mHoras && !mMin) {
+    const soloNumero = parseFloat(texto.replace(',','.'));
+    if (!isNaN(soloNumero)) horas = soloNumero;
+  }
+  return Math.round(horas * 60 + minutos);
+}
+
+function _formatearMinutosATiempo(totalMinutos) {
+  if (!totalMinutos) return '0min';
+  const h = Math.floor(totalMinutos / 60);
+  const m = Math.round(totalMinutos % 60);
+  if (h > 0 && m > 0) return `${h}h ${m}min`;
+  if (h > 0) return `${h}h`;
+  return `${m}min`;
+}
+
+/** Suma el "Tiempo Real" de todas las tareas y el costo de todos los
+ *  repuestos/insumos de la orden, y llena Tiempo Total y Costo Total del
+ *  cierre automáticamente — la persona los puede ajustar a mano si hace
+ *  falta, esto solo deja un punto de partida ya calculado. */
+function autocalcularCierre() {
+  const filasTarea = document.querySelectorAll('#e_tbody_tareas tr.tr-tarea-principal');
+  let minutosTotal = 0;
+  filasTarea.forEach(tr => {
+    const ins = tr.querySelectorAll('input,select');
+    minutosTotal += _parsearTiempoAMinutos(ins[2]?.value); // [2] = Tiempo Real de la tarea
+  });
+  const campoTiempo = document.getElementById('mTiempoReal');
+  if (campoTiempo) campoTiempo.value = _formatearMinutosATiempo(minutosTotal);
+
+  let costoTotal = 0;
+  ['e_tbody_repuestos','e_tbody_insumos'].forEach(tbodyId => {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+      const ins = tr.querySelectorAll('input,select');
+      const cantidad  = parseFloat(ins[2]?.value) || 0; // [2] = Cantidad
+      const costoUnit = parseFloat(ins[4]?.value) || 0; // [4] = Costo Unitario
+      costoTotal += cantidad * costoUnit;
+    });
+  });
+  const campoCosto = document.getElementById('mCostoReal');
+  if (campoCosto) campoCosto.value = costoTotal.toFixed(2);
+}
+
 async function guardarCierre() {
+  autocalcularCierre(); // recalcula con los datos más recientes, por si se agregó algo después de abrir
   const fechaEj  = document.getElementById('mFechaEjecucion').value;
   const ejecutor = document.getElementById('mEjecutadoPor').value.trim();
   const obs      = document.getElementById('mObsCierre').value.trim();
@@ -5343,24 +5406,61 @@ async function cargarDashboard() {
     window[key] = new Chart(ctx.getContext('2d'), cfg);
   }
 
-  // ── Gráfica 1: Órdenes por Tipo ──
+  // ── Gráfica 1: Órdenes por Tipo (con % de cada uno) ──
   const tipoData = TIPOS.map(t => ordenesFiltradas.filter(o => o.TipoMantenimiento === t).length);
+  const tipoTotal = tipoData.reduce((a,b) => a+b, 0);
   makeChart('chartTipo','_chartTipo',{
     type: 'bar',
     data: { labels: TIPOS, datasets: [{ label: 'Órdenes', data: tipoData,
       backgroundColor: TIPOS.map(t => colores[t]||'#797775'), borderRadius: 6, borderSkipped: false }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    options: { responsive: true, maintainAspectRatio: false, plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => {
+          const pct = tipoTotal > 0 ? Math.round((ctx.raw/tipoTotal)*100) : 0;
+          return ` ${ctx.label}: ${ctx.raw} (${pct}%)`;
+        }}}
+      },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+    plugins: [{
+      id: 'pctSobreBarras',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((barra, i) => {
+          const val = tipoData[i];
+          if (!val) return;
+          const pct = tipoTotal > 0 ? Math.round((val/tipoTotal)*100) : 0;
+          ctx.save();
+          ctx.fillStyle = '#3a3a3a';
+          ctx.font = '600 11px Calibri, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${pct}%`, barra.x, barra.y - 6);
+          ctx.restore();
+        });
+      }
+    }]
   });
 
-  // ── Gráfica 2: Órdenes por Estado ──
+  // ── Gráfica 2: Órdenes por Estado (con % de cada uno) ──
   const estadoData = ESTADOS.map(e => ordenesFiltradas.filter(o => o.Estado === e).length);
+  const estadoTotal = estadoData.reduce((a,b) => a+b, 0);
   makeChart('chartEstado','_chartEstado',{
     type: 'doughnut',
     data: { labels: ESTADOS, datasets: [{ data: estadoData,
       backgroundColor: ESTADOS.map(e => colEstado[e]||'#ccc'), borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }] },
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 } } } }, cutout: '60%' }
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14, font: { size: 12 },
+          generateLabels: (chart) => chart.data.labels.map((label, i) => {
+            const val = chart.data.datasets[0].data[i];
+            const pct = estadoTotal > 0 ? Math.round((val/estadoTotal)*100) : 0;
+            return { text: `${label} (${pct}%)`, fillStyle: chart.data.datasets[0].backgroundColor[i], hidden: false, index: i };
+          })
+        }},
+        tooltip: { callbacks: { label: (ctx) => {
+          const pct = estadoTotal > 0 ? Math.round((ctx.raw/estadoTotal)*100) : 0;
+          return ` ${ctx.label}: ${ctx.raw} (${pct}%)`;
+        }}}
+      }, cutout: '60%' }
   });
 
   // ── Gráfica 3: Costos por tipo de mantenimiento (solo órdenes cerradas) ──
@@ -5864,8 +5964,8 @@ async function invCargarDashboard() {
     document.getElementById('invKpiSinStock').textContent = stock.filter(p => p.cantidad <= 0).length;
     document.getElementById('invKpiBajo').textContent     = stock.filter(p => p.cantidad > 0 && p.cantidad <= p.stockMin && p.stockMin > 0).length;
 
-    const valorRep = stock.filter(p => p.tipo === 'Repuesto').reduce((s,p) => s + p.valorTotal, 0);
-    const valorIns = stock.filter(p => p.tipo === 'Insumo').reduce((s,p) => s + p.valorTotal, 0);
+    const valorRep = stock.filter(p => p.tipo === 'Repuestos').reduce((s,p) => s + p.valorTotal, 0);
+    const valorIns = stock.filter(p => p.tipo === 'Insumos').reduce((s,p) => s + p.valorTotal, 0);
     document.getElementById('invKpiValorRep').textContent = fmtCOP(valorRep);
     document.getElementById('invKpiValorIns').textContent = fmtCOP(valorIns);
 
@@ -5974,7 +6074,6 @@ async function invRegistrarProducto() {
     codigo: document.getElementById('invp_codigo').value.trim(),
     nombre: document.getElementById('invp_nombre').value.trim(),
     unidad: document.getElementById('invp_unidad').value.trim() || 'Unidades',
-    grupo:  document.getElementById('invp_grupo').value.trim() || 'General',
     stockMin: document.getElementById('invp_stockmin').value,
     precioUnitario: document.getElementById('invp_precio').value,
     tipo: document.getElementById('invp_tipo').value,
@@ -5985,7 +6084,6 @@ async function invRegistrarProducto() {
     msg.style.color = '#15803d'; msg.textContent = '✔ Producto registrado correctamente.';
     ['invp_codigo','invp_nombre','invp_stockmin','invp_precio'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('invp_unidad').value = 'Unidades';
-    document.getElementById('invp_grupo').value = 'General';
     _stockInventarioCache = null; // invalida el caché del autocompletado, para que vea el producto nuevo
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
@@ -6045,31 +6143,21 @@ async function invCargarStock() {
   try {
     const stock = await obtenerStockInventarioDirecto(inventarioOperacionActual);
     _invStockCacheTabla = stock;
-
-    // Llenar el filtro de Grupo con los grupos que realmente existen
-    const selGrupo = document.getElementById('invStockFiltroGrupo');
-    const grupoActual = selGrupo.value;
-    const grupos = [...new Set(stock.map(p => p.grupo).filter(Boolean))].sort();
-    selGrupo.innerHTML = '<option value="">Todos</option>' + grupos.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
-    if (grupos.includes(grupoActual)) selGrupo.value = grupoActual;
-
     invFiltrarStock();
   } catch (e) {
     cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
   }
 }
 
-/** Aplica los filtros (búsqueda, grupo, tipo) sobre el stock ya cargado en
+/** Aplica los filtros (búsqueda, tipo) sobre el stock ya cargado en
  *  caché — no vuelve a pedirle nada a Google Sheets, solo filtra en el
  *  navegador para que sea instantáneo mientras se escribe. */
 function invFiltrarStock() {
   const texto = (document.getElementById('invStockBuscar').value || '').toLowerCase().trim();
-  const grupo = document.getElementById('invStockFiltroGrupo').value;
   const tipo  = document.getElementById('invStockFiltroTipo').value;
 
   let lista = _invStockCacheTabla.slice();
   if (texto) lista = lista.filter(p => (p.codigo||'').toLowerCase().includes(texto) || (p.nombre||'').toLowerCase().includes(texto));
-  if (grupo) lista = lista.filter(p => p.grupo === grupo);
   if (tipo === '__sinclasificar') lista = lista.filter(p => !p.tipo);
   else if (tipo) lista = lista.filter(p => p.tipo === tipo);
 
