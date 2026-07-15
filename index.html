@@ -284,6 +284,19 @@ body.inv-activo .container { max-width: 1700px; }
 .inv-table th { background: var(--surface2); padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text2); white-space: nowrap; }
 .inv-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .inv-badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+/* Tabla de Inventario de Equipos — grande, con líneas divisorias en cada
+   celda y texto que se puede envolver en varias líneas (para que quepan
+   observaciones largas), en vez de la versión compacta de .inv-table. */
+.ie-table { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 13.5px; }
+.ie-table th {
+  background: var(--brand); color: #fff; padding: 14px 16px; text-align: left;
+  font-size: 12px; text-transform: uppercase; letter-spacing: .03em;
+  border: 1px solid var(--brand); white-space: nowrap;
+}
+.ie-table td { padding: 14px 16px; border: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+.ie-table tr:nth-child(even) td { background: var(--surface2); }
+.ie-table tr:hover td { background: #eaf2ff; }
 .card:hover { box-shadow: 0 6px 28px rgba(13,42,82,.15); }
 .section-header {
   background: linear-gradient(90deg, var(--brand) 0%, #1a4a8a 100%);
@@ -1662,6 +1675,7 @@ body.inv-activo .container { max-width: 1700px; }
             <div class="field"><label>Codificación</label><input id="ie_codificacion" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="field"><label>Ubicación</label><input id="ie_ubicacion" placeholder="Ej: Sala de compresores primer piso"></div>
             <div class="field"><label>Año</label><select id="ie_anio"></select></div>
+            <div class="field" style="grid-column:span 2"><label>Observaciones</label><textarea id="ie_observaciones" rows="2" placeholder="Observaciones del mantenimiento de ese año..."></textarea></div>
           </div>
           <button class="btn btn-primary" onclick="registrarInventarioEquipo()">✔ Agregar Equipo</button>
           <div id="ieMsg" style="margin-top:10px;font-size:13px"></div>
@@ -1670,7 +1684,12 @@ body.inv-activo .container { max-width: 1700px; }
       <div class="card">
         <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
           <span>📋 Equipos Registrados</span>
-          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="cargarInventarioEquipos()">🔄 Actualizar</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="ieFiltroAnio" onchange="ieFiltrarPorAnio()" style="font-size:12px;padding:4px 8px;min-width:130px">
+              <option value="">Todos los años</option>
+            </select>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="cargarInventarioEquipos()">🔄 Actualizar</button>
+          </div>
         </div>
         <div class="card-body" style="padding:0;overflow-x:auto" id="ieTabla">
           <div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>
@@ -3956,7 +3975,7 @@ const SH = {
   fotosNovedades: 'FotosNovedades',
   inventarioEquipos: 'InventarioEquipos',
 };
-const INVENTARIO_EQUIPOS_COLS = ['Equipo','Marca','DescripcionEspecifica','Codificacion','Ubicacion','Anio'];
+const INVENTARIO_EQUIPOS_COLS = ['Equipo','Marca','DescripcionEspecifica','Codificacion','Ubicacion','Anio','Observaciones'];
 
 /** Modal centrado y amigable cuando el token de Google caduca (pasa cada
  *  ~1 hora si dejas la pestaña abierta). Reemplaza los errores técnicos en JSON. */
@@ -7303,6 +7322,7 @@ async function registrarInventarioEquipo() {
     document.getElementById('ie_codificacion').value.trim(),
     document.getElementById('ie_ubicacion').value.trim(),
     document.getElementById('ie_anio').value,
+    document.getElementById('ie_observaciones').value.trim(),
   ];
 
   msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
@@ -7310,32 +7330,56 @@ async function registrarInventarioEquipo() {
     await asegurarHoja(SH.inventarioEquipos, INVENTARIO_EQUIPOS_COLS);
     await appendHoja(SH.inventarioEquipos, [fila]);
     msg.style.color = '#15803d'; msg.textContent = '✔ Equipo registrado correctamente.';
-    ['ie_equipo','ie_marca','ie_descripcion','ie_codificacion','ie_ubicacion'].forEach(id => document.getElementById(id).value = '');
+    ['ie_equipo','ie_marca','ie_descripcion','ie_codificacion','ie_ubicacion','ie_observaciones'].forEach(id => document.getElementById(id).value = '');
     cargarInventarioEquipos();
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
   }
 }
 
+let _ieFilasCache = [];
+
 async function cargarInventarioEquipos() {
   const cont = document.getElementById('ieTabla');
   cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
   try {
     await asegurarHoja(SH.inventarioEquipos, INVENTARIO_EQUIPOS_COLS);
-    const filas = await leerHojaGenerica(SH.inventarioEquipos);
-    if (!filas.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Aún no has registrado ningún equipo.</div>'; return; }
-    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Equipo</th><th>Marca</th><th>Descripción Específica</th><th>Codificación</th><th>Ubicación</th><th>Año</th></tr></thead><tbody>` +
-      filas.map(f => `<tr>
-        <td><strong>${esc(f.Equipo)}</strong></td>
-        <td>${esc(f.Marca)}</td>
-        <td>${esc(f.DescripcionEspecifica)}</td>
-        <td>${esc(f.Codificacion)}</td>
-        <td>${esc(f.Ubicacion)}</td>
-        <td>${esc(f.Anio)}</td>
-      </tr>`).join('') + `</tbody></table>`;
+    _ieFilasCache = await leerHojaGenerica(SH.inventarioEquipos);
+
+    // Llenar el filtro de año solo con los años que realmente existen
+    const selAnio = document.getElementById('ieFiltroAnio');
+    const anioActual = selAnio.value;
+    const anios = [...new Set(_ieFilasCache.map(f => f.Anio).filter(Boolean))].sort();
+    selAnio.innerHTML = '<option value="">Todos los años</option>' + anios.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+    if (anios.includes(anioActual)) selAnio.value = anioActual;
+
+    ieFiltrarPorAnio();
   } catch (e) {
     cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
   }
+}
+
+/** Filtra la tabla de equipos ya cargada por el año elegido, sin volver a
+ *  pedirle nada a Google Sheets — instantáneo. */
+function ieFiltrarPorAnio() {
+  const anio = document.getElementById('ieFiltroAnio').value;
+  const filas = anio ? _ieFilasCache.filter(f => f.Anio === anio) : _ieFilasCache;
+  _ieRenderTabla(filas);
+}
+
+function _ieRenderTabla(filas) {
+  const cont = document.getElementById('ieTabla');
+  if (!filas.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay equipos registrados para este filtro.</div>'; return; }
+  cont.innerHTML = `<table class="ie-table"><thead><tr><th>Equipo</th><th>Marca</th><th>Descripción Específica</th><th>Codificación</th><th>Ubicación</th><th>Año</th><th>Observaciones</th></tr></thead><tbody>` +
+    filas.map(f => `<tr>
+      <td><strong>${esc(f.Equipo)}</strong></td>
+      <td>${esc(f.Marca)}</td>
+      <td>${esc(f.DescripcionEspecifica)}</td>
+      <td>${esc(f.Codificacion)}</td>
+      <td>${esc(f.Ubicacion)}</td>
+      <td>${esc(f.Anio)}</td>
+      <td>${esc(f.Observaciones)}</td>
+    </tr>`).join('') + `</tbody></table>`;
 }
 
 /** Saca la lista de equipos únicos que tienen al menos una orden registrada */
