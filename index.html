@@ -1667,21 +1667,35 @@ body.inv-activo .container { max-width: 1700px; }
     <!-- ══════ VISTA: INVENTARIO DE EQUIPOS (nueva) ══════ -->
     <div id="histVistaInventario" style="display:none">
       <div class="card" style="margin-bottom:14px">
-        <div class="card-head">➕ Registrar Equipo</div>
+        <div class="card-head">➕ Registrar Equipo <span style="font-weight:400;text-transform:none;opacity:.85">— solo una vez por equipo</span></div>
         <div class="card-body" style="padding:18px">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+            <div class="field"><label>Codificación *</label><input id="ie_codificacion" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Ej: CA1"></div>
             <div class="field"><label>Equipo *</label><input id="ie_equipo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del equipo"></div>
             <div class="field"><label>Marca</label><input id="ie_marca" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="field"><label>Descripción Específica</label><input id="ie_descripcion" placeholder="Descripción del equipo"></div>
-            <div class="field"><label>Codificación</label><input id="ie_codificacion" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="field"><label>Ubicación</label><input id="ie_ubicacion" placeholder="Ej: Sala de compresores primer piso"></div>
-            <div class="field"><label>Año</label><select id="ie_anio"></select></div>
-            <div class="field" style="grid-column:span 2"><label>Observaciones</label><textarea id="ie_observaciones" rows="2" placeholder="Observaciones del mantenimiento de ese año..."></textarea></div>
           </div>
-          <button class="btn btn-primary" onclick="registrarInventarioEquipo()">✔ Agregar Equipo</button>
+          <button class="btn btn-primary" onclick="registrarInventarioEquipo()">✔ Registrar Equipo</button>
           <div id="ieMsg" style="margin-top:10px;font-size:13px"></div>
         </div>
       </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-head">📝 Agregar Observación Anual <span style="font-weight:400;text-transform:none;opacity:.85">— sin repetir los datos del equipo</span></div>
+        <div class="card-body" style="padding:18px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+            <div class="field" style="grid-column:span 2"><label>Equipo *</label>
+              <select id="ieobs_codificacion"><option value="">Selecciona un equipo ya registrado...</option></select>
+            </div>
+            <div class="field"><label>Año</label><select id="ieobs_anio"></select></div>
+            <div class="field" style="grid-column:span 2"><label>Observaciones</label><textarea id="ieobs_observaciones" rows="2" placeholder="Observaciones del mantenimiento de ese año..."></textarea></div>
+          </div>
+          <button class="btn btn-primary" onclick="agregarObservacionEquipo()">✔ Agregar Observación</button>
+          <div id="ieObsMsg" style="margin-top:10px;font-size:13px"></div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
           <span>📋 Equipos Registrados</span>
@@ -3997,10 +4011,12 @@ const SH = {
   fotos:     'Fotos',
   novedades: 'Novedades',
   fotosNovedades: 'FotosNovedades',
-  inventarioEquipos: 'InventarioEquipos',
+  inventarioEquiposBase: 'InventarioEquiposBase',
+  inventarioEquiposObs:  'InventarioEquiposObs',
   hvdEquipos: 'HVDEquipos',
 };
-const INVENTARIO_EQUIPOS_COLS = ['Equipo','Marca','DescripcionEspecifica','Codificacion','Ubicacion','Anio','Observaciones'];
+const INVENTARIO_EQUIPOS_BASE_COLS = ['Codificacion','Equipo','Marca','DescripcionEspecifica','Ubicacion'];
+const INVENTARIO_EQUIPOS_OBS_COLS  = ['Codificacion','Anio','Observaciones'];
 
 /** Modal centrado y amigable cuando el token de Google caduca (pasa cada
  *  ~1 hora si dejas la pestaña abierta). Reemplaza los errores técnicos en JSON. */
@@ -7311,7 +7327,7 @@ function histCambiarVista() {
 
 /** Llena el desplegable de Año con el rango pedido (2025 a 3025). */
 function _poblarSelectAnioInventarioEquipos() {
-  const sel = document.getElementById('ie_anio');
+  const sel = document.getElementById('ieobs_anio');
   if (!sel || sel.options.length) return; // ya está lleno, no repetir 1000 opciones cada vez
   const actual = new Date().getFullYear();
   let html = '';
@@ -7339,27 +7355,46 @@ async function leerHojaGenerica(nombre) {
   });
 }
 
+/** Registra los datos FIJOS de un equipo — una sola vez. Si la
+ *  codificación ya existía, actualiza esa misma fila en vez de duplicarla
+ *  (así uno puede corregir un dato sin crear un equipo repetido). */
 async function registrarInventarioEquipo() {
   const msg = document.getElementById('ieMsg');
+  const codificacion = document.getElementById('ie_codificacion').value.trim();
   const equipo = document.getElementById('ie_equipo').value.trim();
-  if (!equipo) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ El nombre del equipo es obligatorio.'; return; }
-
-  const fila = [
-    equipo,
-    document.getElementById('ie_marca').value.trim(),
-    document.getElementById('ie_descripcion').value.trim(),
-    document.getElementById('ie_codificacion').value.trim(),
-    document.getElementById('ie_ubicacion').value.trim(),
-    document.getElementById('ie_anio').value,
-    document.getElementById('ie_observaciones').value.trim(),
-  ];
+  if (!codificacion || !equipo) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ La codificación y el nombre del equipo son obligatorios.'; return; }
 
   msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
   try {
-    await asegurarHoja(SH.inventarioEquipos, INVENTARIO_EQUIPOS_COLS);
-    await appendHoja(SH.inventarioEquipos, [fila]);
+    await _actualizarFilaPorClave(SH.inventarioEquiposBase, INVENTARIO_EQUIPOS_BASE_COLS, 'Codificacion', codificacion, {
+      Equipo: equipo,
+      Marca: document.getElementById('ie_marca').value.trim(),
+      DescripcionEspecifica: document.getElementById('ie_descripcion').value.trim(),
+      Ubicacion: document.getElementById('ie_ubicacion').value.trim(),
+    });
     msg.style.color = '#15803d'; msg.textContent = '✔ Equipo registrado correctamente.';
-    ['ie_equipo','ie_marca','ie_descripcion','ie_codificacion','ie_ubicacion','ie_observaciones'].forEach(id => document.getElementById(id).value = '');
+    ['ie_codificacion','ie_equipo','ie_marca','ie_descripcion','ie_ubicacion'].forEach(id => document.getElementById(id).value = '');
+    cargarInventarioEquipos();
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
+  }
+}
+
+/** Agrega una observación de un año a un equipo YA REGISTRADO — no repite
+ *  ningún dato fijo, solo referencia la codificación. */
+async function agregarObservacionEquipo() {
+  const msg = document.getElementById('ieObsMsg');
+  const codificacion = document.getElementById('ieobs_codificacion').value;
+  const anio = document.getElementById('ieobs_anio').value;
+  const observaciones = document.getElementById('ieobs_observaciones').value.trim();
+  if (!codificacion) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ Selecciona un equipo primero.'; return; }
+
+  msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
+  try {
+    await asegurarHoja(SH.inventarioEquiposObs, INVENTARIO_EQUIPOS_OBS_COLS);
+    await appendHoja(SH.inventarioEquiposObs, [[codificacion, anio, observaciones]]);
+    msg.style.color = '#15803d'; msg.textContent = '✔ Observación agregada correctamente.';
+    document.getElementById('ieobs_observaciones').value = '';
     cargarInventarioEquipos();
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
@@ -7368,12 +7403,37 @@ async function registrarInventarioEquipo() {
 
 let _ieFilasCache = [];
 
+/** Carga las 2 hojas (datos fijos + observaciones) y las une en el
+ *  navegador por Codificación, para mostrar la tabla completa sin tener
+ *  que repetir los datos fijos en cada observación guardada. */
 async function cargarInventarioEquipos() {
   const cont = document.getElementById('ieTabla');
   cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
   try {
-    await asegurarHoja(SH.inventarioEquipos, INVENTARIO_EQUIPOS_COLS);
-    _ieFilasCache = await leerHojaGenerica(SH.inventarioEquipos);
+    await asegurarHoja(SH.inventarioEquiposBase, INVENTARIO_EQUIPOS_BASE_COLS);
+    await asegurarHoja(SH.inventarioEquiposObs, INVENTARIO_EQUIPOS_OBS_COLS);
+    const [base, obs] = await Promise.all([
+      leerHojaGenerica(SH.inventarioEquiposBase),
+      leerHojaGenerica(SH.inventarioEquiposObs),
+    ]);
+
+    // Llenar el desplegable de "Agregar Observación" con los equipos ya registrados
+    const selEquipo = document.getElementById('ieobs_codificacion');
+    const codActual = selEquipo.value;
+    selEquipo.innerHTML = '<option value="">Selecciona un equipo ya registrado...</option>' +
+      base.map(b => `<option value="${esc(b.Codificacion)}">${esc(b.Codificacion)} — ${esc(b.Equipo)}</option>`).join('');
+    if (base.some(b => b.Codificacion === codActual)) selEquipo.value = codActual;
+
+    // Unir cada observación con los datos fijos de su equipo
+    const baseMap = new Map(base.map(b => [b.Codificacion, b]));
+    _ieFilasCache = obs.map(o => {
+      const b = baseMap.get(o.Codificacion) || {};
+      return { ...b, Anio: o.Anio, Observaciones: o.Observaciones };
+    });
+    // Los equipos que aún no tienen ninguna observación también se muestran, con Año/Observaciones vacíos
+    base.forEach(b => {
+      if (!obs.some(o => o.Codificacion === b.Codificacion)) _ieFilasCache.push({ ...b, Anio: '', Observaciones: '' });
+    });
 
     // Llenar el filtro de año solo con los años que realmente existen
     const selAnio = document.getElementById('ieFiltroAnio');
@@ -7406,7 +7466,7 @@ function _ieRenderTabla(filas) {
       <td>${esc(f.DescripcionEspecifica)}</td>
       <td>${esc(f.Codificacion)}</td>
       <td>${esc(f.Ubicacion)}</td>
-      <td>${esc(f.Anio)}</td>
+      <td>${esc(f.Anio) || '<span style="color:var(--text3)">— sin observaciones aún —</span>'}</td>
       <td>${esc(f.Observaciones)}</td>
     </tr>`).join('') + `</tbody></table>`;
 }
