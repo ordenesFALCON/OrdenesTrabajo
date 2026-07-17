@@ -2200,7 +2200,9 @@ async function _invAsegurarHoja(spreadsheetId, nombre, cols) {
     const r = await _invGet(spreadsheetId, nombre + '!A1:' + numToCol(cols.length - 1) + '1');
     existing = r[0] || [];
   } catch (e) { existing = []; }
+
   if (existing.length === 0) {
+    // La pestaña no existe todavía — crearla con todos los encabezados
     try {
       await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
         method: 'POST',
@@ -2208,6 +2210,15 @@ async function _invAsegurarHoja(spreadsheetId, nombre, cols) {
         body: JSON.stringify({ requests: [{ addSheet: { properties: { title: nombre } } }] })
       });
     } catch (e) { /* puede que ya exista la pestaña, seguimos */ }
+    const colFin = numToCol(cols.length - 1);
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(nombre + '!A1:' + colFin + '1')}?valueInputOption=RAW`, {
+      method: 'PUT', headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [cols] })
+    });
+  } else if (existing.length < cols.length) {
+    // La pestaña ya existía, pero le faltan encabezados de columnas
+    // agregadas después (ej. cuando el sistema evoluciona) — se completan
+    // solo los que faltan, sin tocar los que ya estaban.
     const colFin = numToCol(cols.length - 1);
     await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(nombre + '!A1:' + colFin + '1')}?valueInputOption=RAW`, {
       method: 'PUT', headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
