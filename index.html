@@ -1889,6 +1889,20 @@ body.inv-activo .container { max-width: 1700px; }
               <div class="field" id="invm_grupoPrecio"><label>Precio Unitario <span id="invm_precioMarca">*</span></label>
                 <input id="invm_precio" type="number" min="0" step="0.01" placeholder="0.00">
               </div>
+              <div class="field" id="invm_grupoDocTipo">
+                <label>Tipo de Documento</label>
+                <select id="invm_tipoDocumento" onchange="invHandleTipoDocumentoChange()">
+                  <option value="">Sin documento</option>
+                  <option value="Orden de Compra">Orden de Compra</option>
+                  <option value="Recibo de Caja">Recibo de Caja</option>
+                  <option value="Factura">Factura</option>
+                  <option value="Cuenta de Cobro">Cuenta de Cobro</option>
+                </select>
+              </div>
+              <div class="field" id="invm_grupoDocNumero" style="display:none">
+                <label>Número / Referencia</label>
+                <input id="invm_numeroDocumento" placeholder="Ej: FC-00123">
+              </div>
               <div class="field"><label>Responsable *</label><input id="invm_responsable" placeholder="Nombre completo"></div>
               <div class="field" id="invm_grupoEquipo"><label>Equipo Destino <span id="invm_equipoMarca">*</span></label>
                 <select id="invm_equipo"><option value="">Seleccionar equipo...</option></select>
@@ -2229,7 +2243,7 @@ const INVENTARIO_SHEETS = {
 };
 
 const INV_PRODUCTOS_COLS   = ['Código','Nombre','Unidad','Grupo','Stock Mínimo','Fecha Creación','Precio Unitario','Tipo','Ubicacion','Proveedor'];
-const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante','PrecioUnitario'];
+const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante','PrecioUnitario','TipoDocumento','NumeroDocumento'];
 const INV_TIPOS_MOVIMIENTO = ['INGRESO','SALIDA','AJUSTE_POSITIVO','AJUSTE_NEGATIVO'];
 
 function _invSpreadsheetId(sede) {
@@ -2462,6 +2476,8 @@ async function registrarMovimientoInventarioDirecto(sede, mov) {
     mov.observaciones || '',
     stockResultante,
     (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') ? (Math.max(0, parseFloat(mov.precioUnitario) || 0)) : '',
+    mov.tipoDocumento || '',
+    mov.numeroDocumento || '',
   ];
   await _invAppend(spreadsheetId, 'Movimientos', [fila]);
   return { stockResultante };
@@ -2472,7 +2488,7 @@ async function obtenerHistorialInventarioDirecto(sede, filtros) {
   const spreadsheetId = _invSpreadsheetId(sede);
   const [productos, movimientos] = await Promise.all([
     _invGet(spreadsheetId, 'Productos!A2:B100000'),
-    _invGet(spreadsheetId, 'Movimientos!A2:J100000'),
+    _invGet(spreadsheetId, 'Movimientos!A2:M100000'),
   ]);
   const prodMap = {};
   productos.forEach(r => { if (r[0]) prodMap[r[0].toString().trim().toUpperCase()] = r[1] || ''; });
@@ -2483,6 +2499,7 @@ async function obtenerHistorialInventarioDirecto(sede, filtros) {
   return movimientos.filter(row => row[0] && row[1]).map(row => ({
     codigo: row[0], fecha: row[1], tipo: (row[2] || '').toUpperCase(), cantidad: parseFloat(row[3]) || 0,
     usuario: row[4] || '', responsable: row[6] || '', equipo: row[7] || '', observaciones: row[8] || '',
+    precioUnitario: parseFloat(row[10]) || 0, tipoDocumento: row[11] || '', numeroDocumento: row[12] || '',
     producto: prodMap[row[0].toString().trim().toUpperCase()] || 'Producto no encontrado',
   })).filter(m => {
     if (filtros.tipo && m.tipo !== filtros.tipo.toUpperCase()) return false;
@@ -6517,6 +6534,16 @@ function invHandleTipoChange() {
   const esEntrada = tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO';
   document.getElementById('invm_grupoPrecio').style.display = esEntrada ? 'flex' : 'none';
   document.getElementById('invm_precioMarca').style.display = esEntrada ? 'inline' : 'none';
+  document.getElementById('invm_grupoDocTipo').style.display = esEntrada ? 'flex' : 'none';
+  if (!esEntrada) document.getElementById('invm_grupoDocNumero').style.display = 'none';
+}
+
+/** Revela el campo de "Número / Referencia" solo cuando se elige un tipo
+ *  de documento — si dice "Sin documento", no hace falta pedir nada más. */
+function invHandleTipoDocumentoChange() {
+  const tieneDocumento = document.getElementById('invm_tipoDocumento').value !== '';
+  document.getElementById('invm_grupoDocNumero').style.display = tieneDocumento ? 'flex' : 'none';
+  if (!tieneDocumento) document.getElementById('invm_numeroDocumento').value = '';
 }
 
 async function invRegistrarMovimiento() {
@@ -6526,10 +6553,13 @@ async function invRegistrarMovimiento() {
   const responsable = document.getElementById('invm_responsable').value.trim();
   const esEntrada = tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO';
   const precio = document.getElementById('invm_precio').value;
+  const tipoDocumento = esEntrada ? document.getElementById('invm_tipoDocumento').value : '';
+  const numeroDocumento = document.getElementById('invm_numeroDocumento').value.trim();
 
   if (tipo === 'SALIDA' && !equipo) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ Para una salida, el equipo destino es obligatorio.'; return; }
   if (!responsable) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ El responsable es obligatorio.'; return; }
   if (esEntrada && !precio) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ Para un ingreso, el precio unitario es obligatorio.'; return; }
+  if (tipoDocumento && !numeroDocumento) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ Escribe el número o referencia del documento elegido.'; return; }
 
   msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
   try {
@@ -6539,11 +6569,14 @@ async function invRegistrarMovimiento() {
       tipo,
       cantidad: document.getElementById('invm_cantidad').value,
       precioUnitario: esEntrada ? precio : '',
+      tipoDocumento, numeroDocumento: tipoDocumento ? numeroDocumento : '',
       responsable, equipo,
       observaciones: document.getElementById('invm_obs').value.trim(),
     });
     msg.style.color = '#15803d'; msg.textContent = '✔ Movimiento registrado correctamente.';
-    ['invm_codigo','invm_cantidad','invm_precio','invm_responsable','invm_equipo','invm_obs'].forEach(id => document.getElementById(id).value = '');
+    ['invm_codigo','invm_cantidad','invm_precio','invm_responsable','invm_equipo','invm_obs','invm_numeroDocumento'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('invm_tipoDocumento').value = '';
+    document.getElementById('invm_grupoDocNumero').style.display = 'none';
     document.getElementById('invm_fecha').valueAsDate = new Date();
     _stockInventarioCache = null;
   } catch (e) {
@@ -6686,9 +6719,12 @@ async function invCargarHistorial() {
     const historial = await obtenerHistorialInventarioDirecto(inventarioOperacionActual, filtros);
     if (!historial.length) { cont.innerHTML = '<div style="color:var(--text3);font-size:13px">No hay movimientos en el período seleccionado</div>'; return; }
     const tipoLabel = { INGRESO:'Ingreso', SALIDA:'Salida', AJUSTE_POSITIVO:'Ajuste +', AJUSTE_NEGATIVO:'Ajuste −' };
-    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th><th>Observaciones</th></tr></thead><tbody>` +
-      historial.map(m => `<tr><td>${esc(m.fecha)}</td><td><strong>${esc(m.codigo)}</strong></td><td>${esc(m.producto)}</td><td>${tipoLabel[m.tipo]||m.tipo}</td>
-        <td>${m.cantidad}</td><td>${esc(m.equipo)||'—'}</td><td>${esc(m.responsable)||'—'}</td><td>${esc(m.observaciones)}</td></tr>`).join('') +
+    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th><th>Documento</th><th>Observaciones</th></tr></thead><tbody>` +
+      historial.map(m => {
+        const doc = m.tipoDocumento ? `${esc(m.tipoDocumento)}${m.numeroDocumento ? ' Nº ' + esc(m.numeroDocumento) : ''}` : '—';
+        return `<tr><td>${esc(m.fecha)}</td><td><strong>${esc(m.codigo)}</strong></td><td>${esc(m.producto)}</td><td>${tipoLabel[m.tipo]||m.tipo}</td>
+        <td>${m.cantidad}</td><td>${esc(m.equipo)||'—'}</td><td>${esc(m.responsable)||'—'}</td><td>${doc}</td><td>${esc(m.observaciones)}</td></tr>`;
+      }).join('') +
       `</tbody></table>`;
   } catch (e) {
     cont.innerHTML = `<div style="color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
