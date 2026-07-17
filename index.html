@@ -1854,6 +1854,9 @@ body.inv-activo .container { max-width: 1700px; }
               </div>
               <div class="field"><label>Stock Mínimo</label><input id="invp_stockmin" type="number" min="0" value="0"></div>
               <div class="field"><label>Ubicación</label><input id="invp_ubicacion" placeholder="Ej: Bodega principal, estante 3"></div>
+              <div class="field"><label>Proveedor *</label>
+                <select id="invp_proveedor"><option value="">Selecciona un proveedor...</option></select>
+              </div>
               <div class="field"><label>Tipo</label>
                 <select id="invp_tipo">
                   <option value="Insumos">Insumos</option>
@@ -1978,8 +1981,16 @@ body.inv-activo .container { max-width: 1700px; }
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
               <div class="field"><label>Nombre Proveedor *</label><input id="prov_nombre" placeholder="Nombre de la empresa o persona"></div>
               <div class="field"><label>Número de Contacto</label><input id="prov_contacto" placeholder="Ej: 300 123 4567"></div>
-              <div class="field"><label>Ubicación</label><input id="prov_ubicacion" placeholder="Ciudad / dirección"></div>
-              <div class="field"><label>Insumo / Repuesto / Servicio</label><input id="prov_insumo" placeholder="Qué provee"></div>
+              <div class="field"><label>Ciudad / País</label><input id="prov_ciudadpais" placeholder="Ej: Bogotá, Colombia"></div>
+              <div class="field"><label>Dirección</label><input id="prov_direccion" placeholder="Ej: Cra 45 #12-30"></div>
+              <div class="field"><label>Tipo</label>
+                <select id="prov_tipo">
+                  <option value="Insumo">Insumo</option>
+                  <option value="Repuesto">Repuesto</option>
+                  <option value="Servicio">Servicio</option>
+                </select>
+              </div>
+              <div class="field"><label>Qué provee</label><input id="prov_insumo" placeholder="Ej: Rodamientos, mangueras, mantenimiento eléctrico..."></div>
             </div>
             <button class="btn btn-primary" onclick="invRegistrarProveedor()">✔ Registrar Proveedor</button>
             <div id="provMsg" style="margin-top:10px;font-size:13px"></div>
@@ -1988,7 +1999,15 @@ body.inv-activo .container { max-width: 1700px; }
         <div class="card" style="margin:0">
           <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
             <span>📋 Proveedores Registrados</span>
-            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="invCargarProveedores()">🔄 Actualizar</button>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="provFiltroTipo" onchange="invFiltrarProveedores()" style="font-size:12px;padding:4px 8px;min-width:130px">
+                <option value="">Todos los tipos</option>
+                <option value="Insumo">Insumo</option>
+                <option value="Repuesto">Repuesto</option>
+                <option value="Servicio">Servicio</option>
+              </select>
+              <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="invCargarProveedores()">🔄 Actualizar</button>
+            </div>
           </div>
           <div style="padding:0;overflow-x:auto" id="provTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
@@ -2209,7 +2228,7 @@ const INVENTARIO_SHEETS = {
   peru:      '15LoJbWh1aB2cJLLRDLTadbFjeU-U7nFW54K7eM5M6Fc',
 };
 
-const INV_PRODUCTOS_COLS   = ['Código','Nombre','Unidad','Grupo','Stock Mínimo','Fecha Creación','Precio Unitario','Tipo','Ubicacion'];
+const INV_PRODUCTOS_COLS   = ['Código','Nombre','Unidad','Grupo','Stock Mínimo','Fecha Creación','Precio Unitario','Tipo','Ubicacion','Proveedor'];
 const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante','PrecioUnitario'];
 const INV_TIPOS_MOVIMIENTO = ['INGRESO','SALIDA','AJUSTE_POSITIVO','AJUSTE_NEGATIVO'];
 
@@ -2330,7 +2349,7 @@ function _agruparLotesFIFO(movimientos) {
 async function obtenerTodosLosLotesInventario(sede) {
   const spreadsheetId = _invSpreadsheetId(sede);
   const [productos, movimientos] = await Promise.all([
-    _invGet(spreadsheetId, 'Productos!A2:I100000'),
+    _invGet(spreadsheetId, 'Productos!A2:J100000'),
     _invGet(spreadsheetId, 'Movimientos!A2:K100000'),
   ]);
   const lotesPorCodigo = _agruparLotesFIFO(movimientos);
@@ -2344,7 +2363,7 @@ async function obtenerTodosLosLotesInventario(sede) {
 async function obtenerStockInventarioDirecto(sede) {
   const spreadsheetId = _invSpreadsheetId(sede);
   const [productos, movimientos] = await Promise.all([
-    _invGet(spreadsheetId, 'Productos!A2:I100000'),
+    _invGet(spreadsheetId, 'Productos!A2:J100000'),
     _invGet(spreadsheetId, 'Movimientos!A2:K100000'),
   ]);
 
@@ -2361,7 +2380,7 @@ async function obtenerStockInventarioDirecto(sede) {
     return {
       codigo, nombre: row[1] || '', unidad: row[2] || 'Unidades', grupo: row[3] || 'General',
       stockMin: Math.max(0, parseInt(row[4]) || 0), cantidad, precioUnitario: precio,
-      tipo: row[7] || '', ubicacion: row[8] || '', valorTotal, lotes,
+      tipo: row[7] || '', ubicacion: row[8] || '', proveedor: row[9] || '', valorTotal, lotes,
     };
   });
   return stock.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -2387,6 +2406,7 @@ async function registrarProductoInventarioDirecto(sede, producto) {
     Math.max(0, parseFloat(producto.precioUnitario) || 0),
     ['Insumos','Repuestos','Seguridad','Herramienta'].includes(producto.tipo) ? producto.tipo : '',
     producto.ubicacion || '',
+    producto.proveedor || '',
   ];
   await _invAppend(spreadsheetId, 'Productos', [fila]);
 }
@@ -6306,6 +6326,7 @@ function invMostrarSubTab(nombre) {
   if (nombre === 'stock')     invCargarStock();
   if (nombre === 'proveedores') invCargarProveedores();
   if (nombre === 'lotes')     invCargarListaLotes();
+  if (nombre === 'producto')  invPoblarProveedores();
 }
 
 async function invCargarDashboard() {
@@ -6422,14 +6443,45 @@ function invRenderEquiposChart(historial) {
   }).join('') + `</div>`;
 }
 
+let _proveedoresCache = null;
+
+/** Llena el desplegable de "Proveedor" en Nuevo Producto con los
+ *  proveedores ya registrados en la sección de Proveedores. */
+async function invPoblarProveedores() {
+  const sel = document.getElementById('invp_proveedor');
+  if (!sel) return;
+  const actual = sel.value;
+  try {
+    if (_proveedoresCache === null) {
+      const spreadsheetId = _invSpreadsheetId(inventarioOperacionActual);
+      await _invAsegurarHoja(spreadsheetId, 'Proveedores', INV_PROVEEDORES_COLS);
+      const filas = await _invGet(spreadsheetId, 'Proveedores!A2:A100000');
+      _proveedoresCache = filas.filter(r => r[0]).map(r => r[0]);
+    }
+    if (!_proveedoresCache.length) {
+      sel.innerHTML = '<option value="">Aún no hay proveedores — regístralos en la pestaña "🚚 Proveedores"</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Selecciona un proveedor...</option>' +
+      _proveedoresCache.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+    if (_proveedoresCache.includes(actual)) sel.value = actual;
+  } catch (e) {
+    sel.innerHTML = '<option value="">⚠️ No se pudo cargar la lista de proveedores</option>';
+  }
+}
+
 async function invRegistrarProducto() {
   const msg = document.getElementById('invMsg');
+  const proveedor = document.getElementById('invp_proveedor').value;
+  if (!proveedor) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ El proveedor es obligatorio — debes saber quién suministra este producto.'; return; }
+
   const producto = {
     codigo: document.getElementById('invp_codigo').value.trim(),
     nombre: document.getElementById('invp_nombre').value.trim(),
     unidad: document.getElementById('invp_unidad').value.trim() || 'Unidades',
     stockMin: document.getElementById('invp_stockmin').value,
     ubicacion: document.getElementById('invp_ubicacion').value.trim(),
+    proveedor,
     tipo: document.getElementById('invp_tipo').value,
   };
   msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
@@ -6438,6 +6490,7 @@ async function invRegistrarProducto() {
     msg.style.color = '#15803d'; msg.textContent = '✔ Producto registrado correctamente.';
     ['invp_codigo','invp_nombre','invp_stockmin','invp_ubicacion'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('invp_unidad').value = 'Unidades';
+    document.getElementById('invp_proveedor').value = '';
     _stockInventarioCache = null; // invalida el caché del autocompletado, para que vea el producto nuevo
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
@@ -6530,14 +6583,14 @@ function invFiltrarStock() {
 function invRenderTablaStock(stock) {
   const cont = document.getElementById('invStockTabla');
   if (!stock.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay productos que coincidan con el filtro</div>'; return; }
-  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Ubicación</th><th>Grupo</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Ubicación</th><th>Proveedor</th><th>Grupo</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
     stock.map(p => {
       let estado = 'Normal', color = '#dcfce7', tcolor = '#15803d';
       if (p.cantidad <= 0) { estado = 'Sin Stock'; color = '#fee2e2'; tcolor = '#b91c1c'; }
       else if (p.cantidad <= p.stockMin && p.stockMin > 0) { estado = 'Stock Bajo'; color = '#fef9c3'; tcolor = '#a16207'; }
       const numLotes = (p.lotes || []).length;
       const notaLotes = numLotes > 1 ? ` <span title="Este producto tiene ${numLotes} lotes con precios distintos — se muestra el del lote más antiguo" style="cursor:help;color:var(--text3);font-size:11px">(${numLotes} lotes 🛈)</span>` : '';
-      return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.ubicacion)||'—'}</td><td>${esc(p.grupo)}</td>
+      return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.ubicacion)||'—'}</td><td>${esc(p.proveedor)||'—'}</td><td>${esc(p.grupo)}</td>
         <td>${p.stockMin}</td><td><strong>${p.cantidad}</strong></td><td>${fmtCOP(p.precioUnitario)}${notaLotes}</td><td><strong>${fmtCOP(p.valorTotal)}</strong></td>
         <td><span class="inv-badge" style="background:${color};color:${tcolor}">${estado}</span></td></tr>`;
     }).join('') + `</tbody></table>`;
@@ -6642,7 +6695,7 @@ async function invCargarHistorial() {
   }
 }
 
-const INV_PROVEEDORES_COLS = ['Nombre','Contacto','Ubicacion','InsumoRepuestoServicio'];
+const INV_PROVEEDORES_COLS = ['Nombre','Contacto','CiudadPais','Direccion','Tipo','InsumoRepuestoServicio'];
 
 async function invRegistrarProveedor() {
   const msg = document.getElementById('provMsg');
@@ -6652,7 +6705,9 @@ async function invRegistrarProveedor() {
   const fila = [
     nombre,
     document.getElementById('prov_contacto').value.trim(),
-    document.getElementById('prov_ubicacion').value.trim(),
+    document.getElementById('prov_ciudadpais').value.trim(),
+    document.getElementById('prov_direccion').value.trim(),
+    document.getElementById('prov_tipo').value,
     document.getElementById('prov_insumo').value.trim(),
   ];
 
@@ -6662,12 +6717,15 @@ async function invRegistrarProveedor() {
     await _invAsegurarHoja(spreadsheetId, 'Proveedores', INV_PROVEEDORES_COLS);
     await _invAppend(spreadsheetId, 'Proveedores', [fila]);
     msg.style.color = '#15803d'; msg.textContent = '✔ Proveedor registrado correctamente.';
-    ['prov_nombre','prov_contacto','prov_ubicacion','prov_insumo'].forEach(id => document.getElementById(id).value = '');
+    ['prov_nombre','prov_contacto','prov_ciudadpais','prov_direccion','prov_insumo'].forEach(id => document.getElementById(id).value = '');
     invCargarProveedores();
+    _proveedoresCache = null; // para que Nuevo Producto vea este proveedor nuevo
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
   }
 }
+
+let _proveedoresTablaCache = [];
 
 async function invCargarProveedores() {
   const cont = document.getElementById('provTabla');
@@ -6675,19 +6733,36 @@ async function invCargarProveedores() {
   try {
     const spreadsheetId = _invSpreadsheetId(inventarioOperacionActual);
     await _invAsegurarHoja(spreadsheetId, 'Proveedores', INV_PROVEEDORES_COLS);
-    const filas = await _invGet(spreadsheetId, 'Proveedores!A2:D100000');
-    const proveedores = filas.filter(r => r[0]).map(r => ({ nombre: r[0]||'', contacto: r[1]||'', ubicacion: r[2]||'', insumo: r[3]||'' }));
-    if (!proveedores.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Aún no has registrado ningún proveedor.</div>'; return; }
-    cont.innerHTML = `<table class="ie-table"><thead><tr><th>Nombre Proveedor</th><th>Número Contacto</th><th>Ubicación</th><th>Insumo / Repuesto / Servicio</th></tr></thead><tbody>` +
-      proveedores.map(p => `<tr>
-        <td><strong>${esc(p.nombre)}</strong></td>
-        <td>${esc(p.contacto)}</td>
-        <td>${esc(p.ubicacion)}</td>
-        <td>${esc(p.insumo)}</td>
-      </tr>`).join('') + `</tbody></table>`;
+    const filas = await _invGet(spreadsheetId, 'Proveedores!A2:F100000');
+    _proveedoresTablaCache = filas.filter(r => r[0]).map(r => ({
+      nombre: r[0]||'', contacto: r[1]||'', ciudadPais: r[2]||'', direccion: r[3]||'', tipo: r[4]||'', insumo: r[5]||''
+    }));
+    invFiltrarProveedores();
   } catch (e) {
     cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
   }
+}
+
+/** Filtra la tabla de proveedores ya cargada por tipo — instantáneo, sin
+ *  volver a pedirle nada a Google Sheets. */
+function invFiltrarProveedores() {
+  const tipo = document.getElementById('provFiltroTipo').value;
+  const lista = tipo ? _proveedoresTablaCache.filter(p => p.tipo === tipo) : _proveedoresTablaCache;
+  _renderTablaProveedores(lista);
+}
+
+function _renderTablaProveedores(proveedores) {
+  const cont = document.getElementById('provTabla');
+  if (!proveedores.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay proveedores que coincidan con el filtro.</div>'; return; }
+  cont.innerHTML = `<table class="ie-table"><thead><tr><th>Nombre Proveedor</th><th>Número Contacto</th><th>Ciudad / País</th><th>Dirección</th><th>Tipo</th><th>Qué provee</th></tr></thead><tbody>` +
+    proveedores.map(p => `<tr>
+      <td><strong>${esc(p.nombre)}</strong></td>
+      <td>${esc(p.contacto)}</td>
+      <td>${esc(p.ciudadPais)}</td>
+      <td>${esc(p.direccion)}</td>
+      <td>${esc(p.tipo)}</td>
+      <td>${esc(p.insumo)}</td>
+    </tr>`).join('') + `</tbody></table>`;
 }
 
 
