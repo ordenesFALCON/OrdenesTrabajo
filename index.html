@@ -1335,6 +1335,10 @@ body.inv-activo .container { max-width: 1700px; }
               <label>Costo real total</label>
               <input type="number" id="mCostoReal" placeholder="0.00" min="0" step="0.01">
             </div>
+            <div class="field">
+              <label>Horas de operación del equipo</label>
+              <input type="number" id="mHorasEquipo" placeholder="Ej: 1250" min="0" step="0.1">
+            </div>
           </div>
           <div class="field" style="margin-bottom:14px">
             <label>Observaciones de cierre *</label>
@@ -1714,19 +1718,19 @@ body.inv-activo .container { max-width: 1700px; }
 
     <!-- ══════ VISTA: HVD — HOJA DE VIDA DE EQUIPOS (nueva) ══════ -->
     <div id="histVistaHVD" style="display:none">
-      <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:start">
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:start">
         <!-- Lista de equipos -->
         <div class="card">
           <div class="card-head">🔧 Equipos</div>
-          <div class="card-body" style="padding:0;max-height:640px;overflow-y:auto">
+          <div class="card-body" style="padding:0;max-height:720px;overflow-y:auto">
             <div id="hvdListaEquipos"></div>
           </div>
         </div>
 
         <!-- Hoja de vida del equipo seleccionado -->
-        <div class="card">
-          <div class="card-head" id="hvdTitulo">📋 Selecciona un equipo</div>
-          <div class="card-body" style="padding:18px" id="hvdContenido">
+        <div class="card" style="overflow: visible">
+          <div class="card-head" id="hvdTitulo" style="border-radius:var(--radius) var(--radius) 0 0">📋 Selecciona un equipo</div>
+          <div class="card-body" style="padding:20px;overflow-x:auto" id="hvdContenido">
             <div style="color:var(--text3);font-size:13px;text-align:center;padding:30px">
               Elige un equipo de la lista para ver su hoja de vida.
             </div>
@@ -1762,6 +1766,7 @@ body.inv-activo .container { max-width: 1700px; }
         <button class="inv-subtab" data-invtab="movimiento" onclick="invMostrarSubTab('movimiento')">🔄 Movimientos</button>
         <button class="inv-subtab" data-invtab="stock" onclick="invMostrarSubTab('stock')">📋 Stock</button>
         <button class="inv-subtab" data-invtab="reportes" onclick="invMostrarSubTab('reportes')">📈 Reportes</button>
+        <button class="inv-subtab" data-invtab="proveedores" onclick="invMostrarSubTab('proveedores')">🚚 Proveedores</button>
       </div>
 
       <!-- ── Sub-panel: Dashboard ── -->
@@ -1816,12 +1821,14 @@ body.inv-activo .container { max-width: 1700px; }
         <div class="card" style="margin:0">
           <div class="card-head">➕ Registrar Producto Nuevo</div>
           <div style="padding:18px">
+            <div style="background:#eaf2ff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--text2)">
+              ℹ️ El precio ya no se pone aquí — se ingresa en <strong>"🔄 Movimientos"</strong> cada vez que registres una entrada, porque el mismo producto puede comprarse a precios distintos según la fecha.
+            </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
               <div class="field"><label>Código *</label><input id="invp_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
               <div class="field"><label>Nombre *</label><input id="invp_nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del producto"></div>
               <div class="field"><label>Unidad</label><input id="invp_unidad" value="Unidades"></div>
               <div class="field"><label>Stock Mínimo</label><input id="invp_stockmin" type="number" min="0" value="0"></div>
-              <div class="field"><label>Precio por Unidad</label><input id="invp_precio" type="number" min="0" step="0.01" placeholder="0.00"></div>
               <div class="field"><label>Tipo</label>
                 <select id="invp_tipo">
                   <option value="Insumos">Insumos</option>
@@ -1851,11 +1858,17 @@ body.inv-activo .container { max-width: 1700px; }
                 </select>
               </div>
               <div class="field"><label>Cantidad *</label><input id="invm_cantidad" type="number" min="0.01" step="0.01" placeholder="0"></div>
+              <div class="field" id="invm_grupoPrecio"><label>Precio Unitario <span id="invm_precioMarca">*</span></label>
+                <input id="invm_precio" type="number" min="0" step="0.01" placeholder="0.00">
+              </div>
               <div class="field"><label>Responsable *</label><input id="invm_responsable" placeholder="Nombre completo"></div>
               <div class="field" id="invm_grupoEquipo"><label>Equipo Destino <span id="invm_equipoMarca">*</span></label>
                 <select id="invm_equipo"><option value="">Seleccionar equipo...</option></select>
               </div>
               <div class="field" style="grid-column:1/-1"><label>Observaciones</label><input id="invm_obs" placeholder="Opcional"></div>
+            </div>
+            <div style="background:#fffbea;border:1px solid #d4a72c;border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12.5px;color:#7c5c00">
+              💡 Cada ingreso guarda su propio precio — si compras el mismo producto más adelante a otro precio, se registra como un lote nuevo. Al usarlo en una orden de trabajo, el sistema toma primero el lote más antiguo que todavía tenga existencias (FIFO).
             </div>
             <button class="btn btn-primary" onclick="invRegistrarMovimiento()">💾 Guardar Movimiento</button>
           </div>
@@ -1905,6 +1918,30 @@ body.inv-activo .container { max-width: 1700px; }
             <button class="btn btn-primary" onclick="invCargarHistorial()">📊 Generar Reporte</button>
             <div style="overflow-x:auto;margin-top:14px" id="invHistorialTabla"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Sub-panel: Proveedores ── -->
+      <div id="invSub-proveedores" class="inv-subpanel">
+        <div class="card" style="margin:0 0 14px">
+          <div class="card-head">🚚 Registrar Proveedor</div>
+          <div style="padding:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+              <div class="field"><label>Nombre Proveedor *</label><input id="prov_nombre" placeholder="Nombre de la empresa o persona"></div>
+              <div class="field"><label>Número de Contacto</label><input id="prov_contacto" placeholder="Ej: 300 123 4567"></div>
+              <div class="field"><label>Ubicación</label><input id="prov_ubicacion" placeholder="Ciudad / dirección"></div>
+              <div class="field"><label>Insumo / Repuesto / Servicio</label><input id="prov_insumo" placeholder="Qué provee"></div>
+            </div>
+            <button class="btn btn-primary" onclick="invRegistrarProveedor()">✔ Registrar Proveedor</button>
+            <div id="provMsg" style="margin-top:10px;font-size:13px"></div>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+            <span>📋 Proveedores Registrados</span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="invCargarProveedores()">🔄 Actualizar</button>
+          </div>
+          <div style="padding:0;overflow-x:auto" id="provTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
       </div>
 
@@ -2124,7 +2161,7 @@ const INVENTARIO_SHEETS = {
 };
 
 const INV_PRODUCTOS_COLS   = ['Código','Nombre','Unidad','Grupo','Stock Mínimo','Fecha Creación','Precio Unitario','Tipo'];
-const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante'];
+const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante','PrecioUnitario'];
 const INV_TIPOS_MOVIMIENTO = ['INGRESO','SALIDA','AJUSTE_POSITIVO','AJUSTE_NEGATIVO'];
 
 function _invSpreadsheetId(sede) {
@@ -2181,32 +2218,68 @@ async function _invAsegurarHoja(spreadsheetId, nombre, cols) {
 /** Calcula el stock actual de TODOS los productos de una sede, leyendo
  *  Productos + Movimientos y sumando/restando en el navegador (mismo
  *  cálculo que antes hacía el Apps Script, ahora hecho aquí). */
+/** Agrupa los movimientos por código y arma, para cada uno, sus "lotes"
+ *  (cada ingreso es un lote con su propio precio y fecha), consumiendo lo
+ *  más antiguo primero (FIFO) según las salidas ya registradas. Devuelve
+ *  un Map: código → lista de lotes CON existencia restante, del más
+ *  antiguo al más reciente. */
+function _agruparLotesFIFO(movimientos) {
+  const porCodigo = {};
+  movimientos.forEach(row => {
+    const codigo = (row[0] || '').toString().trim().toUpperCase();
+    if (!codigo) return;
+    if (!porCodigo[codigo]) porCodigo[codigo] = [];
+    porCodigo[codigo].push({
+      fecha: row[1] || '',
+      tipo: (row[2] || '').toString().trim().toUpperCase(),
+      cantidad: parseFloat(row[3]) || 0,
+      precio: Math.max(0, parseFloat(row[10]) || 0), // columna K = Precio Unitario
+    });
+  });
+
+  const resultado = new Map();
+  Object.entries(porCodigo).forEach(([codigo, movs]) => {
+    movs.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    const lotes = [];
+    movs.forEach(m => {
+      if (m.tipo === 'INGRESO' || m.tipo === 'AJUSTE_POSITIVO') {
+        lotes.push({ fecha: m.fecha, precio: m.precio, restante: m.cantidad });
+      } else if (m.tipo === 'SALIDA' || m.tipo === 'AJUSTE_NEGATIVO') {
+        let porConsumir = m.cantidad;
+        for (const lote of lotes) {
+          if (porConsumir <= 0) break;
+          const consumido = Math.min(lote.restante, porConsumir);
+          lote.restante -= consumido;
+          porConsumir -= consumido;
+        }
+      }
+    });
+    resultado.set(codigo, lotes.filter(l => l.restante > 0.0001));
+  });
+  return resultado;
+}
+
 async function obtenerStockInventarioDirecto(sede) {
   const spreadsheetId = _invSpreadsheetId(sede);
   const [productos, movimientos] = await Promise.all([
     _invGet(spreadsheetId, 'Productos!A2:H100000'),
-    _invGet(spreadsheetId, 'Movimientos!A2:D100000'),
+    _invGet(spreadsheetId, 'Movimientos!A2:K100000'),
   ]);
 
-  const stockPorCodigo = {};
-  movimientos.forEach(row => {
-    const codigo = (row[0] || '').toString().trim().toUpperCase();
-    if (!codigo) return;
-    const tipo     = (row[2] || '').toString().trim().toUpperCase();
-    const cantidad = parseFloat(row[3]) || 0;
-    if (!(codigo in stockPorCodigo)) stockPorCodigo[codigo] = 0;
-    if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') stockPorCodigo[codigo] += cantidad;
-    else if (tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') stockPorCodigo[codigo] -= cantidad;
-  });
+  const lotesPorCodigo = _agruparLotesFIFO(movimientos);
 
   const stock = productos.filter(row => row[0] && row[1]).map(row => {
-    const codigo   = row[0].toString().trim();
-    const cantidad = Math.max(0, Math.round((stockPorCodigo[codigo.toUpperCase()] || 0) * 100) / 100);
-    const precio   = Math.max(0, parseFloat(row[6]) || 0);
+    const codigo = row[0].toString().trim();
+    const lotes  = lotesPorCodigo.get(codigo.toUpperCase()) || [];
+    const cantidad   = Math.round(lotes.reduce((s, l) => s + l.restante, 0) * 100) / 100;
+    const valorTotal = Math.round(lotes.reduce((s, l) => s + l.restante * l.precio, 0) * 100) / 100;
+    // El "precio unitario" que se muestra es el del lote más antiguo con existencia —
+    // es el precio que se va a usar la próxima vez que se consuma este producto.
+    const precio = lotes.length ? lotes[0].precio : 0;
     return {
       codigo, nombre: row[1] || '', unidad: row[2] || 'Unidades', grupo: row[3] || 'General',
       stockMin: Math.max(0, parseInt(row[4]) || 0), cantidad, precioUnitario: precio,
-      tipo: row[7] || '', valorTotal: Math.round(cantidad * precio * 100) / 100,
+      tipo: row[7] || '', valorTotal, lotes,
     };
   });
   return stock.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -2285,6 +2358,7 @@ async function registrarMovimientoInventarioDirecto(sede, mov) {
     mov.equipo || '',
     mov.observaciones || '',
     stockResultante,
+    (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') ? (Math.max(0, parseFloat(mov.precioUnitario) || 0)) : '',
   ];
   await _invAppend(spreadsheetId, 'Movimientos', [fila]);
   return { stockResultante };
@@ -2489,16 +2563,46 @@ async function buscarProductoEnInventario(inputEl, campo) {
   );
 
   const inputs   = tr.querySelectorAll('input');
-  const inCodigo = inputs[0], inNombre = inputs[1], inCosto = inputs[3];
+  const inCodigo = inputs[0], inNombre = inputs[1], inCantidad = inputs[2], inCosto = inputs[3];
 
   if (producto) {
     if (inCodigo) inCodigo.value = producto.codigo;
     if (inNombre) inNombre.value = producto.nombre;
-    if (inCosto && producto.precioUnitario) inCosto.value = producto.precioUnitario;
+
+    // Toma el precio del lote MÁS ANTIGUO que todavía tenga existencia (FIFO) —
+    // no un precio único fijo, porque el mismo producto puede tener varios
+    // precios según cuándo se compró cada lote.
+    const loteMasAntiguo = (producto.lotes && producto.lotes[0]) || null;
+    if (inCosto) inCosto.value = loteMasAntiguo ? loteMasAntiguo.precio : (producto.precioUnitario || '');
+    tr.dataset.fifoRestante = loteMasAntiguo ? loteMasAntiguo.restante : '0';
+    tr.dataset.fifoFecha    = loteMasAntiguo ? loteMasAntiguo.fecha : '';
+
     if (hint) hint.style.display = 'none';
+    if (inCantidad) validarCantidadFIFO(inCantidad);
   } else if (hint) {
     hint.textContent  = '⚠️ No existe en inventario — puedes escribirlo igual';
     hint.style.display = 'block';
+    delete tr.dataset.fifoRestante;
+  }
+}
+
+/** Avisa si la cantidad pedida en esta fila supera lo que queda en el lote
+ *  más antiguo (el que se va a usar primero, según su precio) — en vez de
+ *  bloquear, guía a agregar otra fila con el mismo código para que tome
+ *  el siguiente lote (con su propio precio) por la diferencia. */
+function validarCantidadFIFO(inputEl) {
+  const tr = inputEl.closest('tr');
+  if (!tr) return;
+  const hint = tr.querySelector('.rep-ins-hint');
+  if (!hint || tr.dataset.fifoRestante === undefined) return;
+
+  const restante = parseFloat(tr.dataset.fifoRestante) || 0;
+  const cantidad = parseFloat(inputEl.value) || 0;
+  if (cantidad > restante) {
+    hint.textContent = `⚠️ Solo hay ${restante} disponibles a este precio (lote del ${tr.dataset.fifoFecha || '—'}). Agrega otra fila con el mismo código para tomar el siguiente lote.`;
+    hint.style.display = 'block';
+  } else if (hint.textContent.startsWith('⚠️ Solo hay')) {
+    hint.style.display = 'none';
   }
 }
 
@@ -3128,7 +3232,7 @@ function abrirModalCompletar(id) {
       <td><input type="text" placeholder="Nombre" value="${esc(r.nombre||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'nombre')">
         <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
       </td>
-      <td><input type="number" placeholder="0" min="0" step="any" value="${esc(r.cantidad||'')}"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" value="${esc(r.cantidad||'')}" oninput="validarCantidadFIFO(this)"></td>
       <td><select>
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${r.unidades===u?'selected':''}>${u}</option>`).join('')}
       </select></td>
@@ -3148,7 +3252,7 @@ function abrirModalCompletar(id) {
       <td><input type="text" placeholder="Nombre" value="${esc(i.nombre||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'nombre')">
         <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
       </td>
-      <td><input type="number" placeholder="0" min="0" step="any" value="${esc(i.cantidad||'')}"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" value="${esc(i.cantidad||'')}" oninput="validarCantidadFIFO(this)"></td>
       <td><select>
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${i.unidades===u?'selected':''}>${u}</option>`).join('')}
       </select></td>
@@ -3174,6 +3278,7 @@ function abrirModalCompletar(id) {
   document.getElementById('mEjecutadoPor').value   = o.EjecutadoPor || o.Responsable || currentUser.name;
   document.getElementById('mTiempoReal').value     = o.TiempoReal || '';
   document.getElementById('mCostoReal').value      = o.CostoReal || '';
+  document.getElementById('mHorasEquipo').value    = o.HorasEquipo || '';
   document.getElementById('mObsCierre').value      = o.ObsCierre || '';
   document.getElementById('alertEditor').className = 'alert';
 
@@ -3502,6 +3607,7 @@ async function guardarCierre() {
     // Aplicar cierre
     const costoReal   = parseFloat(document.getElementById('mCostoReal').value) || 0;
     const tiempoReal  = document.getElementById('mTiempoReal').value;
+    const horasEquipo = document.getElementById('mHorasEquipo').value;
     const firmaCierre = sigDataUrl('sigCierre');
 
     o.Estado       = 'Cerrada';
@@ -3510,6 +3616,7 @@ async function guardarCierre() {
     o.ObsCierre    = obs;
     o.CostoReal    = costoReal;
     o.TiempoReal   = tiempoReal;
+    o.HorasEquipo  = horasEquipo;
     if (firmaCierre) o.FirmaCierre = firmaCierre;
 
     guardarLocal();
@@ -3523,6 +3630,7 @@ async function guardarCierre() {
           CostoReal:    costoReal,
           FechaCierre:  fechaEj,
           TiempoReal:   tiempoReal,
+          HorasEquipo:  horasEquipo,
           tareas:       o.tareas    || [],
           repuestos:    o.repuestos || [],
           insumos:      o.insumos   || [],
@@ -3746,7 +3854,7 @@ function addRow(tbodyId, tipo) {
       <td><input type="text" placeholder="Nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'nombre')">
         <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
       </td>
-      <td><input type="number" placeholder="0" min="0" step="any"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" oninput="validarCantidadFIFO(this)"></td>
       <td>
         <select>
           <option value="und">und</option><option value="m">m</option>
@@ -3995,7 +4103,7 @@ const SHEETS_COLS = [
   'SolicitadaPor','AutorizadaPor','Responsable','Supervisor',
   'FechaInicio','FechaFin','MedidasSeguridad','Observaciones',
   'UserEmail','CostoTotal','FechaCierre','EjecutadoPor','TiempoReal',
-  'CostoReal','ObsCierre','FechaCreacion','FirmaCreador','FirmaCierre'
+  'CostoReal','ObsCierre','FechaCreacion','FirmaCreador','FirmaCierre','HorasEquipo'
 ];
 const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','TiempoReal','OK','Responsable','ObservacionCierre'];
 const REPUESTOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
@@ -6061,6 +6169,7 @@ const INVENTARIO_CHIPS = [
   { key:'movimiento', label:'🔄 Movimientos' },
   { key:'stock',      label:'📋 Stock' },
   { key:'reportes',   label:'📈 Reportes' },
+  { key:'proveedores',label:'🚚 Proveedores' },
 ];
 
 function abrirInventario(opKey) {
@@ -6112,6 +6221,7 @@ function invMostrarSubTab(nombre) {
   document.querySelector(`.inv-subtab[data-invtab="${nombre}"]`).classList.add('active');
   if (nombre === 'dashboard') invCargarDashboard();
   if (nombre === 'stock')     invCargarStock();
+  if (nombre === 'proveedores') invCargarProveedores();
 }
 
 async function invCargarDashboard() {
@@ -6235,14 +6345,13 @@ async function invRegistrarProducto() {
     nombre: document.getElementById('invp_nombre').value.trim(),
     unidad: document.getElementById('invp_unidad').value.trim() || 'Unidades',
     stockMin: document.getElementById('invp_stockmin').value,
-    precioUnitario: document.getElementById('invp_precio').value,
     tipo: document.getElementById('invp_tipo').value,
   };
   msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
   try {
     await registrarProductoInventarioDirecto(inventarioOperacionActual, producto);
     msg.style.color = '#15803d'; msg.textContent = '✔ Producto registrado correctamente.';
-    ['invp_codigo','invp_nombre','invp_stockmin','invp_precio'].forEach(id => document.getElementById(id).value = '');
+    ['invp_codigo','invp_nombre','invp_stockmin'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('invp_unidad').value = 'Unidades';
     _stockInventarioCache = null; // invalida el caché del autocompletado, para que vea el producto nuevo
   } catch (e) {
@@ -6263,8 +6372,12 @@ function invPoblarEquipos() {
 
 function invHandleTipoChange() {
   const tipo = document.getElementById('invm_tipo').value;
-  const requiere = tipo === 'SALIDA';
-  document.getElementById('invm_equipoMarca').style.display = requiere ? 'inline' : 'none';
+  const esSalida = tipo === 'SALIDA';
+  document.getElementById('invm_equipoMarca').style.display = esSalida ? 'inline' : 'none';
+
+  const esEntrada = tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO';
+  document.getElementById('invm_grupoPrecio').style.display = esEntrada ? 'flex' : 'none';
+  document.getElementById('invm_precioMarca').style.display = esEntrada ? 'inline' : 'none';
 }
 
 async function invRegistrarMovimiento() {
@@ -6272,9 +6385,12 @@ async function invRegistrarMovimiento() {
   const tipo = document.getElementById('invm_tipo').value;
   const equipo = document.getElementById('invm_equipo').value.trim();
   const responsable = document.getElementById('invm_responsable').value.trim();
+  const esEntrada = tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO';
+  const precio = document.getElementById('invm_precio').value;
 
   if (tipo === 'SALIDA' && !equipo) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ Para una salida, el equipo destino es obligatorio.'; return; }
   if (!responsable) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ El responsable es obligatorio.'; return; }
+  if (esEntrada && !precio) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ Para un ingreso, el precio unitario es obligatorio.'; return; }
 
   msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
   try {
@@ -6283,11 +6399,12 @@ async function invRegistrarMovimiento() {
       fecha:  document.getElementById('invm_fecha').value,
       tipo,
       cantidad: document.getElementById('invm_cantidad').value,
+      precioUnitario: esEntrada ? precio : '',
       responsable, equipo,
       observaciones: document.getElementById('invm_obs').value.trim(),
     });
     msg.style.color = '#15803d'; msg.textContent = '✔ Movimiento registrado correctamente.';
-    ['invm_codigo','invm_cantidad','invm_responsable','invm_equipo','invm_obs'].forEach(id => document.getElementById(id).value = '');
+    ['invm_codigo','invm_cantidad','invm_precio','invm_responsable','invm_equipo','invm_obs'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('invm_fecha').valueAsDate = new Date();
     _stockInventarioCache = null;
   } catch (e) {
@@ -6332,8 +6449,10 @@ function invRenderTablaStock(stock) {
       let estado = 'Normal', color = '#dcfce7', tcolor = '#15803d';
       if (p.cantidad <= 0) { estado = 'Sin Stock'; color = '#fee2e2'; tcolor = '#b91c1c'; }
       else if (p.cantidad <= p.stockMin && p.stockMin > 0) { estado = 'Stock Bajo'; color = '#fef9c3'; tcolor = '#a16207'; }
+      const numLotes = (p.lotes || []).length;
+      const notaLotes = numLotes > 1 ? ` <span title="Este producto tiene ${numLotes} lotes con precios distintos — se muestra el del lote más antiguo" style="cursor:help;color:var(--text3);font-size:11px">(${numLotes} lotes 🛈)</span>` : '';
       return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.grupo)}</td>
-        <td>${p.stockMin}</td><td><strong>${p.cantidad}</strong></td><td>${fmtCOP(p.precioUnitario)}</td><td><strong>${fmtCOP(p.valorTotal)}</strong></td>
+        <td>${p.stockMin}</td><td><strong>${p.cantidad}</strong></td><td>${fmtCOP(p.precioUnitario)}${notaLotes}</td><td><strong>${fmtCOP(p.valorTotal)}</strong></td>
         <td><span class="inv-badge" style="background:${color};color:${tcolor}">${estado}</span></td></tr>`;
     }).join('') + `</tbody></table>`;
 }
@@ -6356,6 +6475,54 @@ async function invCargarHistorial() {
       `</tbody></table>`;
   } catch (e) {
     cont.innerHTML = `<div style="color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
+  }
+}
+
+const INV_PROVEEDORES_COLS = ['Nombre','Contacto','Ubicacion','InsumoRepuestoServicio'];
+
+async function invRegistrarProveedor() {
+  const msg = document.getElementById('provMsg');
+  const nombre = document.getElementById('prov_nombre').value.trim();
+  if (!nombre) { msg.style.color = 'var(--danger)'; msg.textContent = '❌ El nombre del proveedor es obligatorio.'; return; }
+
+  const fila = [
+    nombre,
+    document.getElementById('prov_contacto').value.trim(),
+    document.getElementById('prov_ubicacion').value.trim(),
+    document.getElementById('prov_insumo').value.trim(),
+  ];
+
+  msg.style.color = 'var(--text3)'; msg.textContent = '⏳ Guardando…';
+  try {
+    const spreadsheetId = _invSpreadsheetId(inventarioOperacionActual);
+    await _invAsegurarHoja(spreadsheetId, 'Proveedores', INV_PROVEEDORES_COLS);
+    await _invAppend(spreadsheetId, 'Proveedores', [fila]);
+    msg.style.color = '#15803d'; msg.textContent = '✔ Proveedor registrado correctamente.';
+    ['prov_nombre','prov_contacto','prov_ubicacion','prov_insumo'].forEach(id => document.getElementById(id).value = '');
+    invCargarProveedores();
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.textContent = '❌ ' + e.message;
+  }
+}
+
+async function invCargarProveedores() {
+  const cont = document.getElementById('provTabla');
+  cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
+  try {
+    const spreadsheetId = _invSpreadsheetId(inventarioOperacionActual);
+    await _invAsegurarHoja(spreadsheetId, 'Proveedores', INV_PROVEEDORES_COLS);
+    const filas = await _invGet(spreadsheetId, 'Proveedores!A2:D100000');
+    const proveedores = filas.filter(r => r[0]).map(r => ({ nombre: r[0]||'', contacto: r[1]||'', ubicacion: r[2]||'', insumo: r[3]||'' }));
+    if (!proveedores.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Aún no has registrado ningún proveedor.</div>'; return; }
+    cont.innerHTML = `<table class="ie-table"><thead><tr><th>Nombre Proveedor</th><th>Número Contacto</th><th>Ubicación</th><th>Insumo / Repuesto / Servicio</th></tr></thead><tbody>` +
+      proveedores.map(p => `<tr>
+        <td><strong>${esc(p.nombre)}</strong></td>
+        <td>${esc(p.contacto)}</td>
+        <td>${esc(p.ubicacion)}</td>
+        <td>${esc(p.insumo)}</td>
+      </tr>`).join('') + `</tbody></table>`;
+  } catch (e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">⚠️ ${esc(e.message)}</div>`;
   }
 }
 
@@ -7677,7 +7844,7 @@ function _renderHistorialOrdenesEquipo(equipo) {
         <td>${esc(o.EjecutadoPor || o.Responsable || '')}</td>
         <td>${esc(o.Title || '')}${o.ObsCierre ? ' — ' + esc(o.ObsCierre) : ''}</td>
         <td>${esc(repuestos)}</td>
-        <td>${esc(o.TiempoReal || '')}</td>
+        <td>${esc(o.HorasEquipo || '')}</td>
         <td>${fmtCOP(valorRepuestos)}</td>
         <td>${esc(o.Observaciones || '')}</td>
       </tr>`;
