@@ -2666,38 +2666,84 @@ async function _obtenerStockSedeActual() {
  *  repuestos/insumos de la MISMA orden que se está llenando (sin guardar
  *  todavía) — para que la segunda fila del mismo código no vea el lote
  *  como "libre" cuando en realidad la primera fila ya lo está usando. */
-function _cantidadCodigoYaUsadaEnOrden(codigo, trExcluir) {
-  const cod = codigo.trim().toUpperCase();
-  let total = 0;
+/** Recorre TODAS las filas de repuestos/insumos (de la orden nueva y del
+ *  editor) que tengan un código escrito, agrupadas por código, y les
+ *  reparte los lotes de arriba hacia abajo — la primera fila de un código
+ *  se lleva el lote más antiguo, la segunda toma lo que sobre de ese lote
+ *  o pasa al siguiente, y así sucesivamente. Se llama cada vez que algo
+ *  cambia (código, cantidad, o se borra una fila), sin importar el orden
+ *  en que se haya editado. */
+async function recalcularTodosLosFIFO() {
+  let stock;
+  try {
+    stock = await _obtenerStockSedeActual();
+  } catch (e) {
+    return;
+  }
+
+  const porCodigo = new Map();
   ['tbody_repuestos', 'tbody_insumos', 'e_tbody_repuestos', 'e_tbody_insumos'].forEach(tbodyId => {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
     Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
-      if (tr === trExcluir) return;
       const inputs = tr.querySelectorAll('input');
-      const trCodigo = (inputs[0]?.value || '').trim().toUpperCase();
-      if (trCodigo !== cod) return;
-      total += parseFloat(inputs[2]?.value) || 0;
+      const codigo = (inputs[0]?.value || '').trim().toUpperCase();
+      if (!codigo) return;
+      if (!porCodigo.has(codigo)) porCodigo.set(codigo, []);
+      porCodigo.get(codigo).push(tr);
     });
   });
-  return total;
-}
 
-/** Recorre los lotes de un producto (del más antiguo al más reciente) y,
- *  después de descontar lo que otras filas de esta misma orden ya están
- *  usando, devuelve el primer lote que TODAVÍA tenga algo disponible —
- *  con su precio y la cantidad real que le queda para esta fila. */
-function _loteDisponibleParaFila(producto, trActual) {
-  const yaUsado = _cantidadCodigoYaUsadaEnOrden(producto.codigo, trActual);
-  let porDescontar = yaUsado;
-  for (const lote of (producto.lotes || [])) {
-    const disponible = lote.restante - porDescontar;
-    if (disponible > 0.0001) {
-      return { precio: lote.precio, restante: Math.round(disponible * 100) / 100, fecha: lote.fecha };
-    }
-    porDescontar = Math.max(0, porDescontar - lote.restante);
-  }
-  return null;
+  porCodigo.forEach((filas, codigoBuscado) => {
+    const producto = stock.find(p => (p.codigo || '').toUpperCase() === codigoBuscado);
+    const hintsSinExistir = !producto;
+    // Copia local de los lotes, para irlos "consumiendo" en esta simulación
+    // sin tocar el caché real del inventario.
+    const lotes = producto && producto.lotes ? producto.lotes.map(l => ({ ...l })) : [];
+    let indiceLote = 0;
+
+    filas.forEach(tr => {
+      const inputs = tr.querySelectorAll('input');
+      const inCosto    = inputs[3];
+      const inCantidad = inputs[2];
+      const hint = tr.querySelector('.rep-ins-hint');
+      const cantidad = parseFloat(inCantidad?.value) || 0;
+
+      if (hintsSinExistir) {
+        if (hint) { hint.textContent = '⚠️ No existe en inventario — puedes escribirlo igual'; hint.style.display = 'block'; }
+        delete tr.dataset.fifoRestante;
+        return;
+      }
+
+      while (indiceLote < lotes.length && lotes[indiceLote].restante <= 0.0001) indiceLote++;
+
+      if (indiceLote >= lotes.length) {
+        tr.dataset.fifoRestante = '0';
+        tr.dataset.fifoFecha = '';
+        if (hint) {
+          if (cantidad > 0) { hint.textContent = '⚠️ No queda inventario disponible para este código.'; hint.style.display = 'block'; }
+          else hint.style.display = 'none';
+        }
+        return;
+      }
+
+      const lote = lotes[indiceLote];
+      if (inCosto) inCosto.value = lote.precio;
+      tr.dataset.fifoRestante = Math.round(lote.restante * 100) / 100;
+      tr.dataset.fifoFecha    = lote.fecha;
+
+      if (cantidad > lote.restante) {
+        if (hint) {
+          hint.textContent = `⚠️ Solo hay ${Math.round(lote.restante * 100) / 100} disponibles a este precio (lote del ${lote.fecha || '—'}). Agrega otra fila con el mismo código para tomar el siguiente lote.`;
+          hint.style.display = 'block';
+        }
+        lote.restante = 0; // esta fila se lleva todo lo que quedaba de este lote
+      } else {
+        if (hint && hint.style.display !== 'none') hint.style.display = 'none';
+        lote.restante -= cantidad;
+      }
+    });
+  });
 }
 
 async function buscarProductoEnInventario(inputEl, campo) {
@@ -2721,48 +2767,29 @@ async function buscarProductoEnInventario(inputEl, campo) {
   );
 
   const inputs   = tr.querySelectorAll('input');
-  const inCodigo = inputs[0], inNombre = inputs[1], inCantidad = inputs[2], inCosto = inputs[3];
+  const inCodigo = inputs[0], inNombre = inputs[1];
 
   if (producto) {
     if (inCodigo) inCodigo.value = producto.codigo;
     if (inNombre) inNombre.value = producto.nombre;
-
-    // Toma el precio del lote MÁS ANTIGUO que todavía tenga existencia
-    // DESPUÉS de descontar lo que ya usan otras filas de esta misma orden
-    // (no solo lo que hay en el inventario real, que todavía no sabe nada
-    // de esta orden sin guardar).
-    const lote = _loteDisponibleParaFila(producto, tr);
-    if (inCosto) inCosto.value = lote ? lote.precio : (producto.precioUnitario || '');
-    tr.dataset.fifoRestante = lote ? lote.restante : '0';
-    tr.dataset.fifoFecha    = lote ? lote.fecha : '';
-
     if (hint) hint.style.display = 'none';
-    if (inCantidad) validarCantidadFIFO(inCantidad);
   } else if (hint) {
     hint.textContent  = '⚠️ No existe en inventario — puedes escribirlo igual';
     hint.style.display = 'block';
     delete tr.dataset.fifoRestante;
   }
+  // El precio, el lote y los avisos de disponibilidad se resuelven todos
+  // juntos aquí — así cualquier otra fila del mismo código (llenada antes
+  // o después) también queda al día, sin importar el orden de edición.
+  await recalcularTodosLosFIFO();
 }
 
-/** Avisa si la cantidad pedida en esta fila supera lo que queda en el lote
- *  más antiguo (el que se va a usar primero, según su precio) — en vez de
- *  bloquear, guía a agregar otra fila con el mismo código para que tome
- *  el siguiente lote (con su propio precio) por la diferencia. */
+/** Cada vez que se cambia la cantidad de una fila, se recalcula TODO el
+ *  reparto de lotes — no solo esta fila — porque cambiar una cantidad
+ *  puede liberar o quitarle disponibilidad a las demás filas del mismo
+ *  código. */
 function validarCantidadFIFO(inputEl) {
-  const tr = inputEl.closest('tr');
-  if (!tr) return;
-  const hint = tr.querySelector('.rep-ins-hint');
-  if (!hint || tr.dataset.fifoRestante === undefined) return;
-
-  const restante = parseFloat(tr.dataset.fifoRestante) || 0;
-  const cantidad = parseFloat(inputEl.value) || 0;
-  if (cantidad > restante) {
-    hint.textContent = `⚠️ Solo hay ${restante} disponibles a este precio (lote del ${tr.dataset.fifoFecha || '—'}). Agrega otra fila con el mismo código para tomar el siguiente lote.`;
-    hint.style.display = 'block';
-  } else if (hint.textContent.startsWith('⚠️ Solo hay')) {
-    hint.style.display = 'none';
-  }
+  recalcularTodosLosFIFO();
 }
 
 /** Al cerrar una orden de trabajo, descuenta automáticamente del inventario
@@ -3396,7 +3423,7 @@ function abrirModalCompletar(id) {
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${r.unidades===u?'selected':''}>${u}</option>`).join('')}
       </select></td>
       <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(r.costoUnitario||r.costoUnit||'')}"></td>
-      <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
+      <td><button class="btn-del-row" onclick="this.closest('tr').remove(); recalcularTodosLosFIFO();">✕</button></td>`;
     eRep.appendChild(tr);
   });
 
@@ -3416,7 +3443,7 @@ function abrirModalCompletar(id) {
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${i.unidades===u?'selected':''}>${u}</option>`).join('')}
       </select></td>
       <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(i.costoUnitario||i.costoUnit||'')}"></td>
-      <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
+      <td><button class="btn-del-row" onclick="this.closest('tr').remove(); recalcularTodosLosFIFO();">✕</button></td>`;
     eIns.appendChild(tr);
   });
 
@@ -4022,7 +4049,7 @@ function addRow(tbodyId, tipo) {
         </select>
       </td>
       <td><input type="number" placeholder="0.00" min="0" step="0.01"></td>
-      <td><button class="btn-del-row" onclick="this.closest('tr').remove()">✕</button></td>`;
+      <td><button class="btn-del-row" onclick="this.closest('tr').remove(); recalcularTodosLosFIFO();">✕</button></td>`;
   }
   tbody.appendChild(tr);
 }
