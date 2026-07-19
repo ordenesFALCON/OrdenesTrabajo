@@ -2662,6 +2662,44 @@ async function _obtenerStockSedeActual() {
 
 /** Handler del input de código/nombre de una fila de repuesto/insumo.
  *  campo: 'codigo' o 'nombre' — cuál de los dos escribió el usuario. */
+/** Suma cuánta cantidad de un código YA está escrita en OTRAS filas de
+ *  repuestos/insumos de la MISMA orden que se está llenando (sin guardar
+ *  todavía) — para que la segunda fila del mismo código no vea el lote
+ *  como "libre" cuando en realidad la primera fila ya lo está usando. */
+function _cantidadCodigoYaUsadaEnOrden(codigo, trExcluir) {
+  const cod = codigo.trim().toUpperCase();
+  let total = 0;
+  ['tbody_repuestos', 'tbody_insumos', 'e_tbody_repuestos', 'e_tbody_insumos'].forEach(tbodyId => {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+      if (tr === trExcluir) return;
+      const inputs = tr.querySelectorAll('input');
+      const trCodigo = (inputs[0]?.value || '').trim().toUpperCase();
+      if (trCodigo !== cod) return;
+      total += parseFloat(inputs[2]?.value) || 0;
+    });
+  });
+  return total;
+}
+
+/** Recorre los lotes de un producto (del más antiguo al más reciente) y,
+ *  después de descontar lo que otras filas de esta misma orden ya están
+ *  usando, devuelve el primer lote que TODAVÍA tenga algo disponible —
+ *  con su precio y la cantidad real que le queda para esta fila. */
+function _loteDisponibleParaFila(producto, trActual) {
+  const yaUsado = _cantidadCodigoYaUsadaEnOrden(producto.codigo, trActual);
+  let porDescontar = yaUsado;
+  for (const lote of (producto.lotes || [])) {
+    const disponible = lote.restante - porDescontar;
+    if (disponible > 0.0001) {
+      return { precio: lote.precio, restante: Math.round(disponible * 100) / 100, fecha: lote.fecha };
+    }
+    porDescontar = Math.max(0, porDescontar - lote.restante);
+  }
+  return null;
+}
+
 async function buscarProductoEnInventario(inputEl, campo) {
   const tr = inputEl.closest('tr');
   if (!tr) return;
@@ -2689,13 +2727,14 @@ async function buscarProductoEnInventario(inputEl, campo) {
     if (inCodigo) inCodigo.value = producto.codigo;
     if (inNombre) inNombre.value = producto.nombre;
 
-    // Toma el precio del lote MÁS ANTIGUO que todavía tenga existencia (FIFO) —
-    // no un precio único fijo, porque el mismo producto puede tener varios
-    // precios según cuándo se compró cada lote.
-    const loteMasAntiguo = (producto.lotes && producto.lotes[0]) || null;
-    if (inCosto) inCosto.value = loteMasAntiguo ? loteMasAntiguo.precio : (producto.precioUnitario || '');
-    tr.dataset.fifoRestante = loteMasAntiguo ? loteMasAntiguo.restante : '0';
-    tr.dataset.fifoFecha    = loteMasAntiguo ? loteMasAntiguo.fecha : '';
+    // Toma el precio del lote MÁS ANTIGUO que todavía tenga existencia
+    // DESPUÉS de descontar lo que ya usan otras filas de esta misma orden
+    // (no solo lo que hay en el inventario real, que todavía no sabe nada
+    // de esta orden sin guardar).
+    const lote = _loteDisponibleParaFila(producto, tr);
+    if (inCosto) inCosto.value = lote ? lote.precio : (producto.precioUnitario || '');
+    tr.dataset.fifoRestante = lote ? lote.restante : '0';
+    tr.dataset.fifoFecha    = lote ? lote.fecha : '';
 
     if (hint) hint.style.display = 'none';
     if (inCantidad) validarCantidadFIFO(inCantidad);
