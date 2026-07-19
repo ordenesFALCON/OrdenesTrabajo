@@ -4839,34 +4839,28 @@ async function cargarOrdenesDeSheets() {
     }
   });
 
-  // Deduplicar repuestos e insumos: si la misma orden tiene filas repetidas
-  // (por ediciones anteriores que usaban append), solo conservamos la última.
-  const repSeenKey = {};
+  // Repuestos e insumos: se toman tal cual vienen de la hoja — cada fila es
+  // una entrada independiente, incluso si el mismo producto aparece 2 veces
+  // en la misma orden (pasa a propósito cuando se usan 2 lotes distintos
+  // de inventario, cada uno con su propio precio).
   repuestosRows.forEach(r => {
     if (r.NumeroOrden && idx[r.NumeroOrden]) {
-      const key = r.NumeroOrden + '|' + (r.Nombre||'').trim().toLowerCase();
-      repSeenKey[key] = { codigo: r.Codigo||'', nombre: r.Nombre||'',
+      idx[r.NumeroOrden].repuestos.push({
+        codigo: r.Codigo||'', nombre: r.Nombre||'',
         cantidad: r.Cantidad||'', unidades: r.Unidades||'und',
-        costoUnitario: r.CostoUnitario||'0', _orden: r.NumeroOrden };
+        costoUnitario: r.CostoUnitario||'0',
+      });
     }
-  });
-  Object.values(repSeenKey).forEach(item => {
-    const { _orden, ...data } = item;
-    if (idx[_orden]) idx[_orden].repuestos.push(data);
   });
 
-  const insSeenKey = {};
   insumosRows.forEach(r => {
     if (r.NumeroOrden && idx[r.NumeroOrden]) {
-      const key = r.NumeroOrden + '|' + (r.Nombre||'').trim().toLowerCase();
-      insSeenKey[key] = { codigo: r.Codigo||'', nombre: r.Nombre||'',
+      idx[r.NumeroOrden].insumos.push({
+        codigo: r.Codigo||'', nombre: r.Nombre||'',
         cantidad: r.Cantidad||'', unidades: r.Unidades||'und',
-        costoUnitario: r.CostoUnitario||'0', _orden: r.NumeroOrden };
+        costoUnitario: r.CostoUnitario||'0',
+      });
     }
-  });
-  Object.values(insSeenKey).forEach(item => {
-    const { _orden, ...data } = item;
-    if (idx[_orden]) idx[_orden].insumos.push(data);
   });
 
   fotosRows.forEach(r => {
@@ -5150,11 +5144,11 @@ function cargarLocal() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return [];
     const data = JSON.parse(raw);
-    // Deduplicar repuestos e insumos en cada orden al cargar
+    // Los repuestos/insumos se dejan tal cual — un mismo producto puede
+    // aparecer 2 veces en la misma orden a propósito (2 lotes de
+    // inventario distintos, cada uno con su propio precio).
     data.forEach(o => {
       if (o.Prioridad === 'Normal') o.Prioridad = 'Media'; // compatibilidad con órdenes guardadas antes del cambio de nombre
-      if (Array.isArray(o.repuestos)) o.repuestos = deduplicarItems(o.repuestos, 'nombre');
-      if (Array.isArray(o.insumos))   o.insumos   = deduplicarItems(o.insumos,   'nombre');
     });
     return data;
   } catch(e) {
