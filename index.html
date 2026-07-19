@@ -5489,7 +5489,10 @@ function filtrarOrdenes() {
         </div>
       </div>
       <div style="text-align:right;font-size:12px;color:var(--text3)">
-        ${o.CostoTotal ? '$' + Number(o.CostoTotal).toLocaleString('es-CO') : ''}
+        ${(() => {
+          const costo = o.Estado === 'Cerrada' ? parseFloat(o.CostoReal) : parseFloat(o.CostoTotal);
+          return costo > 0 ? '$' + costo.toLocaleString('es-CO') : '';
+        })()}
       </div>
     </div>`).join('');
 }
