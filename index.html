@@ -2327,6 +2327,8 @@ function _agruparLotesFIFO(movimientos) {
       tipo: (row[2] || '').toString().trim().toUpperCase(),
       cantidad: parseFloat(row[3]) || 0,
       precio: Math.max(0, parseFloat(row[10]) || 0), // columna K = Precio Unitario
+      tipoDocumento: row[11] || '',   // columna L
+      numeroDocumento: row[12] || '', // columna M
     });
   });
 
@@ -2336,7 +2338,8 @@ function _agruparLotesFIFO(movimientos) {
     const lotes = [];
     movs.forEach(m => {
       if (m.tipo === 'INGRESO' || m.tipo === 'AJUSTE_POSITIVO') {
-        lotes.push({ fecha: m.fecha, precio: m.precio, cantidadOriginal: m.cantidad, restante: m.cantidad });
+        lotes.push({ fecha: m.fecha, precio: m.precio, cantidadOriginal: m.cantidad, restante: m.cantidad,
+          tipoDocumento: m.tipoDocumento, numeroDocumento: m.numeroDocumento });
       } else if (m.tipo === 'SALIDA' || m.tipo === 'AJUSTE_NEGATIVO') {
         let porConsumir = m.cantidad;
         for (const lote of lotes) {
@@ -2364,7 +2367,7 @@ async function obtenerTodosLosLotesInventario(sede) {
   const spreadsheetId = _invSpreadsheetId(sede);
   const [productos, movimientos] = await Promise.all([
     _invGet(spreadsheetId, 'Productos!A2:J100000'),
-    _invGet(spreadsheetId, 'Movimientos!A2:K100000'),
+    _invGet(spreadsheetId, 'Movimientos!A2:M100000'),
   ]);
   const lotesPorCodigo = _agruparLotesFIFO(movimientos);
   return productos.filter(row => row[0] && row[1]).map(row => {
@@ -2378,7 +2381,7 @@ async function obtenerStockInventarioDirecto(sede) {
   const spreadsheetId = _invSpreadsheetId(sede);
   const [productos, movimientos] = await Promise.all([
     _invGet(spreadsheetId, 'Productos!A2:J100000'),
-    _invGet(spreadsheetId, 'Movimientos!A2:K100000'),
+    _invGet(spreadsheetId, 'Movimientos!A2:M100000'),
   ]);
 
   const lotesPorCodigo = _agruparLotesFIFO(movimientos);
@@ -2391,10 +2394,13 @@ async function obtenerStockInventarioDirecto(sede) {
     // El "precio unitario" que se muestra es el del lote más antiguo con existencia —
     // es el precio que se va a usar la próxima vez que se consuma este producto.
     const precio = lotes.length ? lotes[0].precio : 0;
+    const facturacion = (lotes.length && lotes[0].tipoDocumento)
+      ? `${lotes[0].tipoDocumento}${lotes[0].numeroDocumento ? ' Nº ' + lotes[0].numeroDocumento : ''}`
+      : '';
     return {
       codigo, nombre: row[1] || '', unidad: row[2] || 'Unidades', grupo: row[3] || 'General',
       stockMin: Math.max(0, parseInt(row[4]) || 0), cantidad, precioUnitario: precio,
-      tipo: row[7] || '', ubicacion: row[8] || '', proveedor: row[9] || '', valorTotal, lotes,
+      tipo: row[7] || '', ubicacion: row[8] || '', proveedor: row[9] || '', facturacion, valorTotal, lotes,
     };
   });
   return stock.sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -6679,14 +6685,14 @@ function invFiltrarStock() {
 function invRenderTablaStock(stock) {
   const cont = document.getElementById('invStockTabla');
   if (!stock.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay productos que coincidan con el filtro</div>'; return; }
-  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Ubicación</th><th>Proveedor</th><th>Grupo</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Ubicación</th><th>Proveedor</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
     stock.map(p => {
       let estado = 'Normal', color = '#dcfce7', tcolor = '#15803d';
       if (p.cantidad <= 0) { estado = 'Sin Stock'; color = '#fee2e2'; tcolor = '#b91c1c'; }
       else if (p.cantidad <= p.stockMin && p.stockMin > 0) { estado = 'Stock Bajo'; color = '#fef9c3'; tcolor = '#a16207'; }
       const numLotes = (p.lotes || []).length;
       const notaLotes = numLotes > 1 ? ` <span title="Este producto tiene ${numLotes} lotes con precios distintos — se muestra el del lote más antiguo" style="cursor:help;color:var(--text3);font-size:11px">(${numLotes} lotes 🛈)</span>` : '';
-      return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.ubicacion)||'—'}</td><td>${esc(p.proveedor)||'—'}</td><td>${esc(p.grupo)}</td>
+      return `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${esc(p.tipo)||'—'}</td><td>${esc(p.unidad)}</td><td>${esc(p.ubicacion)||'—'}</td><td>${esc(p.proveedor)||'—'}</td>
         <td>${p.stockMin}</td><td><strong>${p.cantidad}</strong></td><td>${fmtCOP(p.precioUnitario)}${notaLotes}</td><td><strong>${fmtCOP(p.valorTotal)}</strong></td>
         <td><span class="inv-badge" style="background:${color};color:${tcolor}">${estado}</span></td></tr>`;
     }).join('') + `</tbody></table>`;
@@ -6754,15 +6760,17 @@ function invSeleccionarProductoLotes(codigo) {
       <div><span style="color:var(--text3)">Valor total disponible:</span> <strong>${fmtCOP(valorTotalDisponible)}</strong></div>
     </div>
     <table class="ie-table"><thead><tr>
-        <th>#</th><th>Fecha de Ingreso</th><th>Cantidad Ingresada</th><th>Precio Unitario</th><th>Restante</th><th>Valor del Lote</th><th>Estado</th>
+        <th>#</th><th>Fecha de Ingreso</th><th>Cantidad Ingresada</th><th>Precio Unitario</th><th>Facturación</th><th>Restante</th><th>Valor del Lote</th><th>Estado</th>
       </tr></thead><tbody>` +
     producto.lotes.map((l, i) => {
       const agotado = l.restante <= 0.0001;
+      const factura = l.tipoDocumento ? `${esc(l.tipoDocumento)}${l.numeroDocumento ? ' Nº ' + esc(l.numeroDocumento) : ''}` : '—';
       return `<tr>
         <td><strong>Lote ${i+1}</strong>${i===0 && !agotado ? ' <span style="font-size:11px;color:#15803d">(próximo a usar)</span>' : ''}</td>
         <td>${esc(l.fecha)}</td>
         <td>${l.cantidadOriginal} ${esc(producto.unidad)}</td>
         <td>${fmtCOP(l.precio)}</td>
+        <td style="white-space:nowrap">${factura}</td>
         <td><strong>${Math.round(l.restante*100)/100}</strong> ${esc(producto.unidad)}</td>
         <td>${fmtCOP(Math.round(l.restante * l.precio * 100)/100)}</td>
         <td><span class="inv-badge" style="background:${agotado ? '#fee2e2' : '#dcfce7'};color:${agotado ? '#b91c1c' : '#15803d'}">${agotado ? 'Agotado' : 'Disponible'}</span></td>
