@@ -40,7 +40,13 @@
   --text2:       #605e5c;
   --text3:       #a19f9d;
   --radius:      8px;
+  --radius-sm:   6px;
+  --radius-lg:   12px;
   --shadow:      0 2px 12px rgba(13,42,82,.13);
+  --shadow-sm:   0 1px 4px rgba(13,42,82,.08);
+  --shadow-md:   0 6px 20px rgba(13,42,82,.14);
+  --shadow-lg:   0 14px 40px rgba(13,42,82,.20);
+  --ease:        cubic-bezier(.4,0,.2,1);
 }
 
 body {
@@ -50,7 +56,21 @@ body {
   font-size: 14px;
   min-height: 100vh;
   position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Detalles de pulido general: foco visible, selección, scrollbar ── */
+::selection { background: rgba(232,112,26,.28); color: var(--brand-dark); }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(13,42,82,.22); border-radius: 20px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(13,42,82,.38); background-clip: padding-box; }
 /* Marca de agua: logos repetidos en diagonal */
 body::before {
   content: '';
@@ -146,6 +166,18 @@ body::after {
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 700;
 }
+/* Botones sueltos del header (Reparar hoja, Limpiar caché, Salir): mismo
+   toque de interactividad que el resto de la app sin tener que tocar cada
+   uno por separado (cada uno trae su color vía style inline). */
+.app-header .header-right button {
+  transition: transform .15s var(--ease), filter .15s var(--ease), box-shadow .15s var(--ease);
+}
+.app-header .header-right button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+  box-shadow: 0 3px 10px rgba(0,0,0,.18);
+}
+.app-header .header-right button:active { transform: translateY(0) scale(.97); }
 
 /* ── Nav tabs ── */
 .nav-tabs {
@@ -169,9 +201,8 @@ body::after {
   border-bottom: 3px solid transparent;
   white-space: nowrap;
   letter-spacing: .2px;
-  transition: color .15s, border-color .15s;
+  transition: color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
   font-family: inherit;
-  transition: color .15s, border-color .15s;
 }
 .nav-tab:hover { color: var(--accent); }
 .nav-tab.active { color: var(--brand); border-bottom-color: var(--accent); background: linear-gradient(180deg,transparent 60%,rgba(232,112,26,.07) 100%); }
@@ -192,6 +223,10 @@ body.inv-activo .container { max-width: 1700px; }
 #btnMenuMovil.girado { transform: rotate(90deg); }
 #sidebarOperaciones > div {
   animation: sidebarItemIn .3s cubic-bezier(.2,.8,.2,1) both;
+  /* Los ítems cambian su fondo al pasar el mouse vía JS inline
+     (onmouseover/onmouseout) — esto hace que ese cambio se vea
+     suave en vez de un cambio brusco de color. */
+  transition: background .15s var(--ease);
 }
 @keyframes sidebarItemIn {
   from { opacity: 0; transform: translateX(-8px); }
@@ -290,8 +325,8 @@ body.inv-activo .container { max-width: 1700px; }
   border-radius: var(--radius);
   margin-bottom: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 16px rgba(13,42,82,.09);
-  transition: box-shadow .2s;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .25s var(--ease), transform .25s var(--ease);
 }
 .inv-subtab {
   background: none; border: none; padding: 9px 14px; font-size: 13px; font-weight: 600;
@@ -318,7 +353,7 @@ body.inv-activo .container { max-width: 1700px; }
 .ie-table td { padding: 14px 16px; border: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
 .ie-table tr:nth-child(even) td { background: var(--surface2); }
 .ie-table tr:hover td { background: #eaf2ff; }
-.card:hover { box-shadow: 0 6px 28px rgba(13,42,82,.15); }
+.card:hover { box-shadow: var(--shadow-md); }
 .section-header {
   background: linear-gradient(90deg, var(--brand) 0%, #1a4a8a 100%);
   color: #fff;
@@ -449,15 +484,21 @@ body.inv-activo .container { max-width: 1700px; }
   border-radius: var(--radius);
   font-size: 14px; font-weight: 600;
   cursor: pointer; font-family: inherit;
-  transition: opacity .15s, transform .1s;
+  transition: opacity .15s, transform .15s var(--ease), box-shadow .2s var(--ease), filter .15s;
   border: none;
 }
-.btn:active { transform: scale(.98); }
+.btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+.btn:active:not(:disabled) { transform: scale(.98) translateY(0); filter: brightness(.97); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primary { background: linear-gradient(135deg, #e8701a 0%, #bf5a13 100%); color: #fff; box-shadow: 0 2px 8px rgba(232,112,26,.3); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(232,112,26,.4); }
 .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-.btn-success { background: var(--accent2); color: #fff; }
-.btn-danger  { background: var(--warn);   color: #fff; }
+.btn-success { background: var(--accent2); color: #fff; box-shadow: 0 2px 8px rgba(16,124,16,.28); }
+.btn-success:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(16,124,16,.36); }
+.btn-danger  { background: var(--warn);   color: #fff; box-shadow: 0 2px 8px rgba(216,59,1,.28); }
+.btn-danger:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(216,59,1,.36); }
 .btn-ghost   { background: var(--brand-light); color: var(--brand); border: 1px solid var(--brand-mid); }
+.btn-ghost:hover:not(:disabled) { background: var(--brand-mid); }
 .btn-block   { width: 100%; margin-top: 8px; }
 
 /* ── Status badges ── */
@@ -529,7 +570,10 @@ body.inv-activo .container { max-width: 1700px; }
   border-radius: var(--radius);
   padding: 14px 16px;
   border-top: 3px solid var(--brand);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s var(--ease), transform .2s var(--ease);
 }
+.kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .kpi-val { font-size: 26px; font-weight: 700; color: var(--brand); line-height: 1; }
 .kpi-label { font-size: 11px; color: var(--text2); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
 .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
