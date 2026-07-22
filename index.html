@@ -4133,6 +4133,20 @@ const EQUIPOS_LISTADO_GENERAL = {
   'Compresores Decorado':        ['COMPRESOR DECORADO NX55','COMPRESOR DECORADO NX18','SCDECORADO'],
 };
 
+// Lista de equipos activos exclusiva de Zipaquirá (no afecta a las demás
+// sedes, que siguen usando EQUIPOS_LISTADO_GENERAL mientras no tengan la suya).
+const EQUIPOS_ZIPAQUIRA = {
+  'Compresores de Aire':        ['CA1','CA2','CA3','CB1','CB2','CB3','CB4'],
+  'Arrancadores':                ['ARRANCADOR CA1','ARRANCADOR CA2','ARRANCADOR CA3','ARRANCADOR CB1','ARRANCADOR CB2','ARRANCADOR CB3','ARRANCADOR CB4'],
+  'Secadores':                   ['SCA1','SCA2','SCA3','SCB1','SCB2','SCB3','SCB4'],
+  'Compresor Pistón':           ['COMPRESOR PISTON','SCPISTON'],
+  'Compresor Portátil':         ['COMPRESOR PORTATIL'],
+  'Bombas y Enfriamiento':       ['BOMBA AGUA 1','BOMBA AGUA 2','DRYCOOLER 1','DRYCOOLER 2','DRYCOOLER 3','DRYCOOLER 4'],
+  'Infraestructura':             ['INFRAESTRUCTURA PRIMER PISO','INFRAESTRUCTURA SEGUNDO PISO','INFRAESTRUCTURA 3 PISO','INFRAESTRUCTURA EMERGENCIA','INFRAESTRUCTURA DECORADO','INFRAESTRUCTURA GENERAL'],
+  'Compresores de Emergencia':   ['COMPRESOR DE EMERGENCIA NX200','COMPRESOR EMERGENCIA IR160','SCEMERGENCIA'],
+  'Compresores Decorado':        ['COMPRESOR DECORADO NX55','COMPRESOR DECORADO NX18','SCDECORADO'],
+};
+
 // Lista de equipos activos exclusiva de PAVISA México (no afecta a las demás sedes)
 // Agrupada por área real de la planta; cada opción muestra el código y el tipo de equipo.
 const EQUIPOS_MEXICO = {
@@ -4192,7 +4206,7 @@ function actualizarEquiposPorEmpresa() {
 ══════════════════════════════════════════════ */
 const EQUIPOS_POR_SEDE = {
   mexico: EQUIPOS_MEXICO,
-  // zipaquira: EQUIPOS_ZIPAQUIRA,  // ← pendiente: agregar cuando tengamos su lista real
+  zipaquira: EQUIPOS_ZIPAQUIRA,
   // soacha:    EQUIPOS_SOACHA,     // ← pendiente: agregar cuando tengamos su lista real
   // peru:      EQUIPOS_PERU,       // ← pendiente: agregar cuando tengamos su lista real
 };
