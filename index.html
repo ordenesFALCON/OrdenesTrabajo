@@ -205,8 +205,15 @@ body::after {
   font-family: inherit;
 }
 .nav-tab:hover { color: var(--accent); }
-.nav-tab.active { color: var(--brand); border-bottom-color: var(--accent); background: linear-gradient(180deg,transparent 60%,rgba(232,112,26,.07) 100%); }
+.nav-tab.active { color: var(--brand); background: linear-gradient(180deg,transparent 60%,rgba(232,112,26,.07) 100%); }
 .nav-tab:hover:not(.active) { color: var(--brand); background: var(--brand-light); }
+.nav-tab-indicator {
+  position: absolute; bottom: 0; left: 0; height: 3px; width: 0;
+  background: var(--accent); border-radius: 2px 2px 0 0;
+  transition: transform .2s var(--ease), width .2s var(--ease);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .nav-tab-indicator { transition: none; } }
 
 /* ── Container ── */
 .container { max-width: 1600px; margin: 0 auto; margin-left: 216px; padding: 20px 16px; }
@@ -316,7 +323,14 @@ body.inv-activo .container { max-width: 1800px; }
 
 /* ── Panels ── */
 .panel { display: none; }
-.panel.active { display: block; }
+.panel.active { display: block; animation: panelIn .18s ease both; }
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel.active { animation: none; }
+}
 
 /* ── Card ── */
 .card {
@@ -806,6 +820,7 @@ body.inv-activo .container { max-width: 1800px; }
   <button class="nav-tab" onclick="showPanel('dashboard')">📊 <span class="nav-tab-text">Dashboard</span></button>
   <button class="nav-tab" onclick="showPanel('novedades')">📝 <span class="nav-tab-text">Novedades</span></button>
   <button class="nav-tab" onclick="showPanel('historico')">📜 <span class="nav-tab-text">Histórico por Equipo</span></button>
+  <span id="navTabIndicator" class="nav-tab-indicator"></span>
 </nav>
 
 <!-- ════════════ SIDEBAR FIJO DE OPERACIONES ════════════ -->
@@ -3218,6 +3233,18 @@ const CLAVE_ACCESO = 'Admin123';
 
 const PANELES_DE_DATOS = ['nueva', 'pendientes', 'realizadas', 'lista', 'dashboard', 'novedades', 'historico'];
 
+/** Desliza la barrita naranja de abajo del menú superior hasta la pestaña
+ *  activa (o la esconde si no hay ninguna, como en la pantalla de Inicio). */
+function actualizarIndicadorNavTab() {
+  const ind = document.getElementById('navTabIndicator');
+  if (!ind) return;
+  const activo = document.querySelector('.nav-tab.active');
+  if (!activo) { ind.style.width = '0'; return; }
+  ind.style.width = activo.offsetWidth + 'px';
+  ind.style.transform = `translateX(${activo.offsetLeft}px)`;
+}
+window.addEventListener('resize', actualizarIndicadorNavTab);
+
 function showPanel(name) {
   // Sin importar qué sede quedó guardada de antes, hay que volver a entrar
   // con contraseña cada vez que se abre el sistema (sessionStorage, no localStorage).
@@ -3246,6 +3273,7 @@ function showPanel(name) {
   const tabs = { nueva:0, pendientes:1, realizadas:2, lista:3, dashboard:4, novedades:5, historico:6, inicio:-1 };
   const t = document.querySelectorAll('.nav-tab')[tabs[name]];
   if (t) t.classList.add('active');
+  actualizarIndicadorNavTab();
 
   if (name === 'pendientes')   { cargarOrdenes().then(renderPendientes); }
   if (name === 'realizadas')   { cargarOrdenes().then(renderRealizadas); }
