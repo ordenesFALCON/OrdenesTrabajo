@@ -379,8 +379,11 @@ body.inv-activo .container { max-width: 1800px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+/* Lista de equipos + panel de detalle (Histórico por Equipo, Hoja de Vida):
+   columna angosta fija para la lista en escritorio, apilada en celular. */
+.grid-lista-detalle { display: grid; grid-template-columns: var(--lista-w, 240px) 1fr; gap: 14px; align-items: start; }
 @media(max-width:720px) {
-  .grid-2,.grid-3,.grid-4 { grid-template-columns: 1fr; }
+  .grid-2,.grid-3,.grid-4,.grid-lista-detalle { grid-template-columns: 1fr; }
 }
 
 /* ── Form fields ── */
@@ -1713,7 +1716,7 @@ body.inv-activo .container { max-width: 1800px; }
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:start">
+      <div class="grid-lista-detalle" style="--lista-w:260px">
         <!-- Lista de equipos -->
         <div class="card">
           <div class="card-head">🔧 Equipos</div>
@@ -1784,7 +1787,7 @@ body.inv-activo .container { max-width: 1800px; }
 
     <!-- ══════ VISTA: HVD — HOJA DE VIDA DE EQUIPOS (nueva) ══════ -->
     <div id="histVistaHVD" style="display:none">
-      <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:start">
+      <div class="grid-lista-detalle" style="--lista-w:220px">
         <!-- Lista de equipos -->
         <div class="card">
           <div class="card-head">🔧 Equipos</div>
@@ -2013,7 +2016,7 @@ body.inv-activo .container { max-width: 1800px; }
 
       <!-- ── Sub-panel: Lotes ── -->
       <div id="invSub-lotes" class="inv-subpanel">
-        <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:start">
+        <div class="grid-lista-detalle" style="--lista-w:280px">
           <!-- Selector de producto -->
           <div class="card" style="margin:0">
             <div class="card-head">📦 Productos</div>
@@ -7878,7 +7881,7 @@ async function hvdSeleccionarEquipo(equipo) {
     : `<div id="hvdFotoImg" style="width:100%;max-width:320px;height:180px;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px">Sin foto</div>`;
 
   cont.innerHTML = `
-    <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;margin-bottom:20px">
+    <div class="grid-lista-detalle" style="--lista-w:320px;gap:20px;margin-bottom:20px">
       <div>
         ${fotoHtml}
         <label class="btn btn-ghost" style="display:inline-flex;margin-top:8px;font-size:12px;cursor:pointer">
