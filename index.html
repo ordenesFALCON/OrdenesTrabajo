@@ -2992,8 +2992,8 @@ function renderSidebarOperaciones() {
 
 /** Pide contraseña antes de cambiar de operación/sede. La clave YA NO vive
  *  en este archivo (nadie puede leerla con "Ver código fuente") — se valida
- *  contra el Apps Script de inventario de esa sede, que la guarda del lado
- *  del servidor. */
+ *  contra un hash guardado en la hoja de cálculo de inventario de esa sede,
+ *  leído directo con la API de Google Sheets (sin pasar por Apps Script). */
 async function seleccionarOperacion(key) {
   if (!OPERACIONES[key]) return;
   if (key === operacionActual && operacionAutenticada) return; // ya estás adentro esta sesión, nada que hacer
@@ -3015,10 +3015,10 @@ async function seleccionarOperacion(key) {
   cambiarOperacion(key);
 }
 
-/** Le pregunta al Apps Script de INVENTARIO de esa sede (ya está separado
- *  por sede, así que reutilizamos ese mismo backend en vez de crear uno
- *  nuevo) si la clave ingresada es la correcta. El código real de la clave
- *  nunca sale del servidor — esta función solo recibe true/false. */
+/** Compara la clave ingresada contra el hash guardado en la pestaña "Config"
+ *  de la hoja de inventario de esa sede (ver validarClaveSedeDirecto). La
+ *  clave real nunca sale del navegador de quien la configuró — esta función
+ *  solo recibe true/false. */
 async function _validarClaveSede(key, clave) {
   return await validarClaveSedeDirecto(key, clave);
 }
