@@ -5853,7 +5853,7 @@ async function cargarDashboard() {
     if (!mesFiltro && !anioFiltro) return true;
     const fecha = o.FechaCierre || o.FechaInicio || o.FechaCreacion || '';
     if (!fecha) return false;
-    const d = new Date(fecha);
+    const d = _fechaLocalDesdeString(fecha);
     if (isNaN(d)) return false;
     const mes  = String(d.getMonth() + 1).padStart(2,'0');
     const anio = String(d.getFullYear());
@@ -6378,9 +6378,23 @@ function _encabezadoPdfHtml(titulo, subtitulo) {
     </div>`;
 }
 
+/** Convierte un string de fecha (con o sin hora) en un objeto Date sin el
+ *  corrimiento de un día que pasa al darle un 'YYYY-MM-DD' plano a `new
+ *  Date(...)`: JS lo interpreta como medianoche UTC, y en una zona horaria
+ *  negativa como la de Colombia eso se termina mostrando como el día
+ *  anterior. Si el string sí trae hora (timestamp completo), se respeta tal cual. */
+function _fechaLocalDesdeString(f) {
+  const str = String(f || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(str);
+}
+
 function fmtFecha(f) {
   if (!f || f==='null' || f==='') return '—';
-  try { return new Date(f).toLocaleDateString('es-CO',{year:'numeric',month:'2-digit',day:'2-digit'}); }
+  try { return _fechaLocalDesdeString(f).toLocaleDateString('es-CO',{year:'numeric',month:'2-digit',day:'2-digit'}); }
   catch(e) { return f; }
 }
 /* ══════════════════════════════════════════════
@@ -8150,7 +8164,7 @@ function renderHistoricoEquipoSeleccionado() {
     if (!mesFiltro && !anioFiltro) return true;
     const fecha = o.FechaInicio || o.FechaCreacion || o.FechaCierre || '';
     if (!fecha) return false;
-    const d = new Date(fecha);
+    const d = _fechaLocalDesdeString(fecha);
     if (isNaN(d)) return false;
     const mes  = String(d.getMonth() + 1).padStart(2, '0');
     const anio = String(d.getFullYear());
