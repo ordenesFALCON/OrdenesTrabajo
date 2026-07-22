@@ -1892,7 +1892,7 @@ body.inv-activo .container { max-width: 1700px; }
               ℹ️ El precio ya no se pone aquí — se ingresa en <strong>"🔄 Movimientos"</strong> cada vez que registres una entrada, porque el mismo producto puede comprarse a precios distintos según la fecha.
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
-              <div class="field"><label>Código *</label><input id="invp_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
+              <div class="field"><label>Código Siesa *</label><input id="invp_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
               <div class="field"><label>Nombre *</label><input id="invp_nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del producto"></div>
               <div class="field"><label>Unidad</label>
                 <select id="invp_unidad">
@@ -1943,7 +1943,7 @@ body.inv-activo .container { max-width: 1700px; }
           <div class="card-head">🔄 Nuevo Movimiento</div>
           <div style="padding:18px">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
-              <div class="field"><label>Código del Producto *</label><input id="invm_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
+              <div class="field"><label>Código Siesa *</label><input id="invm_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="REP-001"></div>
               <div class="field"><label>Fecha *</label><input id="invm_fecha" type="date"></div>
               <div class="field"><label>Tipo *</label>
                 <select id="invm_tipo" onchange="invHandleTipoChange()">
@@ -1993,7 +1993,7 @@ body.inv-activo .container { max-width: 1700px; }
           <div style="padding:14px;display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
             <div class="field" style="flex:1;min-width:180px">
               <label>Buscar</label>
-              <input id="invStockBuscar" placeholder="Código o nombre…" oninput="invFiltrarStock()">
+              <input id="invStockBuscar" placeholder="Código Siesa o nombre…" oninput="invFiltrarStock()">
             </div>
             <div class="field" style="min-width:150px">
               <label>Tipo</label>
@@ -6440,7 +6440,7 @@ async function invCargarDashboard() {
     if (!alertas.length) {
       cont.innerHTML = '<div style="color:#15803d;font-size:13px">✔ No hay productos con alertas de stock</div>';
     } else {
-      cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Mínimo</th><th>Estado</th></tr></thead><tbody>` +
+      cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código Siesa</th><th>Nombre</th><th>Stock</th><th>Mínimo</th><th>Estado</th></tr></thead><tbody>` +
         alertas.map(p => `<tr><td><strong>${esc(p.codigo)}</strong></td><td>${esc(p.nombre)}</td><td>${p.cantidad}</td><td>${p.stockMin}</td>
           <td><span class="inv-badge" style="background:${p.cantidad<=0?'#fee2e2':'#fef9c3'};color:${p.cantidad<=0?'#b91c1c':'#a16207'}">${p.cantidad<=0?'Sin Stock':'Stock Bajo'}</span></td></tr>`).join('') +
         `</tbody></table>`;
@@ -6470,7 +6470,7 @@ function invRenderActividadReciente(historial) {
   const recientes = historial.slice(0, 10);
   const tipoColor = { INGRESO:'#16a34a', SALIDA:'#dc2626', AJUSTE_POSITIVO:'#0891b2', AJUSTE_NEGATIVO:'#ca8a04' };
   const tipoLabel = { INGRESO:'Ingreso', SALIDA:'Salida', AJUSTE_POSITIVO:'Aj+', AJUSTE_NEGATIVO:'Aj−' };
-  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th></tr></thead><tbody>` +
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código Siesa</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th></tr></thead><tbody>` +
     recientes.map(m => {
       const color = tipoColor[m.tipo] || '#64748b';
       return `<tr><td style="font-size:12px;color:var(--text3)">${esc(m.fecha)}</td><td><strong>${esc(m.codigo)}</strong></td>
@@ -6690,7 +6690,7 @@ function invFiltrarStock() {
 function invRenderTablaStock(stock) {
   const cont = document.getElementById('invStockTabla');
   if (!stock.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay productos que coincidan con el filtro</div>'; return; }
-  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Ubicación</th><th>Proveedor</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código Siesa</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Ubicación</th><th>Proveedor</th><th>Stock Mín.</th><th>Stock Actual</th><th>Precio Unit.</th><th>Valor Total</th><th>Estado</th></tr></thead><tbody>` +
     stock.map(p => {
       let estado = 'Normal', color = '#dcfce7', tcolor = '#15803d';
       if (p.cantidad <= 0) { estado = 'Sin Stock'; color = '#fee2e2'; tcolor = '#b91c1c'; }
@@ -6795,7 +6795,7 @@ async function invCargarHistorial() {
     const historial = await obtenerHistorialInventarioDirecto(inventarioOperacionActual, filtros);
     if (!historial.length) { cont.innerHTML = '<div style="color:var(--text3);font-size:13px">No hay movimientos en el período seleccionado</div>'; return; }
     const tipoLabel = { INGRESO:'Ingreso', SALIDA:'Salida', AJUSTE_POSITIVO:'Ajuste +', AJUSTE_NEGATIVO:'Ajuste −' };
-    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th><th>Documento</th><th>Observaciones</th></tr></thead><tbody>` +
+    cont.innerHTML = `<table class="inv-table"><thead><tr><th>Fecha</th><th>Código Siesa</th><th>Producto</th><th>Tipo</th><th>Cant.</th><th>Destino</th><th>Responsable</th><th>Documento</th><th>Observaciones</th></tr></thead><tbody>` +
       historial.map(m => {
         const doc = m.tipoDocumento ? `${esc(m.tipoDocumento)}${m.numeroDocumento ? ' Nº ' + esc(m.numeroDocumento) : ''}` : '—';
         return `<tr><td>${esc(m.fecha)}</td><td><strong>${esc(m.codigo)}</strong></td><td>${esc(m.producto)}</td><td>${tipoLabel[m.tipo]||m.tipo}</td>
