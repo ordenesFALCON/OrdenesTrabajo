@@ -348,9 +348,9 @@ body.inv-activo .container { max-width: 1700px; }
 .ie-table th {
   background: var(--brand); color: #fff; padding: 14px 16px; text-align: left;
   font-size: 12px; text-transform: uppercase; letter-spacing: .03em;
-  border: 1px solid var(--brand); white-space: nowrap;
+  border: 1px solid var(--brand); white-space: nowrap; overflow-wrap: break-word;
 }
-.ie-table td { padding: 14px 16px; border: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+.ie-table td { padding: 14px 16px; border: 1px solid var(--border); vertical-align: top; line-height: 1.5; overflow-wrap: break-word; }
 .ie-table tr:nth-child(even) td { background: var(--surface2); }
 .ie-table tr:hover td { background: #eaf2ff; }
 .card:hover { box-shadow: var(--shadow-md); }
@@ -7790,7 +7790,17 @@ function ieFiltrarPorAnio() {
 function _ieRenderTabla(filas) {
   const cont = document.getElementById('ieTabla');
   if (!filas.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay equipos registrados para este filtro.</div>'; return; }
-  cont.innerHTML = `<table class="ie-table"><thead><tr><th>Equipo</th><th>Marca</th><th>Descripción Específica</th><th>Codificación</th><th>Ubicación</th><th>Año</th><th>Observaciones</th></tr></thead><tbody>` +
+  cont.innerHTML = `<table class="ie-table" style="table-layout:fixed;width:100%;min-width:0">
+    <colgroup>
+      <col style="width:13%"><col style="width:10%"><col style="width:16%">
+      <col style="width:10%"><col style="width:12%"><col style="width:7%">
+      <col style="width:32%">
+    </colgroup>
+    <thead><tr>
+      <th style="white-space:normal">Equipo</th><th style="white-space:normal">Marca</th><th style="white-space:normal">Descripción Específica</th>
+      <th style="white-space:normal">Codificación</th><th style="white-space:normal">Ubicación</th><th style="white-space:normal">Año</th>
+      <th style="white-space:normal">Observaciones</th>
+    </tr></thead><tbody>` +
     filas.map(f => `<tr>
       <td><strong>${esc(f.Equipo)}</strong></td>
       <td>${esc(f.Marca)}</td>
@@ -7798,7 +7808,7 @@ function _ieRenderTabla(filas) {
       <td>${esc(f.Codificacion)}</td>
       <td>${esc(f.Ubicacion)}</td>
       <td>${esc(f.Anio) || '<span style="color:var(--text3)">— sin observaciones aún —</span>'}</td>
-      <td>${esc(f.Observaciones)}</td>
+      <td style="white-space:pre-wrap;word-break:break-word">${esc(f.Observaciones)}</td>
     </tr>`).join('') + `</tbody></table>`;
 }
 
