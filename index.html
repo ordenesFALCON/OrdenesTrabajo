@@ -3227,13 +3227,17 @@ function showPanel(name) {
     return;
   }
 
-  if (PANELES_PROTEGIDOS.includes(name)) {
+  // Estas dos secciones piden una contraseña aparte — pero solo la primera
+  // vez en esta sesión del navegador, para no repetirla cada vez que se
+  // entra y se sale (se olvida al cerrar la pestaña, igual que la de sede).
+  if (PANELES_PROTEGIDOS.includes(name) && sessionStorage.getItem('panelesProtegidosDesbloqueados') !== '1') {
     const clave = prompt('Esta sección está protegida.\nIngresa la contraseña para continuar:');
     if (clave === null) return; // usuario canceló
     if (clave !== CLAVE_ACCESO) {
       alert('Contraseña incorrecta. No tienes acceso a esta sección.');
       return;
     }
+    sessionStorage.setItem('panelesProtegidosDesbloqueados', '1');
   }
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
