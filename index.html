@@ -8011,7 +8011,7 @@ function _renderHistorialOrdenesEquipo(equipo) {
 
   cont.innerHTML = `<table class="ie-table"><thead><tr>
       <th>Fecha</th><th>Realizado por</th><th>Descripción del mantenimiento</th>
-      <th>Repuestos instalados</th><th>Horas operación</th><th>Valor de repuesto</th><th>Comentarios y observaciones</th>
+      <th>Repuestos instalados</th><th>Horas operación</th><th>Valor de repuesto</th><th>Orden de trabajo</th>
     </tr></thead><tbody>` +
     ordenes.map(o => {
       const repuestos = (Array.isArray(o.repuestos) ? o.repuestos : []).map(r => `${r.nombre||r.codigo} (${r.cantidad})`).join(', ') || 'N/A';
@@ -8023,7 +8023,7 @@ function _renderHistorialOrdenesEquipo(equipo) {
         <td>${esc(repuestos)}</td>
         <td>${esc(o.HorasEquipo || '')}</td>
         <td>${fmtCOP(valorRepuestos)}</td>
-        <td>${esc(o.Observaciones || '')}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')">👁 Ver orden</button></td>
       </tr>`;
     }).join('') + `</tbody></table>`;
 }
