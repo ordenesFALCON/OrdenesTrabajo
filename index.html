@@ -347,8 +347,10 @@ body.inv-activo .container { max-width: 1800px; }
   transition: box-shadow .25s var(--ease), transform .25s var(--ease);
 }
 .inv-subtab {
+  display: inline-flex; align-items: center; gap: 6px;
   background: none; border: none; padding: 9px 14px; font-size: 13px; font-weight: 600;
   color: var(--text2); cursor: pointer; border-radius: 6px 6px 0 0; white-space: nowrap;
+  transition: color .15s var(--ease), background .15s var(--ease);
 }
 .inv-subtab:hover { background: var(--surface2); }
 .inv-subtab.active { color: var(--brand); background: var(--surface2); border-bottom: 2px solid var(--brand); margin-bottom: -2px; }
@@ -1850,13 +1852,13 @@ body.inv-activo .container { max-width: 1800px; }
 
       <!-- Sub-navegación del inventario -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:2px">
-        <button class="inv-subtab active" data-invtab="dashboard" onclick="invMostrarSubTab('dashboard')">📊 Dashboard</button>
-        <button class="inv-subtab" data-invtab="producto" onclick="invMostrarSubTab('producto')">➕ Nuevo Producto</button>
-        <button class="inv-subtab" data-invtab="movimiento" onclick="invMostrarSubTab('movimiento')">🔄 Movimientos</button>
-        <button class="inv-subtab" data-invtab="stock" onclick="invMostrarSubTab('stock')">📋 Stock</button>
-        <button class="inv-subtab" data-invtab="lotes" onclick="invMostrarSubTab('lotes')">🏷️ Lotes</button>
-        <button class="inv-subtab" data-invtab="reportes" onclick="invMostrarSubTab('reportes')">📈 Reportes</button>
-        <button class="inv-subtab" data-invtab="proveedores" onclick="invMostrarSubTab('proveedores')">🚚 Proveedores</button>
+        <button class="inv-subtab active" data-invtab="dashboard" onclick="invMostrarSubTab('dashboard')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Dashboard</button>
+        <button class="inv-subtab" data-invtab="producto" onclick="invMostrarSubTab('producto')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Nuevo Producto</button>
+        <button class="inv-subtab" data-invtab="movimiento" onclick="invMostrarSubTab('movimiento')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Movimientos</button>
+        <button class="inv-subtab" data-invtab="stock" onclick="invMostrarSubTab('stock')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Stock</button>
+        <button class="inv-subtab" data-invtab="lotes" onclick="invMostrarSubTab('lotes')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> Lotes</button>
+        <button class="inv-subtab" data-invtab="reportes" onclick="invMostrarSubTab('reportes')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Reportes</button>
+        <button class="inv-subtab" data-invtab="proveedores" onclick="invMostrarSubTab('proveedores')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg> Proveedores</button>
       </div>
 
       <!-- ── Sub-panel: Dashboard ── -->
