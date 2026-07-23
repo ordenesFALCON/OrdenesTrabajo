@@ -3403,10 +3403,14 @@ function actualizarContadorTab() {
     ['Cerrada','Realizada','Rechazada'].includes(o.Estado)
   ).length;
 
-  // Update tab labels with counters
+  // Update tab labels with counters (mismos íconos SVG del HTML original —
+  // hay que repetirlos aquí porque esta función reemplaza todo el innerHTML
+  // del botón para poder agregarle el contador).
+  const iconoPendientes = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+  const iconoRealizadas = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
   const tabs = document.querySelectorAll('.nav-tab');
-  if (tabs[1]) tabs[1].innerHTML = `⏳ <span class="nav-tab-text">Pendientes</span>${pendCount ? ` <span class="count-badge">${pendCount}</span>` : ''}`;
-  if (tabs[2]) tabs[2].innerHTML = `✅ <span class="nav-tab-text">Realizadas</span>${realCount ? ` <span class="count-badge green">${realCount}</span>` : ''}`;
+  if (tabs[1]) tabs[1].innerHTML = `${iconoPendientes} <span class="nav-tab-text">Pendientes</span>${pendCount ? ` <span class="count-badge">${pendCount}</span>` : ''}`;
+  if (tabs[2]) tabs[2].innerHTML = `${iconoRealizadas} <span class="nav-tab-text">Realizadas</span>${realCount ? ` <span class="count-badge green">${realCount}</span>` : ''}`;
 }
 
 /* ══════════════════════════════════════════════
