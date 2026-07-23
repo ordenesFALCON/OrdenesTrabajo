@@ -2279,18 +2279,6 @@ GOOGLE_CONFIG.spreadsheetId = OPERACIONES[operacionActual].spreadsheetId;
 // la pestaña, así que esto NO persiste entre sesiones (a diferencia de operacionActual).
 let operacionAutenticada = sessionStorage.getItem('operacionAutenticada') === operacionActual;
 
-/** Pestañas internas del inventario (deben coincidir con los id de showTab() en el Apps Script) */
-const INVENTARIO_TABS = [
-  { key: 'dashboard',     icono: '📊', label: 'Dashboard' },
-  { key: 'productos',     icono: '📦', label: 'Nuevo Producto' },
-  { key: 'movimientos',   icono: '🔄', label: 'Movimientos' },
-  { key: 'inventario',    icono: '📋', label: 'Inventario' },
-  { key: 'reportes',      icono: '📈', label: 'Reportes' },
-  { key: 'buscar',        icono: '🔍', label: 'Buscar' },
-  { key: 'configuracion', icono: '⚙️', label: 'Configuración' },
-];
-let inventarioTabActual = 'dashboard';
-
 /* ══════════════════════════════════════════════
    INVENTARIO POR OPERACIÓN
    Cada sede tiene su propio Apps Script (Web App)
@@ -3060,101 +3048,6 @@ let isTeams = false;
 let sigPad = null;
 let isDrawing = false, drawCtx = null, drawCanvas = null;
 let googleAccessToken = null;
-let tokenClient = null;
-
-/* ══════════════════════════════════════════════
-   GOOGLE IDENTITY — AUTENTICACIÓN CON GMAIL
-══════════════════════════════════════════════ */
-
-function mostrarPantallaLogin() {
-  document.body.innerHTML = `
-    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif">
-      <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:40px 48px;text-align:center;max-width:380px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,.10)">
-        <div style="font-size:36px;margin-bottom:10px">⚙</div>
-        <h2 style="font-size:22px;font-weight:800;color:var(--brand);margin-bottom:4px;letter-spacing:.5px">SOLUCIONAIRE · ${esc(OPERACIONES[operacionActual].nombre.toUpperCase())}</h2><p style="font-size:12px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Sistema de Órdenes de Trabajo</p>
-        <div style="margin-bottom:18px;text-align:left">
-          <label style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;text-align:center">Sede / Operación</label>
-          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
-            ${Object.keys(OPERACIONES).map((key, i) => {
-              const op = OPERACIONES[key];
-              const activo = key === operacionActual;
-              return `
-                <div onclick="seleccionarOperacion('${key}')"
-                  style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;
-                         color:var(--brand);background:${activo ? 'rgba(20,60,110,.08)' : 'white'};font-weight:${activo ? '700' : '400'};
-                         ${i > 0 ? 'border-top:1px solid var(--border)' : ''}">
-                  <span style="font-size:18px">${op.bandera}</span>
-                  <span style="flex:1;text-align:left">${esc(op.nombre)}</span>
-                  ${activo ? '<span style="font-size:11px;color:var(--accent2)">● Activa</span>' : ''}
-                </div>`;
-            }).join('')}
-          </div>
-        </div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:28px">Inicia sesión con tu cuenta de Google para continuar</p>
-        <div id="googleLoginBtn" style="display:flex;justify-content:center"></div>
-        <p style="font-size:11px;color:var(--text3);margin-top:18px">Los datos se guardan en Google Sheets de forma segura.</p>
-      </div>
-    </div>`;
-  renderGoogleBtn();
-}
-
-function renderGoogleBtn() {
-  if (typeof google === 'undefined') {
-    setTimeout(renderGoogleBtn, 500);
-    return;
-  }
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CONFIG.clientId,
-    callback: handleGoogleCredential,
-    auto_select: false,
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('googleLoginBtn'),
-    { theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', width: 260 }
-  );
-}
-
-async function handleGoogleCredential(response) {
-  // Decodificar JWT id_token para nombre y email
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
-  currentUser = {
-    name:     payload.name || payload.email,
-    email:    payload.email,
-    initials: (payload.name || payload.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
-  };
-
-  // Ahora pedir token OAuth2 con scopes de Sheets
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CONFIG.clientId,
-    scope: GOOGLE_CONFIG.scopes,
-    callback: async (tokenResponse) => {
-      if (tokenResponse.error) {
-        console.error('Error OAuth:', tokenResponse.error);
-        return;
-      }
-      googleAccessToken = tokenResponse.access_token;
-      await iniciarApp();
-    },
-  });
-  tokenClient.requestAccessToken({ prompt: 'consent' });
-}
-
-async function iniciarApp() {
-  // Reconstruir la página completa (se perdió al mostrar el login)
-  location.reload(); // reload simple: tras autenticar con Google, se detecta la sesión guardada
-}
-
-async function iniciarSesionGoogle() {
-  // Verificar si ya hay sesión guardada
-  const savedUser = sessionStorage.getItem('gUser');
-  const savedToken = sessionStorage.getItem('gToken');
-  if (savedUser && savedToken) {
-    currentUser = JSON.parse(savedUser);
-    googleAccessToken = savedToken;
-    return true;
-  }
-  return false;
-}
 
 function cerrarSesion() {
   sessionStorage.removeItem('gUser');
@@ -3714,8 +3607,6 @@ async function guardarEdicion() {
   alerta.textContent = '✅ Cambios guardados correctamente.';
   setTimeout(() => { alerta.className = 'alert'; }, 3000);
 }
-
-function cerrarModal() { volverListaPendientes(); }
 
 /** Convierte un texto de tiempo tipo "2h 30min", "1h", "45min" o solo "3"
  *  (se asume horas) a minutos totales — tolera los formatos que la gente
@@ -4465,38 +4356,6 @@ async function detectarNombreHoja() {
   }
 }
 
-async function asegurarEncabezados() {
-  try {
-    const data = await sheetsRequest('GET', `${GOOGLE_CONFIG.sheetName}!A1:AZ1`);
-    const existingHeaders = (data.values && data.values[0]) ? data.values[0] : [];
-
-    // Si los headers no coinciden con los esperados, reescribirlos completamente
-    const faltantes = SHEETS_COLS.filter(col => !existingHeaders.includes(col));
-
-    if (existingHeaders.length === 0 || faltantes.length > 0) {
-      if (existingHeaders.length === 0) {
-        // Hoja vacía: escribir encabezados
-        await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A1`, [SHEETS_COLS]);
-        window._sheetsHeaders = SHEETS_COLS;
-      } else {
-        // Agregar columnas faltantes al final
-        const nuevosHeaders = [...existingHeaders, ...faltantes];
-        const colFin = numToCol(nuevosHeaders.length - 1);
-        await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A1:${colFin}1`, [nuevosHeaders]);
-        window._sheetsHeaders = nuevosHeaders;
-      }
-    } else {
-      window._sheetsHeaders = existingHeaders;
-    }
-  } catch(e) {
-    console.warn('Error asegurandoEncabezados:', e.message);
-    try {
-      await sheetsRequest('UPDATE', `${GOOGLE_CONFIG.sheetName}!A1`, [SHEETS_COLS]);
-    } catch(_) {}
-    window._sheetsHeaders = SHEETS_COLS;
-  }
-}
-
 async function repararHoja() {
   if (!googleAccessToken) {
     alert('Debes iniciar sesión primero.');
@@ -5163,19 +5022,6 @@ function loginConGoogle() {
   window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 }
 
-const SP_URL = ''; // compatibilidad — no usado
-
-async function getSpToken() { return googleAccessToken; }
-
-async function spRequest(method, listName, body, id) {
-  // Stub de compatibilidad — no usado directamente
-  return { id: 'local-' + Date.now() };
-}
-
-async function graphRequest(method, endpoint, body) {
-  return { value: [], id: 'local-' + Date.now() };
-}
-
 function mostrarIndicadorStorage(sheetsOk) {
   const el = document.getElementById('storageIndicator');
   if (!el) return;
@@ -5264,16 +5110,6 @@ function guardarLocal() {
   }
 }
 
-function deduplicarItems(arr, campoNombre) {
-  if (!Array.isArray(arr)) return arr;
-  const seen = {};
-  arr.forEach(item => {
-    const key = (item.codigo||'') + '|' + (item[campoNombre]||'').trim().toLowerCase();
-    seen[key] = item; // la última aparición gana
-  });
-  return Object.values(seen);
-}
-
 function cargarLocal() {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -5290,25 +5126,6 @@ function cargarLocal() {
     return [];
   }
 }
-
-function sincronizarLocal() {
-  // Merge: prioriza los de SharePoint, agrega los locales que no existan en SP
-  const local = cargarLocal();
-  local.forEach(localItem => {
-    const existe = allOrdenes.find(o =>
-      String(o.id) === String(localItem.id) || o.NumeroOrden === localItem.NumeroOrden
-    );
-    if (!existe) allOrdenes.push(localItem);
-  });
-  guardarLocal();
-}
-
-let DEMO_COUNTER = 4;
-function generarNumeroDemo() {
-  return 'OT-' + String(DEMO_COUNTER++).padStart(5,'0');
-}
-
-let DEMO_DATA = [];
 
 /* ══════════════════════════════════════════════
    LIMPIAR FORMULARIO NUEVA ORDEN
@@ -6281,84 +6098,6 @@ function limpiarCacheLocal() {
 }
 
 /* ══════════════════════════════════════════════
-   TOGGLE OK EN TAREA DEL DETALLE
-   - Marcar alguna tarea OK   → estado pasa a "En ejecución"
-   - Desmarcar y ya no queda ninguna OK → vuelve al estado anterior (Pendiente)
-   - NO se cierra automáticamente nunca; el cierre sigue siendo manual/aparte
-   - Actualiza Sheets y refresca Dashboard/listas
-══════════════════════════════════════════════ */
-async function toggleTareaOk(ordenId, tareaIdx, checked) {
-  const o = allOrdenes.find(x => String(x.id) === String(ordenId) || x.NumeroOrden === ordenId);
-  if (!o) return;
-
-  let tareas = [];
-  if (Array.isArray(o.tareas)) tareas = o.tareas;
-  else { try { tareas = JSON.parse(o.tareas||'[]'); } catch(e) { tareas = []; } }
-  if (!tareas[tareaIdx]) return;
-
-  // Guardar el estado previo a "En ejecución" la primera vez que se activa una tarea,
-  // para poder revertir si se desmarcan todas.
-  if (checked && !o.EstadoAntesEjecucion && o.Estado !== 'En ejecución' && o.Estado !== 'Cerrada') {
-    o.EstadoAntesEjecucion = o.Estado;
-  }
-
-  tareas[tareaIdx].ok = checked;
-  o.tareas = tareas;
-
-  const fila = document.getElementById('tarea-row-' + tareaIdx);
-  if (fila) fila.style.background = checked ? '#f0fff4' : '';
-
-  const totalTareas = tareas.length;
-  const completadas = tareas.filter(t => t.ok).length;
-  const hayAlgunaOk = completadas > 0;
-
-  let nuevoEstado = o.Estado;
-  let camposExtra = {};
-
-  if (hayAlgunaOk && o.Estado !== 'En ejecución' && o.Estado !== 'Cerrada') {
-    // Al menos una tarea marcada → pasa a En ejecución
-    nuevoEstado = 'En ejecución';
-    camposExtra = { Estado: 'En ejecución' };
-  } else if (!hayAlgunaOk && o.Estado === 'En ejecución') {
-    // Se desmarcaron todas → vuelve al estado que tenía antes
-    nuevoEstado = o.EstadoAntesEjecucion || 'Pendiente';
-    camposExtra = { Estado: nuevoEstado };
-    o.EstadoAntesEjecucion = null;
-  }
-
-  o.Estado = nuevoEstado;
-  guardarLocal();
-
-  // Refrescar timeline en el detalle abierto
-  const detCont = document.getElementById('detalleContainer') || document.getElementById('panel-detalle');
-  const tlWrap = detCont ? detCont.querySelector('.timeline') : null;
-  if (tlWrap) tlWrap.parentElement.innerHTML = renderTimeline(nuevoEstado);
-
-  // Actualizar contador de progreso de tareas en pantalla
-  const progEl = document.getElementById('progreso-tareas');
-  if (progEl) {
-    progEl.textContent = `${completadas}/${totalTareas} tareas completadas`;
-  }
-
-  // Guardar en Sheets (estado + tareas siempre que haya cambios)
-  try {
-    if (o.NumeroOrden && googleAccessToken) {
-      await actualizarOrdenEnSheets(o.NumeroOrden, Object.assign(
-        { tareas: tareas },
-        camposExtra
-      ));
-    }
-  } catch(e) { console.warn('Sheets no actualizado:', e.message); }
-
-  // Refrescar Dashboard, lista de pendientes/realizadas, "Todas las órdenes" y contadores
-  actualizarContadorTab();
-  if (typeof renderPendientes === 'function') renderPendientes();
-  if (typeof renderRealizadas === 'function') renderRealizadas();
-  if (typeof filtrarOrdenes === 'function') filtrarOrdenes();
-  if (typeof cargarDashboard === 'function') cargarDashboard();
-}
-
-/* ══════════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════════ */
 function esc(str) {
@@ -6480,7 +6219,6 @@ function volverDeInventario() {
 
 // ── Sub-navegación del inventario (Dashboard / Nuevo Producto / Movimientos / Stock / Reportes) ──
 function invMostrarSubTab(nombre) {
-  inventarioTabActual = nombre;
   document.querySelectorAll('.inv-subpanel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.inv-subtab').forEach(b => b.classList.remove('active'));
   document.getElementById('invSub-' + nombre).classList.add('active');
