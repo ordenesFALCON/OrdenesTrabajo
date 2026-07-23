@@ -193,6 +193,7 @@ body::after {
   z-index: 99;
 }
 .nav-tab {
+  display: inline-flex; align-items: center; gap: 7px;
   padding: 13px 20px;
   border: none; background: none;
   font-size: 13px; font-weight: 600;
@@ -204,6 +205,7 @@ body::after {
   transition: color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
   font-family: inherit;
 }
+.nav-icon { width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; }
 .nav-tab:hover { color: var(--accent); }
 .nav-tab.active { color: var(--brand); background: linear-gradient(180deg,transparent 60%,rgba(232,112,26,.07) 100%); }
 .nav-tab:hover:not(.active) { color: var(--brand); background: var(--brand-light); }
@@ -813,13 +815,13 @@ body.inv-activo .container { max-width: 1800px; }
 
 <!-- ════════════ NAV ════════════ -->
 <nav class="nav-tabs">
-  <button class="nav-tab" onclick="showPanel('nueva')">➕ <span class="nav-tab-text">Nueva Orden</span></button>
-  <button class="nav-tab" onclick="showPanel('pendientes')">⏳ <span class="nav-tab-text">Pendientes</span></button>
-  <button class="nav-tab" onclick="showPanel('realizadas')">✅ <span class="nav-tab-text">Realizadas</span></button>
-  <button class="nav-tab" onclick="showPanel('lista')">📋 <span class="nav-tab-text">Todas las Órdenes</span></button>
-  <button class="nav-tab" onclick="showPanel('dashboard')">📊 <span class="nav-tab-text">Dashboard</span></button>
-  <button class="nav-tab" onclick="showPanel('novedades')">📝 <span class="nav-tab-text">Novedades</span></button>
-  <button class="nav-tab" onclick="showPanel('historico')">📜 <span class="nav-tab-text">Histórico por Equipo</span></button>
+  <button class="nav-tab" onclick="showPanel('nueva')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg> <span class="nav-tab-text">Nueva Orden</span></button>
+  <button class="nav-tab" onclick="showPanel('pendientes')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> <span class="nav-tab-text">Pendientes</span></button>
+  <button class="nav-tab" onclick="showPanel('realizadas')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> <span class="nav-tab-text">Realizadas</span></button>
+  <button class="nav-tab" onclick="showPanel('lista')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> <span class="nav-tab-text">Todas las Órdenes</span></button>
+  <button class="nav-tab" onclick="showPanel('dashboard')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> <span class="nav-tab-text">Dashboard</span></button>
+  <button class="nav-tab" onclick="showPanel('novedades')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg> <span class="nav-tab-text">Novedades</span></button>
+  <button class="nav-tab" onclick="showPanel('historico')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg> <span class="nav-tab-text">Histórico por Equipo</span></button>
   <span id="navTabIndicator" class="nav-tab-indicator"></span>
 </nav>
 
