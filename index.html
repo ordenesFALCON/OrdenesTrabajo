@@ -1623,7 +1623,7 @@ body.inv-activo .container { max-width: 1800px; }
 
     <!-- Costos por equipo -->
     <div class="card" style="margin-top:16px">
-      <div class="card-head">💰 Gasto total por Equipo</div>
+      <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Gasto total por Equipo</div>
       <div class="card-body" style="padding:16px">
         <div style="position:relative;height:320px"><canvas id="chartCostoEquipo"></canvas></div>
       </div>
@@ -1631,7 +1631,7 @@ body.inv-activo .container { max-width: 1800px; }
 
     <!-- Tabla detalle por equipo -->
     <div class="card" style="margin-top:16px">
-      <div class="card-head">📋 Detalle de Gastos por Equipo</div>
+      <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Detalle de Gastos por Equipo</div>
       <div class="card-body" style="padding:0">
         <div id="tablaEquipos" style="overflow-x:auto"></div>
       </div>
@@ -1640,14 +1640,14 @@ body.inv-activo .container { max-width: 1800px; }
     <!-- ════ SOLO SERVICIOTECNICO-ANTIOQUIA: gasto por empresa/equipo ════ -->
     <div id="dashAntioquiaSection" style="display:none;margin-top:16px">
       <div class="card" style="margin-bottom:16px">
-        <div class="card-head">🏢 Gasto General por Empresa (1 a 15)</div>
+        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg> Gasto General por Empresa (1 a 15)</div>
         <div class="card-body" style="padding:16px">
           <div style="position:relative;height:280px"><canvas id="chartGastoEmpresaGeneral"></canvas></div>
         </div>
       </div>
 
-      <div class="card-head" style="margin-bottom:10px;background:var(--brand);color:#fff;border-radius:8px;padding:10px 16px;font-weight:700">
-        📊 Gasto por Equipo — Detalle de cada Empresa
+      <div class="card-head" style="margin-bottom:10px;background:var(--brand);color:#fff;border-radius:8px;padding:10px 16px;font-weight:700;display:flex;align-items:center;gap:8px">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Gasto por Equipo — Detalle de cada Empresa
       </div>
       <div id="gridEmpresasAntioquia" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px"></div>
     </div>
