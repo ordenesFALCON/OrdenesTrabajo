@@ -1707,7 +1707,7 @@ body.inv-activo .container { max-width: 1800px; }
   <!-- ════════════ PANEL: HISTÓRICO POR EQUIPO ════════════ -->
   <div id="panel-historico" class="panel">
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-      <div style="flex:1;font-weight:800;color:var(--brand);font-size:16px">📜 Histórico de Órdenes por Equipo</div>
+      <div style="flex:1;font-weight:800;color:var(--brand);font-size:16px;display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg> Histórico de Órdenes por Equipo</div>
       <select id="histSelectorVista" onchange="histCambiarVista()" style="min-width:220px;font-weight:600">
         <option value="equipos">Equipos</option>
         <option value="inventario">Inventario de Equipos</option>
@@ -1741,7 +1741,7 @@ body.inv-activo .container { max-width: 1800px; }
       <div class="grid-lista-detalle" style="--lista-w:260px">
         <!-- Lista de equipos -->
         <div class="card">
-          <div class="card-head">🔧 Equipos</div>
+          <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> Equipos</div>
           <div class="card-body" style="padding:0;max-height:560px;overflow-y:auto">
             <div id="histListaEquipos"></div>
           </div>
@@ -1749,7 +1749,7 @@ body.inv-activo .container { max-width: 1800px; }
 
         <!-- Órdenes del equipo seleccionado -->
         <div class="card">
-          <div class="card-head" id="histTituloEquipo">📋 Selecciona un equipo</div>
+          <div class="card-head" id="histTituloEquipo" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Selecciona un equipo</div>
           <div class="card-body" style="padding:0;overflow-x:auto">
             <div id="histTablaOrdenes" style="padding:20px;color:var(--text3);font-size:13px;text-align:center">
               Elige un equipo de la lista para ver su historial de órdenes.
@@ -1762,7 +1762,7 @@ body.inv-activo .container { max-width: 1800px; }
     <!-- ══════ VISTA: INVENTARIO DE EQUIPOS (nueva) ══════ -->
     <div id="histVistaInventario" style="display:none">
       <div class="card" style="margin-bottom:14px">
-        <div class="card-head">➕ Registrar Equipo <span style="font-weight:400;text-transform:none;opacity:.85">— solo una vez por equipo</span></div>
+        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Registrar Equipo <span style="font-weight:400;text-transform:none;opacity:.85">— solo una vez por equipo</span></div>
         <div class="card-body" style="padding:18px">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
             <div class="field"><label>Codificación *</label><input id="ie_codificacion" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Ej: CA1"></div>
@@ -1771,13 +1771,13 @@ body.inv-activo .container { max-width: 1800px; }
             <div class="field"><label>Descripción Específica</label><input id="ie_descripcion" placeholder="Descripción del equipo"></div>
             <div class="field"><label>Ubicación</label><input id="ie_ubicacion" placeholder="Ej: Sala de compresores primer piso"></div>
           </div>
-          <button class="btn btn-primary" onclick="registrarInventarioEquipo()">✔ Registrar Equipo</button>
+          <button class="btn btn-primary" onclick="registrarInventarioEquipo()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Registrar Equipo</button>
           <div id="ieMsg" style="margin-top:10px;font-size:13px"></div>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
-        <div class="card-head">📝 Agregar Observación Anual <span style="font-weight:400;text-transform:none;opacity:.85">— sin repetir los datos del equipo</span></div>
+        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg> Agregar Observación Anual <span style="font-weight:400;text-transform:none;opacity:.85">— sin repetir los datos del equipo</span></div>
         <div class="card-body" style="padding:18px">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
             <div class="field" style="grid-column:span 2"><label>Equipo *</label>
@@ -1786,19 +1786,19 @@ body.inv-activo .container { max-width: 1800px; }
             <div class="field"><label>Año</label><select id="ieobs_anio"></select></div>
             <div class="field" style="grid-column:span 2"><label>Observaciones</label><textarea id="ieobs_observaciones" rows="2" placeholder="Observaciones del mantenimiento de ese año..."></textarea></div>
           </div>
-          <button class="btn btn-primary" onclick="agregarObservacionEquipo()">✔ Agregar Observación</button>
+          <button class="btn btn-primary" onclick="agregarObservacionEquipo()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Agregar Observación</button>
           <div id="ieObsMsg" style="margin-top:10px;font-size:13px"></div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
-          <span>📋 Equipos Registrados</span>
+          <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Equipos Registrados</span>
           <div style="display:flex;gap:8px;align-items:center">
             <select id="ieFiltroAnio" onchange="ieFiltrarPorAnio()" style="font-size:12px;padding:4px 8px;min-width:130px">
               <option value="">Todos los años</option>
             </select>
-            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="cargarInventarioEquipos()">🔄 Actualizar</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="cargarInventarioEquipos()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
           </div>
         </div>
         <div class="card-body" style="padding:0;overflow-x:auto" id="ieTabla">
@@ -1812,7 +1812,7 @@ body.inv-activo .container { max-width: 1800px; }
       <div class="grid-lista-detalle" style="--lista-w:220px">
         <!-- Lista de equipos -->
         <div class="card">
-          <div class="card-head">🔧 Equipos</div>
+          <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> Equipos</div>
           <div class="card-body" style="padding:0;max-height:720px;overflow-y:auto">
             <div id="hvdListaEquipos"></div>
           </div>
@@ -1820,7 +1820,7 @@ body.inv-activo .container { max-width: 1800px; }
 
         <!-- Hoja de vida del equipo seleccionado -->
         <div class="card" style="overflow: visible">
-          <div class="card-head" id="hvdTitulo" style="border-radius:var(--radius) var(--radius) 0 0">📋 Selecciona un equipo</div>
+          <div class="card-head" id="hvdTitulo" style="border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Selecciona un equipo</div>
           <div class="card-body" style="padding:20px;overflow-x:auto" id="hvdContenido">
             <div style="color:var(--text3);font-size:13px;text-align:center;padding:30px">
               Elige un equipo de la lista para ver su hoja de vida.
@@ -7450,7 +7450,7 @@ async function inicializarPanelHistorico() {
     return;
   }
   equipoHistoricoSeleccionado = null;
-  document.getElementById('histTituloEquipo').textContent = '📋 Selecciona un equipo';
+  document.getElementById('histTituloEquipo').innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Selecciona un equipo';
   document.getElementById('histTablaOrdenes').innerHTML =
     '<div style="padding:20px;color:var(--text3);font-size:13px;text-align:center">Elige un equipo de la lista para ver su historial de órdenes.</div>';
   renderListaEquiposHistorico();
@@ -7676,7 +7676,7 @@ async function _leerFilaHVD(equipo) {
 async function hvdSeleccionarEquipo(equipo) {
   hvdEquipoActual = equipo;
   hvdRenderListaEquipos();
-  document.getElementById('hvdTitulo').textContent = '📋 ' + equipo;
+  document.getElementById('hvdTitulo').innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> ' + esc(equipo);
   const cont = document.getElementById('hvdContenido');
   cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">Cargando hoja de vida…</div>';
 
@@ -7836,7 +7836,7 @@ function _renderHistorialOrdenesEquipo(equipo) {
         <td>${esc(repuestos)}</td>
         <td>${esc(o.HorasEquipo || '')}</td>
         <td>${fmtCOP(valorRepuestos)}</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')">👁 Ver orden</button></td>
+        <td><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Ver orden</button></td>
       </tr>`;
     }).join('') + `</tbody></table>`;
 }
@@ -7931,7 +7931,7 @@ function renderHistoricoEquipoSeleccionado() {
     .filter(ordenEnPeriodo)
     .sort((a, b) => (b.FechaInicio || b.FechaCreacion || '').localeCompare(a.FechaInicio || a.FechaCreacion || ''));
 
-  document.getElementById('histTituloEquipo').textContent = `🔧 ${equipoHistoricoSeleccionado} — ${ordenes.length} orden(es)`;
+  document.getElementById('histTituloEquipo').innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> ' + esc(equipoHistoricoSeleccionado) + ` — ${ordenes.length} orden(es)`;
 
   const wrap = document.getElementById('histTablaOrdenes');
   if (!ordenes.length) {
@@ -7968,7 +7968,7 @@ function renderHistoricoEquipoSeleccionado() {
       <td style="padding:7px 10px">${fmtFecha(o.FechaInicio || o.FechaCreacion)}</td>
       <td style="padding:7px 10px;text-align:center"><span class="badge" style="${estilo}">${esc(o.Estado)}</span></td>
       <td style="padding:7px 10px;text-align:center">${costo ? fmtCOP(costo) : '—'}</td>
-      <td style="padding:7px 10px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')">👁 Ver</button></td>
+      <td style="padding:7px 10px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Ver</button></td>
     </tr>`;
   });
 
