@@ -2683,27 +2683,27 @@ function _fotosUrlSede() {
      rango configurado no se puede saber si algo está "fuera
      de rango", así que nunca se marca enAlerta hasta que se
      configuren con los rangos seguros reales.
-   ► Unidad de flujo_baja puesta como 'SCFM' por convención
-     vista en otras variables de este mismo device (ej.
-     ssco_b2_flujo_scfm) — confirma que sea la unidad real.
+   ► Unidad de flujo_baja confirmada como 'SCFM' directo del
+     panel de la variable en Ubidots.
    ► baseUrl: se probó 'stem.api.ubidots.com' y dio "Failed to
      fetch" (ni siquiera conecta — típico de CORS/dominio
      equivocado para esta cuenta), mientras que
-     'industrial.api.ubidots.com' sí conecta (devolvía 403, un
-     error real del servidor, no de red). Por eso se dejó en
-     'industrial'. El 403 que queda es un problema de permisos
-     del token/variable en Ubidots, no del endpoint — revísalo
-     en tu cuenta de Ubidots (que el token tenga acceso de
-     lectura a esta variable/dispositivo específico). ══════════════════════════════════════════════ */
+     'industrial.api.ubidots.com' sí conecta. Por eso se dejó
+     en 'industrial'.
+   ► El ID de flujo_baja usado antes (68ac6f88e46503001115de60)
+     era incorrecto — no correspondía a esta variable, lo que
+     causaba los 401/403 sin importar el token o el formato de
+     autenticación. El ID correcto (verificado directo del
+     panel de la variable en Ubidots) es 698a3fd756b9223308d60918. ══════════════════════════════════════════════ */
 const UBIDOTS_CONFIG = {
-  token:   'BBUS-mZiSLFiEpqlinxqOyRfbBPHMc9nhzt', // token de Ubidots (cuenta Celsia, device falcon-compresores)
+  token:   'BBUS-LTl7hWhMqXx7nN6aQC64ZatI5lV5QY', // token de Ubidots (cuenta Celsia, device falcon-compresores)
   baseUrl: 'https://industrial.api.ubidots.com/api/v1.6',
 };
 
 const UBIDOTS_SEDES_MAP = {
   zipaquira: {
     variables: [
-      { id: '68ac6f88e46503001115de60', label: 'flujo_baja', nombre: 'Flujo (Baja)', unidad: 'SCFM', umbralMin: null, umbralMax: null },
+      { id: '698a3fd756b9223308d60918', label: 'flujo_baja_scmf', nombre: 'Flujo (Baja)', unidad: 'SCFM', umbralMin: null, umbralMax: null },
     ],
   },
 };
