@@ -2685,10 +2685,16 @@ function _fotosUrlSede() {
      configuren con los rangos seguros reales.
    ► Unidad de flujo_baja puesta como 'SCFM' por convención
      vista en otras variables de este mismo device (ej.
-     ssco_b2_flujo_scfm) — confirma que sea la unidad real. ══════════════════════════════════════════════ */
+     ssco_b2_flujo_scfm) — confirma que sea la unidad real.
+   ► baseUrl: Ubidots tiene dos APIs distintas según el plan
+     de la cuenta — 'industrial.api.ubidots.com' (Industrial,
+     de pago) o 'stem.api.ubidots.com' (STEM, gratuita). Usar
+     la que no corresponde a tu cuenta da error 403 aunque el
+     token sea válido. Si esto sigue fallando con 403, confirma
+     en tu cuenta de Ubidots cuál de las dos usa. ══════════════════════════════════════════════ */
 const UBIDOTS_CONFIG = {
   token:   'BBUS-mZiSLFiEpqlinxqOyRfbBPHMc9nhzt', // token de Ubidots (cuenta Celsia, device falcon-compresores)
-  baseUrl: 'https://industrial.api.ubidots.com/api/v1.6',
+  baseUrl: 'https://stem.api.ubidots.com/api/v1.6',
 };
 
 const UBIDOTS_SEDES_MAP = {
