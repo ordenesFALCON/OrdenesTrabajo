@@ -2709,15 +2709,15 @@ const UBIDOTS_SEDES_MAP = {
 };
 
 /** Pide el último valor de una variable de Ubidots. Prueba primero con el
- *  header clásico 'X-Auth-Token'; si esa cuenta lo rechaza puntualmente
- *  con 403, reintenta una sola vez con 'Authorization: Bearer' (algunas
- *  cuentas/tokens de Ubidots usan ese formato en vez del clásico) antes
- *  de darse por vencido. */
+ *  header clásico 'X-Auth-Token'; si esa cuenta lo rechaza (401 o 403),
+ *  reintenta una sola vez con 'Authorization: Bearer' (algunas cuentas/
+ *  tokens de Ubidots usan ese formato en vez del clásico) antes de darse
+ *  por vencido. */
 async function _fetchUbidotsValor(variableId) {
   const url = `${UBIDOTS_CONFIG.baseUrl}/variables/${variableId}/values/?page_size=1`;
 
   let resp = await fetch(url, { headers: { 'X-Auth-Token': UBIDOTS_CONFIG.token } });
-  if (resp.status === 403) {
+  if (resp.status === 401 || resp.status === 403) {
     resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + UBIDOTS_CONFIG.token } });
   }
   if (!resp.ok) throw new Error('Ubidots respondió ' + resp.status);
