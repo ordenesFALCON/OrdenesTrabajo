@@ -2708,6 +2708,22 @@ const UBIDOTS_SEDES_MAP = {
   },
 };
 
+/** Pide el último valor de una variable de Ubidots. Prueba primero con el
+ *  header clásico 'X-Auth-Token'; si esa cuenta lo rechaza puntualmente
+ *  con 403, reintenta una sola vez con 'Authorization: Bearer' (algunas
+ *  cuentas/tokens de Ubidots usan ese formato en vez del clásico) antes
+ *  de darse por vencido. */
+async function _fetchUbidotsValor(variableId) {
+  const url = `${UBIDOTS_CONFIG.baseUrl}/variables/${variableId}/values/?page_size=1`;
+
+  let resp = await fetch(url, { headers: { 'X-Auth-Token': UBIDOTS_CONFIG.token } });
+  if (resp.status === 403) {
+    resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + UBIDOTS_CONFIG.token } });
+  }
+  if (!resp.ok) throw new Error('Ubidots respondió ' + resp.status);
+  return resp.json();
+}
+
 /** Trae la última lectura de cada variable Ubidots configurada para una
  *  sede. Devuelve null si esa sede no tiene sensores conectados (no está
  *  en UBIDOTS_SEDES_MAP). Si una variable puntual falla, no tumba a las
@@ -2718,12 +2734,7 @@ async function obtenerLecturasSede(sede) {
 
   return Promise.all(cfg.variables.map(async (v) => {
     try {
-      const resp = await fetch(
-        `${UBIDOTS_CONFIG.baseUrl}/variables/${v.id}/values/?page_size=1`,
-        { headers: { 'X-Auth-Token': UBIDOTS_CONFIG.token } }
-      );
-      if (!resp.ok) throw new Error('Ubidots respondió ' + resp.status);
-      const data = await resp.json();
+      const data = await _fetchUbidotsValor(v.id);
       const ultimo = (data.results || [])[0];
       const valor = (ultimo && typeof ultimo.value === 'number') ? ultimo.value : null;
       const enAlerta = valor !== null && (
