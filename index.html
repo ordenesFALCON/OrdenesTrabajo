@@ -2758,6 +2758,7 @@ async function obtenerLecturasSede(sede) {
 
 let inventarioOperacionActual = null; // qué OPERACIÓN de inventario está abierta
 let tiempoRealOperacionActual  = null; // qué OPERACIÓN de tiempo real (sensores) está abierta
+let _tiempoRealIntervalId      = null; // id del setInterval que refresca las lecturas en vivo
 
 /* ══════════════════════════════════════════════
    AUTOCOMPLETADO DE REPUESTOS/INSUMOS EN LA ORDEN
@@ -6306,6 +6307,7 @@ function abrirInventario(opKey) {
     alert('🔒 Solo puedes abrir el inventario de la sede activa: ' + OPERACIONES[operacionActual].nombre);
     return;
   }
+  if (_tiempoRealIntervalId) { clearInterval(_tiempoRealIntervalId); _tiempoRealIntervalId = null; } // por si venía de Tiempo Real
   inventarioOperacionActual = opKey;
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -6362,11 +6364,19 @@ function abrirTiempoReal(opKey) {
 
   renderSidebarOperaciones();
   cargarTiempoReal(opKey);
+
+  // Refresca las lecturas solo mientras se está viendo esta pantalla —
+  // se detiene al volver (volverDeTiempoReal) para no gastar llamadas a
+  // Ubidots de fondo sin que nadie lo esté mirando.
+  if (_tiempoRealIntervalId) clearInterval(_tiempoRealIntervalId);
+  _tiempoRealIntervalId = setInterval(() => cargarTiempoReal(opKey, true), 10000);
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function volverDeTiempoReal() {
   tiempoRealOperacionActual = null;
+  if (_tiempoRealIntervalId) { clearInterval(_tiempoRealIntervalId); _tiempoRealIntervalId = null; }
   const navTabs = document.querySelector('.nav-tabs');
   if (navTabs) navTabs.style.display = 'flex';
   document.body.classList.remove('inv-activo');
@@ -6376,11 +6386,13 @@ function volverDeTiempoReal() {
 
 /** Pinta las lecturas en vivo de Ubidots para una sede. Si la sede no
  *  tiene sensores conectados (no está en UBIDOTS_SEDES_MAP), muestra un
- *  aviso tranquilo en vez de romper algo. */
-async function cargarTiempoReal(sede) {
+ *  aviso tranquilo en vez de romper algo. El parámetro "silencioso" evita
+ *  el parpadeo de "Cargando…" en los refrescos automáticos — solo se usa
+ *  la primera vez que se abre la pantalla. */
+async function cargarTiempoReal(sede, silencioso) {
   const cont = document.getElementById('tiempoRealContenido');
   if (!cont) return;
-  cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando lecturas…</div>';
+  if (!silencioso) cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando lecturas…</div>';
 
   let lecturas;
   try {
