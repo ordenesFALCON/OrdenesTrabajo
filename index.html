@@ -2686,15 +2686,18 @@ function _fotosUrlSede() {
    ► Unidad de flujo_baja puesta como 'SCFM' por convención
      vista en otras variables de este mismo device (ej.
      ssco_b2_flujo_scfm) — confirma que sea la unidad real.
-   ► baseUrl: Ubidots tiene dos APIs distintas según el plan
-     de la cuenta — 'industrial.api.ubidots.com' (Industrial,
-     de pago) o 'stem.api.ubidots.com' (STEM, gratuita). Usar
-     la que no corresponde a tu cuenta da error 403 aunque el
-     token sea válido. Si esto sigue fallando con 403, confirma
-     en tu cuenta de Ubidots cuál de las dos usa. ══════════════════════════════════════════════ */
+   ► baseUrl: se probó 'stem.api.ubidots.com' y dio "Failed to
+     fetch" (ni siquiera conecta — típico de CORS/dominio
+     equivocado para esta cuenta), mientras que
+     'industrial.api.ubidots.com' sí conecta (devolvía 403, un
+     error real del servidor, no de red). Por eso se dejó en
+     'industrial'. El 403 que queda es un problema de permisos
+     del token/variable en Ubidots, no del endpoint — revísalo
+     en tu cuenta de Ubidots (que el token tenga acceso de
+     lectura a esta variable/dispositivo específico). ══════════════════════════════════════════════ */
 const UBIDOTS_CONFIG = {
   token:   'BBUS-mZiSLFiEpqlinxqOyRfbBPHMc9nhzt', // token de Ubidots (cuenta Celsia, device falcon-compresores)
-  baseUrl: 'https://stem.api.ubidots.com/api/v1.6',
+  baseUrl: 'https://industrial.api.ubidots.com/api/v1.6',
 };
 
 const UBIDOTS_SEDES_MAP = {
