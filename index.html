@@ -6889,12 +6889,13 @@ function planMantFiltrar() {
  *  las horas actuales conocidas de los compresores, y refresca las tablas
  *  de la pestaña Registro y la de Horas de Mantenimiento. */
 async function importarPlan2026Click() {
-  if (!confirm('Esto va a registrar las ' + PLAN_2026_ZIPAQUIRA.length + ' actividades del Programa de Mantenimiento 2026 (Compresores de baja/alta, Drycoolers, Secadores, HOC y UPS) y las horas actuales conocidas de los compresores. Solo debe hacerse una vez. ¿Continuar?')) return;
+  if (!confirm('Esto va a registrar las ' + PLAN_2026_ZIPAQUIRA.length + ' actividades del Programa de Mantenimiento 2026 (Compresores de baja/alta, Drycoolers, Secadores, HOC y UPS) y las horas actuales conocidas de los compresores. Si ya habías importado antes, esto reemplaza esos datos por los nuevos. ¿Continuar?')) return;
   const btn = document.getElementById('btnImportarPlan2026');
   if (btn) { btn.disabled = true; btn.textContent = 'Importando…'; }
   try {
     const res = await importarPlan2026Zipaquira();
-    alert(`Listo: se registraron ${res.planes} planes de mantenimiento y se actualizaron las horas de ${res.equiposConHoras} equipos. Las órdenes que ya estén vencidas según las horas/fechas reales se generarán automáticamente al revisar los planes.`);
+    const notaReemplazo = res.reemplazados ? ` Se reemplazó una importación anterior de ${res.reemplazados} planes.` : '';
+    alert(`Listo: se registraron ${res.planes} planes de mantenimiento y se actualizaron las horas de ${res.equiposConHoras} equipos.${notaReemplazo} Ve a la pestaña "Horas de Mantenimiento" para ver la tabla. Las órdenes que ya estén vencidas según las horas/fechas reales se generarán automáticamente al revisar los planes.`);
     planMantCargarLista();
     horasEquipoCargarTabla();
     pmRenderHorasMantenimiento();
@@ -8633,27 +8634,32 @@ async function hvdGuardarSpecs() {
  *  "upsert" genérico para hojas que representan una ficha por elemento,
  *  en vez de un historial que solo crece hacia abajo. */
 async function _actualizarFilaPorClave(hoja, cols, colClave, valorClave, datosParciales) {
-  await asegurarHoja(hoja, cols);
+  // Usa el orden REAL de columnas de la hoja (no el de la constante local):
+  // si la hoja creció con columnas agregadas en versiones posteriores,
+  // asegurarHoja las añade al final, y ese orden puede no coincidir con el
+  // de la constante — indexar por posición contra la constante desalinearía
+  // los datos silenciosamente.
+  const colsReales = await asegurarHoja(hoja, cols);
   const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
   const hdrs = { Authorization: 'Bearer ' + googleAccessToken };
   const resp = await fetch(base + '/values/' + encodeURIComponent(hoja + '!A:Z'), { headers: hdrs });
   if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado'); }
   const d = await resp.json();
   const valores = d.values || [];
-  const idxCol = cols.indexOf(colClave);
+  const idxCol = colsReales.indexOf(colClave);
 
   let filaExistente = null, numeroFila = -1;
   for (let i = 1; i < valores.length; i++) {
     if ((valores[i][idxCol] || '') === valorClave) { filaExistente = valores[i]; numeroFila = i + 1; break; }
   }
 
-  const filaCompleta = cols.map((c, i) => {
+  const filaCompleta = colsReales.map((c, i) => {
     if (c === colClave) return valorClave;
     if (Object.prototype.hasOwnProperty.call(datosParciales, c)) return datosParciales[c];
     return filaExistente ? (filaExistente[i] || '') : '';
   });
 
-  const colFin = numToCol(cols.length - 1);
+  const colFin = numToCol(colsReales.length - 1);
   if (numeroFila > 0) {
     await fetch(base + '/values/' + encodeURIComponent(hoja + `!A${numeroFila}:${colFin}${numeroFila}`) + '?valueInputOption=RAW', {
       method: 'PUT', headers: { ...hdrs, 'Content-Type': 'application/json' },
@@ -8688,9 +8694,11 @@ async function cargarPlanesMantenimiento() {
  *  acumuladas genera su primera orden "puesto al día" en vez de esperar
  *  a acumular el intervalo completo desde cero). */
 async function registrarPlanMantenimiento(datos) {
-  await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
+  // Usa el orden REAL de columnas de la hoja — ver comentario en
+  // _actualizarFilaPorClave sobre por qué no basta con la constante local.
+  const cols = await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
   const id = 'PLAN-' + Date.now();
-  const fila = PLANES_MANTENIMIENTO_COLS.map(c => {
+  const fila = cols.map(c => {
     if (c === 'ID') return id;
     if (c === 'UltimaGeneracion' || c === 'UltimaGeneracionHoras') return '';
     if (c === 'Activo') return 'SI';
@@ -8730,15 +8738,23 @@ async function actualizarHorasEquipo(equipo, horas) {
  *  contra reimportar dos veces revisando si ya existe algún plan con ID
  *  que empiece por "PLAN2026-". */
 async function importarPlan2026Zipaquira() {
+  // Orden REAL de columnas de la hoja — ver comentario en
+  // _actualizarFilaPorClave sobre por qué no basta con la constante local.
+  const cols = await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
+
+  // Si ya había una importación anterior (por ejemplo, una hecha antes de
+  // corregir el bug de desalineación de columnas), la desactiva en vez de
+  // bloquear el reintento — así no hay que borrar nada a mano en el Sheet.
   const planesExistentes = await cargarPlanesMantenimiento();
-  if (planesExistentes.some(p => (p.ID || '').startsWith('PLAN2026-'))) {
-    throw new Error('El Plan de Mantenimiento 2026 ya fue importado antes — revisa "Planes Registrados".');
+  const anteriores = planesExistentes.filter(p => (p.ID || '').startsWith('PLAN2026-') && p.Activo !== 'NO');
+  for (const p of anteriores) {
+    await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', p.ID, { Activo: 'NO' });
   }
 
-  await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
+  const runId = Date.now();
   const hoyStr = new Date().toISOString().slice(0, 10);
-  const filas = PLAN_2026_ZIPAQUIRA.map((p, i) => PLANES_MANTENIMIENTO_COLS.map(c => {
-    if (c === 'ID') return 'PLAN2026-' + String(i + 1).padStart(3, '0');
+  const filas = PLAN_2026_ZIPAQUIRA.map((p, i) => cols.map(c => {
+    if (c === 'ID') return 'PLAN2026-' + runId + '-' + String(i + 1).padStart(3, '0');
     if (c === 'Equipo') return p.equipo;
     if (c === 'TipoMantenimiento') return 'Preventivo';
     if (c === 'TipoFrecuencia') return p.tipoFrecuencia;
@@ -8756,7 +8772,7 @@ async function importarPlan2026Zipaquira() {
     await actualizarHorasEquipo(equipo, horas);
   }
 
-  return { planes: filas.length, equiposConHoras: Object.keys(HORAS_INICIALES_2026_ZIPAQUIRA).length };
+  return { planes: filas.length, equiposConHoras: Object.keys(HORAS_INICIALES_2026_ZIPAQUIRA).length, reemplazados: anteriores.length };
 }
 
 async function cargarNotificaciones() {
