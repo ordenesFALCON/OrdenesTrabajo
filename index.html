@@ -2167,7 +2167,13 @@ body.inv-activo .container { max-width: 1800px; }
                 <option value="Mejora">Mejora</option>
               </select>
             </div>
-            <div class="field"><label>Frecuencia *</label>
+            <div class="field"><label>Tipo de Frecuencia *</label>
+              <select id="pm_tipoFrecuencia" onchange="planMantToggleTipoFrecuencia()">
+                <option value="calendario">Por calendario (fecha)</option>
+                <option value="horas">Por horas de operación del equipo</option>
+              </select>
+            </div>
+            <div class="field" id="pm_grupoFrecCalendario"><label>Frecuencia *</label>
               <select id="pm_frecuencia">
                 <option value="">Selecciona...</option>
                 <option value="diario">Diario</option>
@@ -2178,14 +2184,34 @@ body.inv-activo .container { max-width: 1800px; }
                 <option value="trimestral">Trimestral</option>
                 <option value="semestral">Semestral</option>
                 <option value="anual">Anual</option>
+                <option value="bienal">Cada 2 años</option>
               </select>
             </div>
-            <div class="field"><label>Fecha de inicio *</label><input id="pm_fechaInicio" type="date"></div>
+            <div class="field" id="pm_grupoFrecHoras" style="display:none"><label>Cada cuántas horas *</label>
+              <input id="pm_frecuenciaHoras" type="number" min="1" placeholder="Ej: 8000">
+            </div>
+            <div class="field" id="pm_grupoFechaInicio"><label>Fecha de inicio *</label><input id="pm_fechaInicio" type="date"></div>
             <div class="field"><label>Responsable sugerido</label><input id="pm_responsable" placeholder="Nombre (opcional)"></div>
             <div class="field" style="grid-column:1/-1"><label>Descripción de la tarea</label><input id="pm_descripcion" placeholder="Ej: Cambio de filtros y revisión general"></div>
           </div>
           <button class="btn btn-primary" onclick="planMantRegistrar()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Registrar Plan</button>
           <div id="pmMsg" style="margin-top:10px;font-size:13px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Horas de Operación de Equipos</div>
+        <div class="card-body" style="padding:18px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Actualiza aquí las horas acumuladas de cada equipo — los planes "por horas de operación" las usan para saber cuándo generar la próxima orden.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+            <div class="field" style="grid-column:span 2"><label>Equipo *</label>
+              <select id="he_equipo"><option value="">Selecciona un equipo...</option></select>
+            </div>
+            <div class="field"><label>Horas actuales *</label><input id="he_horas" type="number" min="0" step="1" placeholder="Ej: 24228"></div>
+          </div>
+          <button class="btn btn-primary" onclick="horasEquipoActualizar()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Actualizar Horas</button>
+          <div id="heMsg" style="margin-top:10px;font-size:13px"></div>
+          <div style="margin-top:16px;overflow-x:auto" id="heTabla"><div style="padding:10px 0;color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
       </div>
 
@@ -2203,6 +2229,8 @@ body.inv-activo .container { max-width: 1800px; }
               <option value="trimestral">Trimestral</option>
               <option value="semestral">Semestral</option>
               <option value="anual">Anual</option>
+              <option value="bienal">Cada 2 años</option>
+              <option value="horas">Por horas de operación</option>
             </select>
             <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="planMantCargarLista()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
           </div>
@@ -4485,21 +4513,29 @@ const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','Tiempo
 const REPUESTOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const INSUMOS_COLS   = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const FOTOS_COLS     = ['NumeroOrden','#','DriveFileId','UrlVer','UrlDescarga','TareaDescripcion','SubidoPor','Fecha'];
-const PLANES_MANTENIMIENTO_COLS = ['ID','Equipo','TipoMantenimiento','Frecuencia','FechaInicio','UltimaGeneracion','Descripcion','Responsable','Activo'];
+/** TipoFrecuencia: 'calendario' (usa Frecuencia = clave de FRECUENCIAS_PLAN,
+ *  contada desde FechaInicio/UltimaGeneracion) o 'horas' (usa Frecuencia =
+ *  número de horas de operación del equipo, contadas desde
+ *  UltimaGeneracionHoras — ver obtenerHorasEquipo/HORAS_EQUIPOS_COLS). */
+const PLANES_MANTENIMIENTO_COLS = ['ID','Equipo','TipoMantenimiento','TipoFrecuencia','Frecuencia','FechaInicio','UltimaGeneracion','UltimaGeneracionHoras','Descripcion','Responsable','Activo'];
 const NOTIFICACIONES_COLS = ['ID','Fecha','Mensaje','NumeroOrden','Equipo'];
+const HORAS_EQUIPOS_COLS = ['Equipo','HorasActuales','UltimaActualizacion'];
 
-/** Frecuencias soportadas por los Planes de Mantenimiento, con su
- *  intervalo en días para calcular cuándo toca la próxima generación
- *  automática de orden. */
+/** Frecuencias de calendario soportadas por los Planes de Mantenimiento,
+ *  con su intervalo en días para calcular cuándo toca la próxima
+ *  generación automática de orden. Las frecuencias "por horas" no están
+ *  en esta lista — ahí Frecuencia guarda directamente el número de horas
+ *  (ej. 8000), no una de estas claves. */
 const FRECUENCIAS_PLAN = [
-  { key: 'diario',     nombre: 'Diario',     dias: 1   },
-  { key: 'semanal',    nombre: 'Semanal',    dias: 7   },
-  { key: 'quincenal',  nombre: 'Quincenal',  dias: 15  },
-  { key: 'mensual',    nombre: 'Mensual',    dias: 30  },
-  { key: 'bimestral',  nombre: 'Bimestral',  dias: 60  },
-  { key: 'trimestral', nombre: 'Trimestral', dias: 90  },
-  { key: 'semestral',  nombre: 'Semestral',  dias: 182 },
-  { key: 'anual',      nombre: 'Anual',      dias: 365 },
+  { key: 'diario',     nombre: 'Diario',      dias: 1   },
+  { key: 'semanal',    nombre: 'Semanal',     dias: 7   },
+  { key: 'quincenal',  nombre: 'Quincenal',   dias: 15  },
+  { key: 'mensual',    nombre: 'Mensual',     dias: 30  },
+  { key: 'bimestral',  nombre: 'Bimestral',   dias: 60  },
+  { key: 'trimestral', nombre: 'Trimestral',  dias: 90  },
+  { key: 'semestral',  nombre: 'Semestral',   dias: 182 },
+  { key: 'anual',      nombre: 'Anual',       dias: 365 },
+  { key: 'bienal',     nombre: 'Cada 2 años', dias: 730 },
 ];
 
 // Nombres de hojas
@@ -4516,6 +4552,7 @@ const SH = {
   hvdEquipos: 'HVDEquipos',
   planesMantenimiento: 'PlanesMantenimiento',
   notificaciones: 'Notificaciones',
+  horasEquipos: 'HorasEquipos',
 };
 const INVENTARIO_EQUIPOS_BASE_COLS = ['Codificacion','Equipo','Marca','DescripcionEspecifica','Ubicacion'];
 const INVENTARIO_EQUIPOS_OBS_COLS  = ['Codificacion','Anio','Observaciones'];
@@ -6565,14 +6602,16 @@ function abrirPlanMantenimiento(opKey) {
   document.body.classList.add('inv-activo');
 
   const sel = document.getElementById('pm_equipo');
-  if (sel) {
-    const grupos = EQUIPOS_POR_SEDE[opKey] || EQUIPOS_LISTADO_GENERAL;
-    sel.innerHTML = '<option value="">Selecciona un equipo...</option>' + _renderOptionsGrupo(grupos);
-  }
+  const selHoras = document.getElementById('he_equipo');
+  const grupos = EQUIPOS_POR_SEDE[opKey] || EQUIPOS_LISTADO_GENERAL;
+  if (sel) sel.innerHTML = '<option value="">Selecciona un equipo...</option>' + _renderOptionsGrupo(grupos);
+  if (selHoras) selHoras.innerHTML = '<option value="">Selecciona un equipo...</option>' + _renderOptionsGrupo(grupos);
   document.getElementById('pm_fechaInicio').valueAsDate = new Date();
+  planMantToggleTipoFrecuencia();
 
   renderSidebarOperaciones();
   planMantCargarLista();
+  horasEquipoCargarTabla();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -6585,25 +6624,38 @@ function volverDePlanMantenimiento() {
   renderSidebarOperaciones();
 }
 
+/** Muestra el selector de Frecuencia (calendario) o el campo numérico de
+ *  horas, según el Tipo de Frecuencia elegido — nunca los dos a la vez. */
+function planMantToggleTipoFrecuencia() {
+  const esHoras = document.getElementById('pm_tipoFrecuencia').value === 'horas';
+  document.getElementById('pm_grupoFrecCalendario').style.display = esHoras ? 'none' : 'block';
+  document.getElementById('pm_grupoFrecHoras').style.display = esHoras ? 'block' : 'none';
+  document.getElementById('pm_grupoFechaInicio').style.display = esHoras ? 'none' : 'block';
+}
+
 async function planMantRegistrar() {
-  const equipo     = document.getElementById('pm_equipo').value;
-  const tipo       = document.getElementById('pm_tipo').value;
-  const frecuencia = document.getElementById('pm_frecuencia').value;
-  const fechaInicio= document.getElementById('pm_fechaInicio').value;
-  const responsable= document.getElementById('pm_responsable').value.trim();
-  const descripcion= document.getElementById('pm_descripcion').value.trim();
+  const equipo        = document.getElementById('pm_equipo').value;
+  const tipo           = document.getElementById('pm_tipo').value;
+  const tipoFrecuencia = document.getElementById('pm_tipoFrecuencia').value;
+  const frecuencia     = tipoFrecuencia === 'horas'
+    ? document.getElementById('pm_frecuenciaHoras').value
+    : document.getElementById('pm_frecuencia').value;
+  const fechaInicio    = document.getElementById('pm_fechaInicio').value;
+  const responsable    = document.getElementById('pm_responsable').value.trim();
+  const descripcion    = document.getElementById('pm_descripcion').value.trim();
   const msg = document.getElementById('pmMsg');
 
-  if (!equipo || !frecuencia || !fechaInicio) {
+  const faltaFecha = tipoFrecuencia !== 'horas' && !fechaInicio;
+  if (!equipo || !frecuencia || faltaFecha) {
     msg.style.color = 'var(--danger)';
-    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Equipo, Frecuencia y Fecha de inicio son obligatorios.';
+    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Equipo y Frecuencia son obligatorios' + (tipoFrecuencia !== 'horas' ? ' (y la Fecha de inicio)' : '') + '.';
     return;
   }
 
   msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
   try {
     await registrarPlanMantenimiento({
-      Equipo: equipo, TipoMantenimiento: tipo, Frecuencia: frecuencia,
+      Equipo: equipo, TipoMantenimiento: tipo, TipoFrecuencia: tipoFrecuencia, Frecuencia: frecuencia,
       FechaInicio: fechaInicio, Descripcion: descripcion, Responsable: responsable,
     });
     msg.style.color = '#15803d';
@@ -6611,6 +6663,7 @@ async function planMantRegistrar() {
     document.getElementById('pm_descripcion').value = '';
     document.getElementById('pm_responsable').value = '';
     document.getElementById('pm_frecuencia').value = '';
+    document.getElementById('pm_frecuenciaHoras').value = '';
     planMantCargarLista();
   } catch (e) {
     msg.style.color = 'var(--danger)';
@@ -6638,7 +6691,12 @@ function planMantFiltrar() {
   const filtro = document.getElementById('pmFiltroFrecuencia')?.value || '';
   if (!cont) return;
 
-  const planes = filtro ? _ultimosPlanesCache.filter(p => (p.Frecuencia || '').toLowerCase() === filtro) : _ultimosPlanesCache;
+  const planes = _ultimosPlanesCache.filter(p => {
+    if (!filtro) return true;
+    const esHoras = (p.TipoFrecuencia || 'calendario') === 'horas';
+    if (filtro === 'horas') return esHoras;
+    return !esHoras && (p.Frecuencia || '').toLowerCase() === filtro;
+  });
 
   if (!planes.length) {
     cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No hay planes de mantenimiento registrados' + (filtro ? ' con esa frecuencia' : '') + '.</div>';
@@ -6646,22 +6704,70 @@ function planMantFiltrar() {
   }
 
   cont.innerHTML = `<table class="ie-table"><thead><tr>
-      <th>Equipo</th><th>Tipo</th><th>Frecuencia</th><th>Fecha Inicio</th>
-      <th>Última Generación</th><th>Descripción</th><th>Estado</th>
+      <th>Equipo</th><th>Tipo</th><th>Frecuencia</th><th>Fecha Inicio / Últ. Generación</th>
+      <th>Descripción</th><th>Estado</th>
     </tr></thead><tbody>` +
     planes.map(p => {
+      const esHoras = (p.TipoFrecuencia || 'calendario') === 'horas';
       const freq = FRECUENCIAS_PLAN.find(f => f.key === (p.Frecuencia || '').toLowerCase());
       const activo = p.Activo !== 'NO';
+      const etiquetaFrecuencia = esHoras ? `Cada ${esc(p.Frecuencia)} horas` : esc(freq ? freq.nombre : p.Frecuencia);
+      const infoFecha = esHoras
+        ? (p.UltimaGeneracionHoras ? `Últ. gen.: ${esc(p.UltimaGeneracionHoras)} h` : 'Aún no generada')
+        : (p.UltimaGeneracion ? 'Últ. gen.: ' + fmtFecha(p.UltimaGeneracion) : 'Inicio: ' + fmtFecha(p.FechaInicio));
       return `<tr>
         <td><strong>${esc(p.Equipo)}</strong></td>
         <td>${esc(p.TipoMantenimiento)}</td>
-        <td>${esc(freq ? freq.nombre : p.Frecuencia)}</td>
-        <td>${fmtFecha(p.FechaInicio)}</td>
-        <td>${p.UltimaGeneracion ? fmtFecha(p.UltimaGeneracion) : '—'}</td>
+        <td>${etiquetaFrecuencia}</td>
+        <td>${infoFecha}</td>
         <td>${esc(p.Descripcion || '—')}</td>
         <td><span class="badge" style="background:${activo ? '#e6f4ea' : '#eee'};color:${activo ? '#1e7e34' : '#666'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
       </tr>`;
     }).join('') +
+    `</tbody></table>`;
+}
+
+async function horasEquipoActualizar() {
+  const equipo = document.getElementById('he_equipo').value;
+  const horas  = document.getElementById('he_horas').value;
+  const msg = document.getElementById('heMsg');
+
+  if (!equipo || horas === '') {
+    msg.style.color = 'var(--danger)';
+    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Equipo y Horas actuales son obligatorios.';
+    return;
+  }
+
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
+  try {
+    await actualizarHorasEquipo(equipo, horas);
+    msg.style.color = '#15803d';
+    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Horas actualizadas correctamente.';
+    document.getElementById('he_horas').value = '';
+    horasEquipoCargarTabla();
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
+  }
+}
+
+async function horasEquipoCargarTabla() {
+  const cont = document.getElementById('heTabla');
+  if (!cont) return;
+  cont.innerHTML = '<div style="padding:10px 0;color:var(--text3);font-size:13px">Cargando…</div>';
+  let filas;
+  try {
+    filas = await cargarHorasEquipos();
+  } catch (e) {
+    cont.innerHTML = `<div style="color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
+    return;
+  }
+  if (!filas.length) {
+    cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Todavía no hay horas registradas para ningún equipo.</div>';
+    return;
+  }
+  cont.innerHTML = `<table class="ie-table"><thead><tr><th>Equipo</th><th>Horas Actuales</th><th>Última Actualización</th></tr></thead><tbody>` +
+    filas.map(f => `<tr><td><strong>${esc(f.Equipo)}</strong></td><td>${esc(f.HorasActuales)}</td><td>${esc(f.UltimaActualizacion || '—')}</td></tr>`).join('') +
     `</tbody></table>`;
 }
 
@@ -8275,20 +8381,45 @@ async function cargarPlanesMantenimiento() {
   return leerHojaGenerica(SH.planesMantenimiento);
 }
 
-/** Registra un plan de mantenimiento nuevo. UltimaGeneracion arranca
- *  vacía — la primera orden se genera cuando se cumpla la frecuencia
- *  contada desde FechaInicio. */
+/** Registra un plan de mantenimiento nuevo. UltimaGeneracion/
+ *  UltimaGeneracionHoras arrancan vacías — la primera orden se genera
+ *  cuando se cumpla la frecuencia contada desde FechaInicio (calendario)
+ *  o desde 0 horas (por horas — así un equipo con historial de horas ya
+ *  acumuladas genera su primera orden "puesto al día" en vez de esperar
+ *  a acumular el intervalo completo desde cero). */
 async function registrarPlanMantenimiento(datos) {
   await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
   const id = 'PLAN-' + Date.now();
   const fila = PLANES_MANTENIMIENTO_COLS.map(c => {
     if (c === 'ID') return id;
-    if (c === 'UltimaGeneracion') return '';
+    if (c === 'UltimaGeneracion' || c === 'UltimaGeneracionHoras') return '';
     if (c === 'Activo') return 'SI';
     return datos[c] || '';
   });
   await appendHoja(SH.planesMantenimiento, [fila]);
   return id;
+}
+
+/* ── Horas de operación por equipo (para las frecuencias "por horas") ── */
+async function cargarHorasEquipos() {
+  await asegurarHoja(SH.horasEquipos, HORAS_EQUIPOS_COLS);
+  return leerHojaGenerica(SH.horasEquipos);
+}
+
+async function obtenerHorasEquipo(equipo) {
+  const filas = await cargarHorasEquipos();
+  const fila = filas.find(f => f.Equipo === equipo);
+  if (!fila || fila.HorasActuales === '') return null;
+  const n = Number(fila.HorasActuales);
+  return isNaN(n) ? null : n;
+}
+
+/** Registra/actualiza las horas actuales de un equipo — upsert por
+ *  Equipo, igual que las especificaciones de la Hoja de Vida. */
+async function actualizarHorasEquipo(equipo, horas) {
+  await _actualizarFilaPorClave(SH.horasEquipos, HORAS_EQUIPOS_COLS, 'Equipo', equipo, {
+    HorasActuales: horas, UltimaActualizacion: new Date().toLocaleString('es-CO'),
+  });
 }
 
 async function cargarNotificaciones() {
@@ -8326,34 +8457,73 @@ function marcarTodasNotificacionesLeidas(ids) {
 }
 
 /** Revisa los planes de mantenimiento de la sede activa y genera UNA
- *  orden pendiente por cada uno que ya cumplió su frecuencia. Se llama
+ *  orden pendiente por cada uno que ya cumplió su frecuencia — de
+ *  calendario (por fecha) o por horas de operación del equipo. Se llama
  *  al abrir la app ya autenticado (ver arranque de la app). */
 async function verificarPlanesMantenimientoYGenerar() {
   let planes;
   try { planes = await cargarPlanesMantenimiento(); }
   catch (e) { console.warn('No se pudo revisar planes de mantenimiento:', e.message); return; }
+  if (!planes.length) return;
+
+  let horasEquipos = [];
+  if (planes.some(p => (p.TipoFrecuencia || 'calendario') === 'horas')) {
+    try { horasEquipos = await cargarHorasEquipos(); }
+    catch (e) { console.warn('No se pudieron cargar las horas de equipos:', e.message); }
+  }
+  function horasDe(equipo) {
+    const fila = horasEquipos.find(f => f.Equipo === equipo);
+    if (!fila || fila.HorasActuales === '') return null;
+    const n = Number(fila.HorasActuales);
+    return isNaN(n) ? null : n;
+  }
 
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const hoyStr = hoy.toISOString().split('T')[0];
   let i = 0;
 
   for (const plan of planes) {
     if (!plan.ID || plan.Activo === 'NO') continue;
-    const freq = FRECUENCIAS_PLAN.find(f => f.key === (plan.Frecuencia || '').toLowerCase());
-    if (!freq) continue;
+    const esPorHoras = (plan.TipoFrecuencia || 'calendario') === 'horas';
 
-    const fechaBase = _fechaLocalDesdeString(plan.UltimaGeneracion || plan.FechaInicio);
-    if (isNaN(fechaBase)) continue;
-    const proxima = new Date(fechaBase);
-    proxima.setDate(proxima.getDate() + freq.dias);
-    if (proxima > hoy) continue; // todavía no toca
+    let debeGenerar = false;
+    let etiquetaFrecuencia = '';
+    let actualizacionPlan = null;
+
+    if (esPorHoras) {
+      const intervalo = Number(plan.Frecuencia);
+      if (!intervalo || intervalo <= 0) continue;
+      const horasActuales = horasDe(plan.Equipo);
+      if (horasActuales === null) continue; // sin horas registradas para este equipo — no se puede evaluar
+
+      const baseHoras = plan.UltimaGeneracionHoras !== '' ? Number(plan.UltimaGeneracionHoras) : 0;
+      if (horasActuales >= baseHoras + intervalo) {
+        debeGenerar = true;
+        etiquetaFrecuencia = `cada ${intervalo} horas`;
+        actualizacionPlan = { UltimaGeneracionHoras: String(horasActuales) };
+      }
+    } else {
+      const freq = FRECUENCIAS_PLAN.find(f => f.key === (plan.Frecuencia || '').toLowerCase());
+      if (!freq) continue;
+      const fechaBase = _fechaLocalDesdeString(plan.UltimaGeneracion || plan.FechaInicio);
+      if (isNaN(fechaBase)) continue;
+      const proxima = new Date(fechaBase);
+      proxima.setDate(proxima.getDate() + freq.dias);
+      if (proxima <= hoy) {
+        debeGenerar = true;
+        etiquetaFrecuencia = freq.nombre.toLowerCase();
+        actualizacionPlan = { UltimaGeneracion: hoyStr };
+      }
+    }
+
+    if (!debeGenerar) continue;
 
     i++;
     try {
       const numOrden = 'OT-' + String(Date.now() + i).slice(-5);
-      const hoyStr = hoy.toISOString().split('T')[0];
       const nuevaOrden = {
         id: numOrden, NumeroOrden: numOrden,
-        Title: plan.Descripcion || ('Mantenimiento ' + freq.nombre + ' — ' + plan.Equipo),
+        Title: plan.Descripcion || ('Mantenimiento (' + etiquetaFrecuencia + ') — ' + plan.Equipo),
         Equipo: plan.Equipo,
         TipoMantenimiento: plan.TipoMantenimiento || 'Preventivo',
         Prioridad: 'Media', Estado: 'Pendiente',
@@ -8367,9 +8537,9 @@ async function verificarPlanesMantenimientoYGenerar() {
       allOrdenes.push(nuevaOrden);
       guardarLocal();
       await guardarOrdenEnSheets(nuevaOrden);
-      await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', plan.ID, { UltimaGeneracion: hoyStr });
+      await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', plan.ID, actualizacionPlan);
       await registrarNotificacion(
-        `Se generó automáticamente la orden ${numOrden} para ${plan.Equipo} (mantenimiento ${freq.nombre}).`,
+        `Se generó automáticamente la orden ${numOrden} para ${plan.Equipo} (mantenimiento ${etiquetaFrecuencia}).`,
         numOrden, plan.Equipo
       );
     } catch (e) {
