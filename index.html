@@ -807,6 +807,13 @@ body.inv-activo .container { max-width: 1800px; }
   </div>
   <div class="header-right">
     <div id="storageIndicator" style="font-size:11px;opacity:.7;display:flex;align-items:center;gap:5px"></div>
+    <div style="position:relative">
+      <button id="btnNotificaciones" onclick="toggleDropdownNotificaciones()" title="Notificaciones" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;border-radius:20px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:inherit;position:relative;display:inline-flex;align-items:center">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc2626;color:white;border-radius:50%;min-width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;padding:0 3px;line-height:1">0</span>
+      </button>
+      <div id="dropdownNotificaciones" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;max-height:420px;overflow-y:auto;background:white;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.25);z-index:500;color:#1a1a1a"></div>
+    </div>
     <button onclick="abrirInventario(operacionActual)" title="Ir al inventario de la sede activa" style="background:rgba(232,112,26,.22);border:1px solid rgba(232,112,26,.5);color:white;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Mi Inventario</button>
     <button onclick="repararHoja()" title="Reparar columnas de Google Sheets" style="background:rgba(255,200,0,.18);border:1px solid rgba(255,200,0,.4);color:white;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> Reparar hoja</button>
     <button onclick="limpiarCacheLocal()" title="Eliminar órdenes fantasma guardadas solo en este equipo" style="background:rgba(255,80,80,.18);border:1px solid rgba(255,80,80,.4);color:white;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Limpiar caché</button>
@@ -2137,6 +2144,74 @@ body.inv-activo .container { max-width: 1800px; }
     </div>
   </div>
 
+  <!-- ════════════ PANEL: PLAN DE MANTENIMIENTO ════════════ -->
+  <div id="panel-planmantenimiento" class="panel">
+    <div style="max-width:1100px;margin:0 auto;width:100%">
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <div id="planMantTitulo" style="font-weight:700;color:var(--brand);font-size:15px;flex:1;display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Plan de Mantenimiento</div>
+        <button class="btn btn-ghost" onclick="volverDePlanMantenimiento()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Volver</button>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Registrar Plan de Mantenimiento</div>
+        <div class="card-body" style="padding:18px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+            <div class="field" style="grid-column:span 2"><label>Equipo *</label>
+              <select id="pm_equipo"><option value="">Selecciona un equipo...</option></select>
+            </div>
+            <div class="field"><label>Tipo de Mantenimiento</label>
+              <select id="pm_tipo">
+                <option value="Preventivo">Preventivo</option>
+                <option value="Predictivo">Predictivo</option>
+                <option value="Correctivo">Correctivo</option>
+                <option value="Mejora">Mejora</option>
+              </select>
+            </div>
+            <div class="field"><label>Frecuencia *</label>
+              <select id="pm_frecuencia">
+                <option value="">Selecciona...</option>
+                <option value="diario">Diario</option>
+                <option value="semanal">Semanal</option>
+                <option value="quincenal">Quincenal</option>
+                <option value="mensual">Mensual</option>
+                <option value="bimestral">Bimestral</option>
+                <option value="trimestral">Trimestral</option>
+                <option value="semestral">Semestral</option>
+                <option value="anual">Anual</option>
+              </select>
+            </div>
+            <div class="field"><label>Fecha de inicio *</label><input id="pm_fechaInicio" type="date"></div>
+            <div class="field"><label>Responsable sugerido</label><input id="pm_responsable" placeholder="Nombre (opcional)"></div>
+            <div class="field" style="grid-column:1/-1"><label>Descripción de la tarea</label><input id="pm_descripcion" placeholder="Ej: Cambio de filtros y revisión general"></div>
+          </div>
+          <button class="btn btn-primary" onclick="planMantRegistrar()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Registrar Plan</button>
+          <div id="pmMsg" style="margin-top:10px;font-size:13px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Planes Registrados</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="pmFiltroFrecuencia" onchange="planMantFiltrar()" style="font-size:12px;padding:4px 8px;min-width:150px">
+              <option value="">Todas las frecuencias</option>
+              <option value="diario">Diario</option>
+              <option value="semanal">Semanal</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="mensual">Mensual</option>
+              <option value="bimestral">Bimestral</option>
+              <option value="trimestral">Trimestral</option>
+              <option value="semestral">Semestral</option>
+              <option value="anual">Anual</option>
+            </select>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="planMantCargarLista()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
+          </div>
+        </div>
+        <div style="padding:0;overflow-x:auto" id="pmTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /container -->
 
 <!-- Contenedor del informe de Novedades, solo visible al imprimir/exportar PDF -->
@@ -2759,6 +2834,7 @@ async function obtenerLecturasSede(sede) {
 let inventarioOperacionActual = null; // qué OPERACIÓN de inventario está abierta
 let tiempoRealOperacionActual  = null; // qué OPERACIÓN de tiempo real (sensores) está abierta
 let _tiempoRealIntervalId      = null; // id del setInterval que refresca las lecturas en vivo
+let planMantOperacionActual    = null; // qué OPERACIÓN de plan de mantenimiento está abierta
 
 /* ══════════════════════════════════════════════
    AUTOCOMPLETADO DE REPUESTOS/INSUMOS EN LA ORDEN
@@ -3109,6 +3185,25 @@ function renderSidebarOperaciones() {
           <span style="flex:1;line-height:1.25">TIEMPO REAL ${esc(op.nombre)}</span>
           ${habilitado ? '' : '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>'}
         </div>`;
+    }).join('')}
+    <div style="border-top:1px solid rgba(255,255,255,.12);margin:8px 0"></div>
+    <div style="padding:10px 16px 6px;font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.45);text-transform:uppercase;display:flex;align-items:center;gap:6px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Plan de Mantenimiento</div>
+    ${Object.keys(OPERACIONES).map(key => {
+      const op = OPERACIONES[key];
+      const habilitado = key === operacionActual && operacionAutenticada;
+      const activo = key === planMantOperacionActual && document.getElementById('panel-planmantenimiento')?.classList.contains('active');
+      return `
+        <div ${habilitado ? `onclick="abrirPlanMantenimiento('${key}')"` : ''}
+          title="${habilitado ? '' : 'Primero entra a esa operación con su contraseña en la sección de arriba'}"
+          style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;
+                 cursor:${habilitado ? 'pointer' : 'not-allowed'};
+                 color:${habilitado ? 'white' : 'rgba(255,255,255,.35)'};
+                 background:${activo ? 'rgba(255,255,255,.14)' : 'transparent'};font-weight:${activo ? '700' : '400'}"
+          ${habilitado ? `onmouseover="this.style.background='rgba(255,255,255,.10)'" onmouseout="this.style.background='${activo ? 'rgba(255,255,255,.14)' : 'transparent'}'"` : ''}>
+          <span style="font-size:16px">${op.bandera}</span>
+          <span style="flex:1;line-height:1.25">PLAN ${esc(op.nombre)}</span>
+          ${habilitado ? '' : '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>'}
+        </div>`;
     }).join('')}`;
 }
 
@@ -3248,7 +3343,12 @@ window.addEventListener('load', async () => {
       renderPendientes();
       // Si quedaron órdenes sin subir de una sesión anterior sin internet, reintenta ahora.
       intentarSincronizarPendientes();
+      // Revisa los planes de mantenimiento de esta sede y genera las
+      // órdenes que ya toquen — no bloquea el resto de la app mientras
+      // corre, y cualquier falla queda solo en consola.
+      verificarPlanesMantenimientoYGenerar().catch(e => console.warn('Planes de mantenimiento:', e.message));
     });
+    actualizarBadgeNotificaciones();
   }
 });
 
@@ -4378,12 +4478,29 @@ const SHEETS_COLS = [
   'SolicitadaPor','AutorizadaPor','Responsable','Supervisor',
   'FechaInicio','FechaFin','MedidasSeguridad','Observaciones',
   'UserEmail','CostoTotal','FechaCierre','EjecutadoPor','TiempoReal',
-  'CostoReal','ObsCierre','FechaCreacion','FirmaCreador','FirmaCierre','HorasEquipo'
+  'CostoReal','ObsCierre','FechaCreacion','FirmaCreador','FirmaCierre','HorasEquipo',
+  'CreadaAutomaticamente','PlanId'
 ];
 const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','TiempoReal','OK','Responsable','ObservacionCierre'];
 const REPUESTOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const INSUMOS_COLS   = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const FOTOS_COLS     = ['NumeroOrden','#','DriveFileId','UrlVer','UrlDescarga','TareaDescripcion','SubidoPor','Fecha'];
+const PLANES_MANTENIMIENTO_COLS = ['ID','Equipo','TipoMantenimiento','Frecuencia','FechaInicio','UltimaGeneracion','Descripcion','Responsable','Activo'];
+const NOTIFICACIONES_COLS = ['ID','Fecha','Mensaje','NumeroOrden','Equipo'];
+
+/** Frecuencias soportadas por los Planes de Mantenimiento, con su
+ *  intervalo en días para calcular cuándo toca la próxima generación
+ *  automática de orden. */
+const FRECUENCIAS_PLAN = [
+  { key: 'diario',     nombre: 'Diario',     dias: 1   },
+  { key: 'semanal',    nombre: 'Semanal',    dias: 7   },
+  { key: 'quincenal',  nombre: 'Quincenal',  dias: 15  },
+  { key: 'mensual',    nombre: 'Mensual',    dias: 30  },
+  { key: 'bimestral',  nombre: 'Bimestral',  dias: 60  },
+  { key: 'trimestral', nombre: 'Trimestral', dias: 90  },
+  { key: 'semestral',  nombre: 'Semestral',  dias: 182 },
+  { key: 'anual',      nombre: 'Anual',      dias: 365 },
+];
 
 // Nombres de hojas
 const SH = {
@@ -4397,6 +4514,8 @@ const SH = {
   inventarioEquiposBase: 'InventarioEquiposBase',
   inventarioEquiposObs:  'InventarioEquiposObs',
   hvdEquipos: 'HVDEquipos',
+  planesMantenimiento: 'PlanesMantenimiento',
+  notificaciones: 'Notificaciones',
 };
 const INVENTARIO_EQUIPOS_BASE_COLS = ['Codificacion','Equipo','Marca','DescripcionEspecifica','Ubicacion'];
 const INVENTARIO_EQUIPOS_OBS_COLS  = ['Codificacion','Anio','Observaciones'];
@@ -6420,6 +6539,132 @@ async function cargarTiempoReal(sede, silencioso) {
   </div>`;
 }
 
+/** Abre el panel de Plan de Mantenimiento de una sede — mismo patrón de
+ *  acceso que abrirInventario()/abrirTiempoReal(): solo se puede abrir el
+ *  de la sede activa y ya autenticada. */
+function abrirPlanMantenimiento(opKey) {
+  if (!operacionAutenticada) {
+    alert('Primero selecciona e ingresa la contraseña de una operación en el panel izquierdo.');
+    showPanel('inicio');
+    return;
+  }
+  if (opKey !== operacionActual) {
+    alert('Solo puedes abrir el plan de mantenimiento de la sede activa: ' + OPERACIONES[operacionActual].nombre);
+    return;
+  }
+  if (_tiempoRealIntervalId) { clearInterval(_tiempoRealIntervalId); _tiempoRealIntervalId = null; } // por si venía de Tiempo Real
+  planMantOperacionActual = opKey;
+
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-planmantenimiento').classList.add('active');
+  document.getElementById('planMantTitulo').innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Plan de Mantenimiento — ' + esc(OPERACIONES[opKey].nombre);
+
+  const navTabs = document.querySelector('.nav-tabs');
+  if (navTabs) navTabs.style.display = 'none';
+  document.body.classList.add('inv-activo');
+
+  const sel = document.getElementById('pm_equipo');
+  if (sel) {
+    const grupos = EQUIPOS_POR_SEDE[opKey] || EQUIPOS_LISTADO_GENERAL;
+    sel.innerHTML = '<option value="">Selecciona un equipo...</option>' + _renderOptionsGrupo(grupos);
+  }
+  document.getElementById('pm_fechaInicio').valueAsDate = new Date();
+
+  renderSidebarOperaciones();
+  planMantCargarLista();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function volverDePlanMantenimiento() {
+  planMantOperacionActual = null;
+  const navTabs = document.querySelector('.nav-tabs');
+  if (navTabs) navTabs.style.display = 'flex';
+  document.body.classList.remove('inv-activo');
+  showPanel('pendientes');
+  renderSidebarOperaciones();
+}
+
+async function planMantRegistrar() {
+  const equipo     = document.getElementById('pm_equipo').value;
+  const tipo       = document.getElementById('pm_tipo').value;
+  const frecuencia = document.getElementById('pm_frecuencia').value;
+  const fechaInicio= document.getElementById('pm_fechaInicio').value;
+  const responsable= document.getElementById('pm_responsable').value.trim();
+  const descripcion= document.getElementById('pm_descripcion').value.trim();
+  const msg = document.getElementById('pmMsg');
+
+  if (!equipo || !frecuencia || !fechaInicio) {
+    msg.style.color = 'var(--danger)';
+    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Equipo, Frecuencia y Fecha de inicio son obligatorios.';
+    return;
+  }
+
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
+  try {
+    await registrarPlanMantenimiento({
+      Equipo: equipo, TipoMantenimiento: tipo, Frecuencia: frecuencia,
+      FechaInicio: fechaInicio, Descripcion: descripcion, Responsable: responsable,
+    });
+    msg.style.color = '#15803d';
+    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Plan registrado correctamente.';
+    document.getElementById('pm_descripcion').value = '';
+    document.getElementById('pm_responsable').value = '';
+    document.getElementById('pm_frecuencia').value = '';
+    planMantCargarLista();
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
+  }
+}
+
+let _ultimosPlanesCache = [];
+
+async function planMantCargarLista() {
+  const cont = document.getElementById('pmTabla');
+  if (!cont) return;
+  cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
+  try {
+    _ultimosPlanesCache = await cargarPlanesMantenimiento();
+  } catch (e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
+    return;
+  }
+  planMantFiltrar();
+}
+
+function planMantFiltrar() {
+  const cont   = document.getElementById('pmTabla');
+  const filtro = document.getElementById('pmFiltroFrecuencia')?.value || '';
+  if (!cont) return;
+
+  const planes = filtro ? _ultimosPlanesCache.filter(p => (p.Frecuencia || '').toLowerCase() === filtro) : _ultimosPlanesCache;
+
+  if (!planes.length) {
+    cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No hay planes de mantenimiento registrados' + (filtro ? ' con esa frecuencia' : '') + '.</div>';
+    return;
+  }
+
+  cont.innerHTML = `<table class="ie-table"><thead><tr>
+      <th>Equipo</th><th>Tipo</th><th>Frecuencia</th><th>Fecha Inicio</th>
+      <th>Última Generación</th><th>Descripción</th><th>Estado</th>
+    </tr></thead><tbody>` +
+    planes.map(p => {
+      const freq = FRECUENCIAS_PLAN.find(f => f.key === (p.Frecuencia || '').toLowerCase());
+      const activo = p.Activo !== 'NO';
+      return `<tr>
+        <td><strong>${esc(p.Equipo)}</strong></td>
+        <td>${esc(p.TipoMantenimiento)}</td>
+        <td>${esc(freq ? freq.nombre : p.Frecuencia)}</td>
+        <td>${fmtFecha(p.FechaInicio)}</td>
+        <td>${p.UltimaGeneracion ? fmtFecha(p.UltimaGeneracion) : '—'}</td>
+        <td>${esc(p.Descripcion || '—')}</td>
+        <td><span class="badge" style="background:${activo ? '#e6f4ea' : '#eee'};color:${activo ? '#1e7e34' : '#666'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
+      </tr>`;
+    }).join('') +
+    `</tbody></table>`;
+}
+
 // ── Sub-navegación del inventario (Dashboard / Nuevo Producto / Movimientos / Stock / Reportes) ──
 function invMostrarSubTab(nombre) {
   document.querySelectorAll('.inv-subpanel').forEach(p => p.classList.remove('active'));
@@ -8010,6 +8255,211 @@ async function _actualizarFilaPorClave(hoja, cols, colClave, valorClave, datosPa
     });
   } else {
     await appendHoja(hoja, [filaCompleta]);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   PLANES DE MANTENIMIENTO Y NOTIFICACIONES
+   Un plan define, por equipo, cada cuánto (Frecuencia) debe
+   generarse una orden de mantenimiento preventivo. Cada vez
+   que alguien abre el sistema ya autenticado en una sede, se
+   revisan los planes de ESA sede: si ya pasó el intervalo
+   desde la última generación (o desde FechaInicio si nunca se
+   ha generado), se crea UNA orden pendiente — no una por cada
+   período atrasado, para no inundar de órdenes si nadie abrió
+   la app en varios días — y una notificación avisando que se
+   generó sola.
+══════════════════════════════════════════════ */
+async function cargarPlanesMantenimiento() {
+  await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
+  return leerHojaGenerica(SH.planesMantenimiento);
+}
+
+/** Registra un plan de mantenimiento nuevo. UltimaGeneracion arranca
+ *  vacía — la primera orden se genera cuando se cumpla la frecuencia
+ *  contada desde FechaInicio. */
+async function registrarPlanMantenimiento(datos) {
+  await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
+  const id = 'PLAN-' + Date.now();
+  const fila = PLANES_MANTENIMIENTO_COLS.map(c => {
+    if (c === 'ID') return id;
+    if (c === 'UltimaGeneracion') return '';
+    if (c === 'Activo') return 'SI';
+    return datos[c] || '';
+  });
+  await appendHoja(SH.planesMantenimiento, [fila]);
+  return id;
+}
+
+async function cargarNotificaciones() {
+  await asegurarHoja(SH.notificaciones, NOTIFICACIONES_COLS);
+  return leerHojaGenerica(SH.notificaciones);
+}
+
+async function registrarNotificacion(mensaje, numeroOrden, equipo) {
+  await asegurarHoja(SH.notificaciones, NOTIFICACIONES_COLS);
+  const fila = [
+    'NOTIF-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+    new Date().toLocaleString('es-CO'),
+    mensaje, numeroOrden || '', equipo || '',
+  ];
+  await appendHoja(SH.notificaciones, [fila]);
+}
+
+// ── Estado de "leída" — se guarda solo en este navegador (localStorage),
+//    por sede, para no tener que escribir a Sheets cada vez que alguien
+//    abre la campanita. ──
+function _notifLeidasKey() { return 'notifLeidas_' + operacionActual; }
+function _idsNotificacionesLeidas() {
+  try { return JSON.parse(localStorage.getItem(_notifLeidasKey()) || '[]'); }
+  catch (e) { return []; }
+}
+function marcarNotificacionLeida(id) {
+  const leidas = new Set(_idsNotificacionesLeidas());
+  leidas.add(id);
+  localStorage.setItem(_notifLeidasKey(), JSON.stringify([...leidas]));
+}
+function marcarTodasNotificacionesLeidas(ids) {
+  const leidas = new Set(_idsNotificacionesLeidas());
+  ids.forEach(id => leidas.add(id));
+  localStorage.setItem(_notifLeidasKey(), JSON.stringify([...leidas]));
+}
+
+/** Revisa los planes de mantenimiento de la sede activa y genera UNA
+ *  orden pendiente por cada uno que ya cumplió su frecuencia. Se llama
+ *  al abrir la app ya autenticado (ver arranque de la app). */
+async function verificarPlanesMantenimientoYGenerar() {
+  let planes;
+  try { planes = await cargarPlanesMantenimiento(); }
+  catch (e) { console.warn('No se pudo revisar planes de mantenimiento:', e.message); return; }
+
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  let i = 0;
+
+  for (const plan of planes) {
+    if (!plan.ID || plan.Activo === 'NO') continue;
+    const freq = FRECUENCIAS_PLAN.find(f => f.key === (plan.Frecuencia || '').toLowerCase());
+    if (!freq) continue;
+
+    const fechaBase = _fechaLocalDesdeString(plan.UltimaGeneracion || plan.FechaInicio);
+    if (isNaN(fechaBase)) continue;
+    const proxima = new Date(fechaBase);
+    proxima.setDate(proxima.getDate() + freq.dias);
+    if (proxima > hoy) continue; // todavía no toca
+
+    i++;
+    try {
+      const numOrden = 'OT-' + String(Date.now() + i).slice(-5);
+      const hoyStr = hoy.toISOString().split('T')[0];
+      const nuevaOrden = {
+        id: numOrden, NumeroOrden: numOrden,
+        Title: plan.Descripcion || ('Mantenimiento ' + freq.nombre + ' — ' + plan.Equipo),
+        Equipo: plan.Equipo,
+        TipoMantenimiento: plan.TipoMantenimiento || 'Preventivo',
+        Prioridad: 'Media', Estado: 'Pendiente',
+        Responsable: plan.Responsable || '',
+        FechaInicio: hoyStr,
+        FechaCreacion: new Date().toISOString(),
+        CreadaAutomaticamente: 'SI', PlanId: plan.ID,
+        tareas: [], repuestos: [], insumos: [],
+      };
+
+      allOrdenes.push(nuevaOrden);
+      guardarLocal();
+      await guardarOrdenEnSheets(nuevaOrden);
+      await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', plan.ID, { UltimaGeneracion: hoyStr });
+      await registrarNotificacion(
+        `Se generó automáticamente la orden ${numOrden} para ${plan.Equipo} (mantenimiento ${freq.nombre}).`,
+        numOrden, plan.Equipo
+      );
+    } catch (e) {
+      console.warn('No se pudo generar la orden automática del plan', plan.ID, e.message);
+    }
+  }
+
+  actualizarBadgeNotificaciones();
+}
+
+let _ultimasNotificacionesCache = [];
+
+/** Abre/cierra el dropdown de notificaciones del header. */
+async function toggleDropdownNotificaciones() {
+  const dd = document.getElementById('dropdownNotificaciones');
+  if (!dd) return;
+  const abrir = dd.style.display === 'none';
+  dd.style.display = abrir ? 'block' : 'none';
+  if (abrir) await _renderDropdownNotificaciones();
+}
+
+// Cerrar el dropdown al hacer click afuera de él.
+document.addEventListener('click', (e) => {
+  const dd  = document.getElementById('dropdownNotificaciones');
+  const btn = document.getElementById('btnNotificaciones');
+  if (dd && dd.style.display === 'block' && !dd.contains(e.target) && !btn.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+async function _renderDropdownNotificaciones() {
+  const dd = document.getElementById('dropdownNotificaciones');
+  if (!dd) return;
+  dd.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
+
+  let notifs;
+  try { notifs = await cargarNotificaciones(); }
+  catch (e) {
+    dd.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
+    return;
+  }
+  _ultimasNotificacionesCache = notifs;
+
+  if (!notifs.length) {
+    dd.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;text-align:center">No hay notificaciones todavía.</div>';
+    return;
+  }
+
+  notifs.sort((a, b) => new Date(b.Fecha) - new Date(a.Fecha));
+  const leidas = new Set(_idsNotificacionesLeidas());
+
+  dd.innerHTML = `
+    <div style="padding:10px 14px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;color:var(--brand)">
+      <span>Notificaciones</span>
+      <span onclick="marcarTodasNotificacionesLeidasClick()" style="font-weight:400;font-size:11px;color:var(--accent2);cursor:pointer">Marcar todas como leídas</span>
+    </div>` +
+    notifs.map(n => {
+      const noLeida = !leidas.has(n.ID);
+      return `<div onclick="marcarNotificacionLeida('${esc(n.ID)}');actualizarBadgeNotificaciones();this.style.background='transparent';this.querySelector('.notif-dot')?.remove();"
+        style="padding:12px 14px;border-bottom:1px solid #f2f2f2;font-size:12.5px;cursor:pointer;background:${noLeida ? '#eaf2ff' : 'transparent'};display:flex;gap:8px;align-items:flex-start">
+        ${noLeida ? '<span class="notif-dot" style="width:7px;height:7px;border-radius:50%;background:var(--accent2);margin-top:4px;flex-shrink:0"></span>' : '<span style="width:7px;flex-shrink:0"></span>'}
+        <div>
+          <div style="color:#333">${esc(n.Mensaje)}</div>
+          <div style="color:var(--text3);font-size:11px;margin-top:3px">${esc(n.Fecha)}</div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function marcarTodasNotificacionesLeidasClick() {
+  marcarTodasNotificacionesLeidas(_ultimasNotificacionesCache.map(n => n.ID));
+  _renderDropdownNotificaciones();
+  actualizarBadgeNotificaciones();
+}
+
+/** Actualiza el número rojo de la campanita con la cantidad de
+ *  notificaciones no leídas (según el localStorage de este navegador). */
+async function actualizarBadgeNotificaciones() {
+  const badge = document.getElementById('notifBadge');
+  if (!badge || !operacionAutenticada) return;
+  let notifs;
+  try { notifs = await cargarNotificaciones(); }
+  catch (e) { return; }
+  const leidas = new Set(_idsNotificacionesLeidas());
+  const noLeidas = notifs.filter(n => !leidas.has(n.ID)).length;
+  if (noLeidas > 0) {
+    badge.textContent = noLeidas > 99 ? '99+' : String(noLeidas);
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
   }
 }
 
