@@ -2152,6 +2152,14 @@ body.inv-activo .container { max-width: 1800px; }
         <button class="btn btn-ghost" onclick="volverDePlanMantenimiento()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Volver</button>
       </div>
 
+      <!-- Sub-navegación del Plan de Mantenimiento -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:2px">
+        <button class="inv-subtab active" data-pmtab="registro" onclick="pmMostrarSubTab('registro')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Registro</button>
+        <button class="inv-subtab" data-pmtab="horas" onclick="pmMostrarSubTab('horas')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Horas de Mantenimiento</button>
+      </div>
+
+      <div id="pmSub-registro" class="inv-subpanel active">
+
       <div class="card" style="margin-bottom:14px">
         <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Registrar Plan de Mantenimiento</div>
         <div class="card-body" style="padding:18px">
@@ -2237,6 +2245,20 @@ body.inv-activo .container { max-width: 1800px; }
         </div>
         <div style="padding:0;overflow-x:auto" id="pmTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
       </div>
+
+      </div><!-- /pmSub-registro -->
+
+      <div id="pmSub-horas" class="inv-subpanel">
+        <div class="card">
+          <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+            <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Horas de Mantenimiento</span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="pmRenderHorasMantenimiento()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
+          </div>
+          <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Progreso de cada equipo hacia su próximo mantenimiento por horas de operación (ver "Registro" → Horas de Operación de Equipos y planes con Tipo de Frecuencia "Por horas"). Se alimenta de las horas registradas para cada equipo — hoy manual, y en el futuro directo desde tu formulario de operarios.</div>
+          <div class="card-body" style="padding:18px" id="pmHorasContenido"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -6608,6 +6630,7 @@ function abrirPlanMantenimiento(opKey) {
   if (selHoras) selHoras.innerHTML = '<option value="">Selecciona un equipo...</option>' + _renderOptionsGrupo(grupos);
   document.getElementById('pm_fechaInicio').valueAsDate = new Date();
   planMantToggleTipoFrecuencia();
+  pmMostrarSubTab('registro');
 
   renderSidebarOperaciones();
   planMantCargarLista();
@@ -6769,6 +6792,98 @@ async function horasEquipoCargarTabla() {
   cont.innerHTML = `<table class="ie-table"><thead><tr><th>Equipo</th><th>Horas Actuales</th><th>Última Actualización</th></tr></thead><tbody>` +
     filas.map(f => `<tr><td><strong>${esc(f.Equipo)}</strong></td><td>${esc(f.HorasActuales)}</td><td>${esc(f.UltimaActualizacion || '—')}</td></tr>`).join('') +
     `</tbody></table>`;
+}
+
+/** Sub-navegación del panel Plan de Mantenimiento (Registro / Horas de
+ *  Mantenimiento) — con querySelectorAll acotado a este panel para no
+ *  interferir con la sub-navegación (con las mismas clases CSS) del
+ *  panel de Inventario. */
+function pmMostrarSubTab(nombre) {
+  const panel = document.getElementById('panel-planmantenimiento');
+  panel.querySelectorAll('.inv-subpanel').forEach(p => p.classList.remove('active'));
+  panel.querySelectorAll('.inv-subtab').forEach(b => b.classList.remove('active'));
+  document.getElementById('pmSub-' + nombre).classList.add('active');
+  panel.querySelector(`.inv-subtab[data-pmtab="${nombre}"]`).classList.add('active');
+  if (nombre === 'horas') pmRenderHorasMantenimiento();
+}
+
+/** Pinta, agrupados por categoría de equipo (igual que en el selector de
+ *  Equipo), una barra de progreso por cada plan de mantenimiento "por
+ *  horas" activo — mostrando qué tan cerca está cada equipo de su
+ *  próximo mantenimiento, a partir de las horas registradas en la
+ *  tarjeta "Horas de Operación de Equipos". Replica en el sistema la
+ *  hoja "Horas_para_mantenimiento" del programa de mantenimiento. */
+async function pmRenderHorasMantenimiento() {
+  const cont = document.getElementById('pmHorasContenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando…</div>';
+
+  let planes, horasEquipos;
+  try {
+    [planes, horasEquipos] = await Promise.all([cargarPlanesMantenimiento(), cargarHorasEquipos()]);
+  } catch (e) {
+    cont.innerHTML = `<div style="color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
+    return;
+  }
+
+  const planesHoras = planes.filter(p => (p.TipoFrecuencia || 'calendario') === 'horas' && p.Activo !== 'NO');
+  if (!planesHoras.length) {
+    cont.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Todavía no hay planes "por horas de operación" registrados. Ve a la pestaña "Registro" para crear uno.</div>';
+    return;
+  }
+
+  function horasDe(equipo) {
+    const fila = horasEquipos.find(f => f.Equipo === equipo);
+    if (!fila || fila.HorasActuales === '') return null;
+    const n = Number(fila.HorasActuales);
+    return isNaN(n) ? null : n;
+  }
+
+  const grupos = EQUIPOS_POR_SEDE[planMantOperacionActual] || EQUIPOS_LISTADO_GENERAL;
+  const equiposConPlan = new Set(planesHoras.map(p => p.Equipo));
+
+  let html = '';
+  Object.keys(grupos).forEach(nombreGrupo => {
+    const codigosGrupo = grupos[nombreGrupo].map(item => Array.isArray(item) ? item[0] : item);
+    const equiposDelGrupo = codigosGrupo.filter(c => equiposConPlan.has(c));
+    if (!equiposDelGrupo.length) return;
+
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px">${esc(nombreGrupo)}</div>`;
+
+    equiposDelGrupo.forEach(equipo => {
+      const horasActuales = horasDe(equipo);
+      html += `<div style="margin-bottom:14px;padding:12px 14px;border:1px solid var(--border);border-radius:8px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+          <strong style="font-size:13px">${esc(equipo)}</strong>
+          <span style="font-size:12px;color:var(--text3)">${horasActuales === null ? 'Sin horas registradas' : horasActuales.toLocaleString('es-CO') + ' horas'}</span>
+        </div>`;
+
+      planesHoras.filter(p => p.Equipo === equipo).forEach(p => {
+        const intervalo = Number(p.Frecuencia) || 0;
+        if (!intervalo) return;
+        const baseHoras = p.UltimaGeneracionHoras !== '' ? Number(p.UltimaGeneracionHoras) : 0;
+        let pct = 0, restante = intervalo;
+        if (horasActuales !== null) {
+          pct = Math.min(100, Math.max(0, ((horasActuales - baseHoras) / intervalo) * 100));
+          restante = Math.max(0, Math.round(baseHoras + intervalo - horasActuales));
+        }
+        const colorBarra = pct >= 100 ? '#dc2626' : (pct >= 75 ? '#e8701a' : 'var(--accent2)');
+        html += `<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text2);margin-bottom:3px">
+            <span>${esc(p.Descripcion || ('Cada ' + intervalo + ' horas'))}</span>
+            <span>${horasActuales === null ? '—' : (pct >= 100 ? '¡Toca ya!' : `faltan ${restante.toLocaleString('es-CO')} h`)}</span>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;height:10px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${colorBarra};border-radius:6px"></div>
+          </div>
+        </div>`;
+      });
+
+      html += `</div>`;
+    });
+  });
+
+  cont.innerHTML = html || '<div style="color:var(--text3);font-size:13px">No hay equipos con planes por horas y horas registradas todavía.</div>';
 }
 
 // ── Sub-navegación del inventario (Dashboard / Nuevo Producto / Movimientos / Stock / Reportes) ──
