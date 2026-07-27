@@ -2193,6 +2193,7 @@ body.inv-activo .container { max-width: 1800px; }
                 <option value="semestral">Semestral</option>
                 <option value="anual">Anual</option>
                 <option value="bienal">Cada 2 años</option>
+                <option value="sexenal">Cada 6 años</option>
               </select>
             </div>
             <div class="field" id="pm_grupoFrecHoras" style="display:none"><label>Cada cuántas horas *</label>
@@ -2238,9 +2239,11 @@ body.inv-activo .container { max-width: 1800px; }
               <option value="semestral">Semestral</option>
               <option value="anual">Anual</option>
               <option value="bienal">Cada 2 años</option>
+              <option value="sexenal">Cada 6 años</option>
               <option value="horas">Por horas de operación</option>
             </select>
             <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="planMantCargarLista()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
+            <button id="btnImportarPlan2026" class="btn btn-primary" style="display:none;font-size:11px;padding:4px 10px" onclick="importarPlan2026Click()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Importar Plan 2026</button>
           </div>
         </div>
         <div style="padding:0;overflow-x:auto" id="pmTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
@@ -4324,6 +4327,7 @@ const EQUIPOS_ZIPAQUIRA = {
   'Infraestructura':             ['INFRAESTRUCTURA PRIMER PISO','INFRAESTRUCTURA SEGUNDO PISO','INFRAESTRUCTURA 3 PISO','INFRAESTRUCTURA EMERGENCIA','INFRAESTRUCTURA DECORADO','INFRAESTRUCTURA GENERAL'],
   'Compresores de Emergencia':   ['COMPRESOR DE EMERGENCIA NX200','COMPRESOR EMERGENCIA IR160','SCEMERGENCIA'],
   'Compresores Decorado':        ['COMPRESOR DECORADO NX55','COMPRESOR DECORADO NX18','SCDECORADO'],
+  'HOC':                         ['HOC 1','HOC 2','HOC 3'],
 };
 
 // Lista de equipos activos exclusiva de PAVISA México (no afecta a las demás sedes)
@@ -4558,7 +4562,135 @@ const FRECUENCIAS_PLAN = [
   { key: 'semestral',  nombre: 'Semestral',   dias: 182 },
   { key: 'anual',      nombre: 'Anual',       dias: 365 },
   { key: 'bienal',     nombre: 'Cada 2 años', dias: 730 },
+  { key: 'sexenal',    nombre: 'Cada 6 años', dias: 2190 },
 ];
+
+/** Programa de Mantenimiento 2026 de Zipaquirá — importado directamente
+ *  del Excel/ODS real del cliente ("Programa_2026" + "Horas_para_mantenimiento").
+ *  Se usa una sola vez desde importarPlan2026Zipaquira() para poblar
+ *  PlanesMantenimiento y HorasEquipos con los datos reales, en vez de
+ *  tener que digitarlos uno por uno desde el formulario. */
+const PLAN_2026_ZIPAQUIRA = [
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'bienal', descripcion:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'horas', frecuencia:'16000', descripcion:'cambio de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'bienal', descripcion:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'horas', frecuencia:'16000', descripcion:'Cambio de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'bienal', descripcion:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'horas', frecuencia:'16000', descripcion:'cambio de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'bienal', descripcion:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'horas', frecuencia:'8000', descripcion:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'horas', frecuencia:'16000', descripcion:'cambio de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'Cambio filtros de acumulador de gases', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA' },
+  { equipo:'CA1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA' },
+  { equipo:'CA2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA2', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA2', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'Cambio filtros de acumulador de gases', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA2', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA2', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA2', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA' },
+  { equipo:'CA2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA' },
+  { equipo:'CA3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA3', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA3', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'Cambio filtros de acumulador de gases', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA3', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA3', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA3', tipoFrecuencia:'horas', frecuencia:'2000', descripcion:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA' },
+  { equipo:'CA3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA' },
+  { equipo:'DRYCOOLER 1', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 1', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 1', tipoFrecuencia:'calendario', frecuencia:'mensual', descripcion:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 1', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 1', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 1', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 2', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 2', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 2', tipoFrecuencia:'calendario', frecuencia:'mensual', descripcion:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 2', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 2', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 2', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 3', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 3', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 3', tipoFrecuencia:'calendario', frecuencia:'mensual', descripcion:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 3', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 3', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 3', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 4', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 4', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 4', tipoFrecuencia:'calendario', frecuencia:'mensual', descripcion:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 4', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 4', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 4', tipoFrecuencia:'calendario', frecuencia:'semanal', descripcion:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'DRYCOOLER 4', tipoFrecuencia:'calendario', frecuencia:'anual', descripcion:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'SCB1', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'SCB2', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'SCB3', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'SCB4', tipoFrecuencia:'calendario', frecuencia:'diario', descripcion:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'HOC 1', tipoFrecuencia:'calendario', frecuencia:'sexenal', descripcion:'Cambio de alumina (REVISION)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'HOC 1', tipoFrecuencia:'calendario', frecuencia:'bienal', descripcion:'Limpieza de cooler de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'HOC 2', tipoFrecuencia:'calendario', frecuencia:'sexenal', descripcion:'Cambio de alumina (REVISION)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'HOC 2', tipoFrecuencia:'calendario', frecuencia:'bienal', descripcion:'Limpieza de cooler de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'HOC 3', tipoFrecuencia:'calendario', frecuencia:'sexenal', descripcion:'Cambio de alumina (REVISION)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'HOC 3', tipoFrecuencia:'calendario', frecuencia:'bienal', descripcion:'Limpieza de cooler de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA1', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA2', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CA3', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB1', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB2', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB3', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+  { equipo:'CB4', tipoFrecuencia:'calendario', frecuencia:'semestral', descripcion:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.' },
+];
+
+const HORAS_INICIALES_2026_ZIPAQUIRA = {
+  'CB1': 24228,
+  'CB2': 22810,
+  'CB3': 4154,
+  'CB4': 19358,
+  'CA1': 18094,
+  'CA2': 20285,
+  'CA3': 13005,
+};
 
 // Nombres de hojas
 const SH = {
@@ -6631,6 +6763,8 @@ function abrirPlanMantenimiento(opKey) {
   document.getElementById('pm_fechaInicio').valueAsDate = new Date();
   planMantToggleTipoFrecuencia();
   pmMostrarSubTab('registro');
+  const btnImportar = document.getElementById('btnImportarPlan2026');
+  if (btnImportar) btnImportar.style.display = (opKey === 'zipaquira') ? '' : 'none';
 
   renderSidebarOperaciones();
   planMantCargarLista();
@@ -6750,6 +6884,27 @@ function planMantFiltrar() {
     `</tbody></table>`;
 }
 
+/** Botón "Importar Plan 2026" — solo visible en Zipaquirá. Registra de una
+ *  vez las ~109 actividades reales del Programa de Mantenimiento 2026 y
+ *  las horas actuales conocidas de los compresores, y refresca las tablas
+ *  de la pestaña Registro y la de Horas de Mantenimiento. */
+async function importarPlan2026Click() {
+  if (!confirm('Esto va a registrar las ' + PLAN_2026_ZIPAQUIRA.length + ' actividades del Programa de Mantenimiento 2026 (Compresores de baja/alta, Drycoolers, Secadores, HOC y UPS) y las horas actuales conocidas de los compresores. Solo debe hacerse una vez. ¿Continuar?')) return;
+  const btn = document.getElementById('btnImportarPlan2026');
+  if (btn) { btn.disabled = true; btn.textContent = 'Importando…'; }
+  try {
+    const res = await importarPlan2026Zipaquira();
+    alert(`Listo: se registraron ${res.planes} planes de mantenimiento y se actualizaron las horas de ${res.equiposConHoras} equipos. Las órdenes que ya estén vencidas según las horas/fechas reales se generarán automáticamente al revisar los planes.`);
+    planMantCargarLista();
+    horasEquipoCargarTabla();
+    pmRenderHorasMantenimiento();
+  } catch (e) {
+    alert('No se pudo importar: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Importar Plan 2026'; }
+  }
+}
+
 async function horasEquipoActualizar() {
   const equipo = document.getElementById('he_equipo').value;
   const horas  = document.getElementById('he_horas').value;
@@ -6807,12 +6962,14 @@ function pmMostrarSubTab(nombre) {
   if (nombre === 'horas') pmRenderHorasMantenimiento();
 }
 
-/** Pinta, agrupados por categoría de equipo (igual que en el selector de
- *  Equipo), una barra de progreso por cada plan de mantenimiento "por
- *  horas" activo — mostrando qué tan cerca está cada equipo de su
- *  próximo mantenimiento, a partir de las horas registradas en la
- *  tarjeta "Horas de Operación de Equipos". Replica en el sistema la
- *  hoja "Horas_para_mantenimiento" del programa de mantenimiento. */
+/** Pinta una tabla-matriz (equipo/actividad × horas), agrupada por categoría
+ *  de equipo (igual que en el selector de Equipo), replicando el formato de
+ *  la hoja "Horas_para_mantenimiento" del programa de mantenimiento real:
+ *  columnas = hitos de horas de operación compartidos por toda la tabla;
+ *  fila de equipo = horas actuales acumuladas (celdas rellenas hasta ahí);
+ *  fila de actividad (un plan "por horas") = celda verde en cada múltiplo
+ *  de su frecuencia, verde oscuro si ya se cumplió y rojo si es la próxima
+ *  pendiente. */
 async function pmRenderHorasMantenimiento() {
   const cont = document.getElementById('pmHorasContenido');
   if (!cont) return;
@@ -6842,48 +6999,76 @@ async function pmRenderHorasMantenimiento() {
   const grupos = EQUIPOS_POR_SEDE[planMantOperacionActual] || EQUIPOS_LISTADO_GENERAL;
   const equiposConPlan = new Set(planesHoras.map(p => p.Equipo));
 
-  let html = '';
+  // Eje de horas compartido por toda la tabla, en pasos de 2.000 horas.
+  const PASO_HORAS = 2000;
+  let maxHoras = PASO_HORAS;
+  planesHoras.forEach(p => {
+    const intervalo = Number(p.Frecuencia) || 0;
+    const base = p.UltimaGeneracionHoras !== '' ? Number(p.UltimaGeneracionHoras) : 0;
+    maxHoras = Math.max(maxHoras, base + intervalo);
+  });
+  equiposConPlan.forEach(eq => {
+    const h = horasDe(eq);
+    if (h !== null) maxHoras = Math.max(maxHoras, h);
+  });
+  maxHoras = Math.ceil(maxHoras / PASO_HORAS) * PASO_HORAS;
+  const columnas = [];
+  for (let h = PASO_HORAS; h <= maxHoras; h += PASO_HORAS) columnas.push(h);
+
+  const thCols = columnas.map(h => `<th style="text-align:center;min-width:42px;padding:4px 2px;font-size:10px;color:var(--text3);font-weight:600;white-space:nowrap">${(h / 1000)}k</th>`).join('');
+
+  let filas = '';
   Object.keys(grupos).forEach(nombreGrupo => {
     const codigosGrupo = grupos[nombreGrupo].map(item => Array.isArray(item) ? item[0] : item);
     const equiposDelGrupo = codigosGrupo.filter(c => equiposConPlan.has(c));
     if (!equiposDelGrupo.length) return;
 
-    html += `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px">${esc(nombreGrupo)}</div>`;
+    filas += `<tr><td colspan="${columnas.length + 1}" style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:14px 10px 4px;background:var(--surface)">${esc(nombreGrupo)}</td></tr>`;
 
     equiposDelGrupo.forEach(equipo => {
       const horasActuales = horasDe(equipo);
-      html += `<div style="margin-bottom:14px;padding:12px 14px;border:1px solid var(--border);border-radius:8px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-          <strong style="font-size:13px">${esc(equipo)}</strong>
-          <span style="font-size:12px;color:var(--text3)">${horasActuales === null ? 'Sin horas registradas' : horasActuales.toLocaleString('es-CO') + ' horas'}</span>
-        </div>`;
+      const pct = horasActuales === null ? null : Math.min(100, Math.round((horasActuales / maxHoras) * 100));
+      const celdasResumen = columnas.map(h => {
+        const lleno = horasActuales !== null && h <= horasActuales;
+        return `<td style="background:${lleno ? 'var(--accent2)' : 'transparent'};border-left:1px solid var(--border)"></td>`;
+      }).join('');
+      filas += `<tr style="background:var(--surface2)">
+        <td style="padding:6px 10px;position:sticky;left:0;background:var(--surface2)"><strong style="font-size:12.5px">${esc(equipo)}</strong> <span style="font-size:11px;color:var(--text3)">— ${horasActuales === null ? 'sin horas' : horasActuales.toLocaleString('es-CO') + ' h'}${pct === null ? '' : ' (' + pct + '%)'}</span></td>
+        ${celdasResumen}
+      </tr>`;
 
       planesHoras.filter(p => p.Equipo === equipo).forEach(p => {
         const intervalo = Number(p.Frecuencia) || 0;
         if (!intervalo) return;
-        const baseHoras = p.UltimaGeneracionHoras !== '' ? Number(p.UltimaGeneracionHoras) : 0;
-        let pct = 0, restante = intervalo;
-        if (horasActuales !== null) {
-          pct = Math.min(100, Math.max(0, ((horasActuales - baseHoras) / intervalo) * 100));
-          restante = Math.max(0, Math.round(baseHoras + intervalo - horasActuales));
-        }
-        const colorBarra = pct >= 100 ? '#dc2626' : (pct >= 75 ? '#e8701a' : 'var(--accent2)');
-        html += `<div style="margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text2);margin-bottom:3px">
-            <span>${esc(p.Descripcion || ('Cada ' + intervalo + ' horas'))}</span>
-            <span>${horasActuales === null ? '—' : (pct >= 100 ? '¡Toca ya!' : `faltan ${restante.toLocaleString('es-CO')} h`)}</span>
-          </div>
-          <div style="background:var(--surface2);border-radius:6px;height:10px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${colorBarra};border-radius:6px"></div>
-          </div>
-        </div>`;
+        const proximoCheckpoint = horasActuales !== null ? columnas.find(c => c % intervalo === 0 && c > horasActuales) : null;
+        const celdas = columnas.map(h => {
+          if (h % intervalo !== 0) return '<td style="border-left:1px solid var(--border)"></td>';
+          const cumplido = horasActuales !== null && h <= horasActuales;
+          const esProximo = h === proximoCheckpoint;
+          const color = esProximo ? '#dc2626' : (cumplido ? '#16a34a' : '#86efac');
+          return `<td style="background:${color};border-left:1px solid var(--border)" title="${h.toLocaleString('es-CO')} h"></td>`;
+        }).join('');
+        filas += `<tr>
+          <td style="padding:4px 10px 4px 22px;font-size:11.5px;color:var(--text2);position:sticky;left:0;background:var(--surface)">${esc(p.Descripcion || ('Cada ' + intervalo + ' h'))}</td>
+          ${celdas}
+        </tr>`;
       });
-
-      html += `</div>`;
     });
   });
 
-  cont.innerHTML = html || '<div style="color:var(--text3);font-size:13px">No hay equipos con planes por horas y horas registradas todavía.</div>';
+  cont.innerHTML = `
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;font-size:11px;color:var(--text2)">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#86efac;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Programado</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Cumplido</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Próximo</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent2);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Horas acumuladas</span>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
+      <table style="border-collapse:collapse;width:100%;font-size:12px">
+        <thead><tr><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--text3);position:sticky;left:0;background:var(--surface)">Equipo / Actividad</th>${thCols}</tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
 }
 
 // ── Sub-navegación del inventario (Dashboard / Nuevo Producto / Movimientos / Stock / Reportes) ──
@@ -8535,6 +8720,43 @@ async function actualizarHorasEquipo(equipo, horas) {
   await _actualizarFilaPorClave(SH.horasEquipos, HORAS_EQUIPOS_COLS, 'Equipo', equipo, {
     HorasActuales: horas, UltimaActualizacion: new Date().toLocaleString('es-CO'),
   });
+}
+
+/** Importa de una sola vez el Programa de Mantenimiento 2026 real de
+ *  Zipaquirá (PLAN_2026_ZIPAQUIRA + HORAS_INICIALES_2026_ZIPAQUIRA) a las
+ *  hojas PlanesMantenimiento y HorasEquipos. Usa un solo appendHoja con
+ *  todas las filas (en vez de un registrarPlanMantenimiento por fila) para
+ *  que sean 1-2 llamadas a la API en lugar de más de cien. Se protege
+ *  contra reimportar dos veces revisando si ya existe algún plan con ID
+ *  que empiece por "PLAN2026-". */
+async function importarPlan2026Zipaquira() {
+  const planesExistentes = await cargarPlanesMantenimiento();
+  if (planesExistentes.some(p => (p.ID || '').startsWith('PLAN2026-'))) {
+    throw new Error('El Plan de Mantenimiento 2026 ya fue importado antes — revisa "Planes Registrados".');
+  }
+
+  await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const filas = PLAN_2026_ZIPAQUIRA.map((p, i) => PLANES_MANTENIMIENTO_COLS.map(c => {
+    if (c === 'ID') return 'PLAN2026-' + String(i + 1).padStart(3, '0');
+    if (c === 'Equipo') return p.equipo;
+    if (c === 'TipoMantenimiento') return 'Preventivo';
+    if (c === 'TipoFrecuencia') return p.tipoFrecuencia;
+    if (c === 'Frecuencia') return p.frecuencia;
+    if (c === 'FechaInicio') return p.tipoFrecuencia === 'calendario' ? hoyStr : '';
+    if (c === 'UltimaGeneracion' || c === 'UltimaGeneracionHoras') return '';
+    if (c === 'Descripcion') return p.descripcion;
+    if (c === 'Responsable') return p.responsable;
+    if (c === 'Activo') return 'SI';
+    return '';
+  }));
+  await appendHoja(SH.planesMantenimiento, filas);
+
+  for (const [equipo, horas] of Object.entries(HORAS_INICIALES_2026_ZIPAQUIRA)) {
+    await actualizarHorasEquipo(equipo, horas);
+  }
+
+  return { planes: filas.length, equiposConHoras: Object.keys(HORAS_INICIALES_2026_ZIPAQUIRA).length };
 }
 
 async function cargarNotificaciones() {
