@@ -4692,6 +4692,101 @@ const HORAS_INICIALES_2026_ZIPAQUIRA = {
   'CA3': 13005,
 };
 
+/** Hoja "Horas_para_mantenimiento" del Excel real del cliente, replicada
+ *  literalmente (categoría → equipos con sus horas totales, y una lista de
+ *  actividades compartida por categoría con los puntos de horas exactos en
+ *  los que el Excel las marca en verde). No se calcula con una fórmula de
+ *  frecuencia — se copian los puntos tal como están en el archivo real,
+ *  porque no siguen un patrón periódico único por actividad. Los planes de
+ *  PLAN_2026_ZIPAQUIRA (arriba) son los que de verdad generan las órdenes
+ *  automáticas; esta tabla es solo la réplica visual de referencia. */
+const HORAS_MANTENIMIENTO_REAL_ZIPAQUIRA = [
+  {
+    categoria: 'Compresores de baja',
+    equipos: ['CB1', 'CB2', 'CB3', 'CB4'],
+    actividades: [
+      { nombre:'Fugas', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Nivel de aceite', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Muestra de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 56000, 64000, 80000, 88000, 104000, 112000] },
+      { nombre:'Drenajes', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Filtros de aire primarios', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'Filtros de aire segundarios', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'Aire de sellos', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Temperaturas y presión de agua', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Aceite cojinetes', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Bomba auxiliar', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Filtros de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Filtro de instrumentación', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Filtro separador', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'válvulas', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'válvula cheque', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Cooler', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Cooler de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Limpieza aerodinámica', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Cambio de aceite', marcas:[24000, 48000, 72000, 96000, 120000] },
+      { nombre:'Acople motor compresor', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'parámetros de compresor', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+    ],
+  },
+  {
+    categoria: 'Compresores de alta',
+    equipos: ['CA1', 'CA2', 'CA3'],
+    actividades: [
+      { nombre:'Fugas', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Nivel de aceite', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Muestra de aceite', marcas:[8000, 16000, 32000, 40000, 56000, 64000, 80000, 88000, 104000, 112000] },
+      { nombre:'Drenajes', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Filtros de aire primarios', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'Filtros de aire segundarios', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'Aire de sellos', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Temperaturas y presión de agua', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Aceite cojinetes', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Bomba auxiliar', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+      { nombre:'Filtros de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Filtro de instrumentación', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Filtro separador', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'válvulas', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'válvula cheque', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Cooler', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Cooler de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Limpieza aerodinámica', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'Cambio de aceite', marcas:[24000, 48000, 72000, 96000, 120000] },
+      { nombre:'Acople motor compresor', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+      { nombre:'parámetros de compresor', marcas:[2000, 4000, 24000, 26000, 28000, 48000, 50000, 52000, 72000, 74000, 76000, 96000, 98000, 100000, 120000] },
+    ],
+  },
+  {
+    categoria: 'Compresor de emergencia',
+    equipos: ['COMPRESOR DE EMERGENCIA NX200'],
+    actividades: [
+      { nombre:'Cambio de filtros aire', marcas:[2000] },
+      { nombre:'cambio filtros de aceite', marcas:[2000] },
+      { nombre:'Cambio de filtro separador', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'cambio de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+    ],
+  },
+  {
+    categoria: 'Compresor de decorado',
+    equipos: ['COMPRESOR DECORADO NX55'],
+    actividades: [
+      { nombre:'Cambio de filtros aire', marcas:[2000, 120000] },
+      { nombre:'Cambio filtros de aceite', marcas:[2000, 120000] },
+      { nombre:'Cambio de filtro separador', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'Cambio de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+    ],
+  },
+  {
+    categoria: 'Compresor de decorado de respaldo.',
+    equipos: ['COMPRESOR DECORADO NX18'],
+    actividades: [
+      { nombre:'Cambio de filtros aire', marcas:[2000] },
+      { nombre:'Cambio filtros de aceite', marcas:[2000] },
+      { nombre:'Cambio de filtro separador', marcas:[4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000, 36000, 40000, 44000, 48000, 52000, 56000, 60000, 64000, 68000, 72000, 76000, 80000, 84000, 88000, 92000, 96000, 100000, 104000, 108000, 112000, 116000, 120000] },
+      { nombre:'Cambio de aceite', marcas:[8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 72000, 80000, 88000, 96000, 104000, 112000, 120000] },
+    ],
+  },
+];
+
 // Nombres de hojas
 const SH = {
   ordenes:   'Ordenes',
@@ -6963,30 +7058,28 @@ function pmMostrarSubTab(nombre) {
   if (nombre === 'horas') pmRenderHorasMantenimiento();
 }
 
-/** Pinta una tabla-matriz (equipo/actividad × horas), agrupada por categoría
- *  de equipo (igual que en el selector de Equipo), replicando el formato de
- *  la hoja "Horas_para_mantenimiento" del programa de mantenimiento real:
- *  columnas = hitos de horas de operación compartidos por toda la tabla;
- *  fila de equipo = horas actuales acumuladas (celdas rellenas hasta ahí);
- *  fila de actividad (un plan "por horas") = celda verde en cada múltiplo
- *  de su frecuencia, verde oscuro si ya se cumplió y rojo si es la próxima
- *  pendiente. */
+/** Pinta la tabla-matriz (equipo/actividad × horas) replicando LITERALMENTE
+ *  la hoja "Horas_para_mantenimiento" del Excel real del cliente (ver
+ *  HORAS_MANTENIMIENTO_REAL_ZIPAQUIRA): mismas categorías, mismos equipos,
+ *  misma lista de actividades por categoría, y los mismos puntos de horas
+ *  marcados en verde — no se recalculan a partir de una frecuencia, se
+ *  copian tal cual. Lo único que sí queda en vivo son las horas actuales y
+ *  el % de cada equipo, tomados de la hoja HorasEquipos. */
 async function pmRenderHorasMantenimiento() {
   const cont = document.getElementById('pmHorasContenido');
   if (!cont) return;
   cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando…</div>';
 
-  let planes, horasEquipos;
-  try {
-    [planes, horasEquipos] = await Promise.all([cargarPlanesMantenimiento(), cargarHorasEquipos()]);
-  } catch (e) {
-    cont.innerHTML = `<div style="color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
+  if (planMantOperacionActual !== 'zipaquira') {
+    cont.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Esta tabla replica el Programa de Mantenimiento real de Zipaquirá — todavía no está disponible para esta sede.</div>';
     return;
   }
 
-  const planesHoras = planes.filter(p => (p.TipoFrecuencia || 'calendario') === 'horas' && p.Activo !== 'NO');
-  if (!planesHoras.length) {
-    cont.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Todavía no hay planes "por horas de operación" registrados. Ve a la pestaña "Registro" para crear uno.</div>';
+  let horasEquipos;
+  try {
+    horasEquipos = await cargarHorasEquipos();
+  } catch (e) {
+    cont.innerHTML = `<div style="color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
     return;
   }
 
@@ -6997,76 +7090,44 @@ async function pmRenderHorasMantenimiento() {
     return isNaN(n) ? null : n;
   }
 
-  const grupos = EQUIPOS_POR_SEDE[planMantOperacionActual] || EQUIPOS_LISTADO_GENERAL;
-  const equiposConPlan = new Set(planesHoras.map(p => p.Equipo));
-
-  // Eje de horas compartido por toda la tabla, en pasos de 2.000 horas.
+  // Eje de horas y "vida útil" de referencia, igual que en el Excel real.
   const PASO_HORAS = 2000;
-  let maxHoras = PASO_HORAS;
-  planesHoras.forEach(p => {
-    const intervalo = Number(p.Frecuencia) || 0;
-    const base = p.UltimaGeneracionHoras !== '' ? Number(p.UltimaGeneracionHoras) : 0;
-    maxHoras = Math.max(maxHoras, base + intervalo);
-  });
-  equiposConPlan.forEach(eq => {
-    const h = horasDe(eq);
-    if (h !== null) maxHoras = Math.max(maxHoras, h);
-  });
-  maxHoras = Math.ceil(maxHoras / PASO_HORAS) * PASO_HORAS;
+  const MAX_HORAS = 120000;
   const columnas = [];
-  for (let h = PASO_HORAS; h <= maxHoras; h += PASO_HORAS) columnas.push(h);
+  for (let h = PASO_HORAS; h <= MAX_HORAS; h += PASO_HORAS) columnas.push(h);
 
-  const thCols = columnas.map(h => `<th style="text-align:center;min-width:42px;padding:4px 2px;font-size:10px;color:var(--text3);font-weight:600;white-space:nowrap">${(h / 1000)}k</th>`).join('');
+  const BORDE = '1px solid #b9c2d0';
+  const thCols = columnas.map(h => `<th style="text-align:center;min-width:56px;padding:6px 4px;font-size:11px;color:var(--text3);font-weight:600;white-space:nowrap;border:${BORDE}">${(h / 1000)}k</th>`).join('');
 
   let filas = '';
-  Object.keys(grupos).forEach(nombreGrupo => {
-    const codigosGrupo = grupos[nombreGrupo].map(item => Array.isArray(item) ? item[0] : item);
-    const equiposDelGrupo = codigosGrupo.filter(c => equiposConPlan.has(c));
-    if (!equiposDelGrupo.length) return;
+  HORAS_MANTENIMIENTO_REAL_ZIPAQUIRA.forEach(block => {
+    filas += `<tr><td colspan="${columnas.length + 1}" style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:14px 10px 4px;background:var(--surface);border:${BORDE}">${esc(block.categoria)}</td></tr>`;
 
-    filas += `<tr><td colspan="${columnas.length + 1}" style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:14px 10px 4px;background:var(--surface)">${esc(nombreGrupo)}</td></tr>`;
-
-    equiposDelGrupo.forEach(equipo => {
+    block.equipos.forEach(equipo => {
       const horasActuales = horasDe(equipo);
-      const pct = horasActuales === null ? null : Math.min(100, Math.round((horasActuales / maxHoras) * 100));
-      const celdasResumen = columnas.map(h => {
-        const lleno = horasActuales !== null && h <= horasActuales;
-        return `<td style="background:${lleno ? 'var(--accent2)' : 'transparent'};border-left:1px solid var(--border)"></td>`;
-      }).join('');
+      const pct = horasActuales === null ? null : Math.round((horasActuales / MAX_HORAS) * 100);
       filas += `<tr style="background:var(--surface2)">
-        <td style="padding:6px 10px;position:sticky;left:0;background:var(--surface2)"><strong style="font-size:12.5px">${esc(equipo)}</strong> <span style="font-size:11px;color:var(--text3)">— ${horasActuales === null ? 'sin horas' : horasActuales.toLocaleString('es-CO') + ' h'}${pct === null ? '' : ' (' + pct + '%)'}</span></td>
-        ${celdasResumen}
+        <td colspan="${columnas.length + 1}" style="padding:6px 10px;position:sticky;left:0;background:var(--surface2);border:${BORDE}"><strong style="font-size:12.5px">${esc(equipo)}</strong> <span style="font-size:11px;color:var(--text3)">— ${horasActuales === null ? 'sin horas registradas' : horasActuales.toLocaleString('es-CO') + ' h'}${pct === null ? '' : ' (' + pct + '%)'}</span></td>
       </tr>`;
+    });
 
-      planesHoras.filter(p => p.Equipo === equipo).forEach(p => {
-        const intervalo = Number(p.Frecuencia) || 0;
-        if (!intervalo) return;
-        const proximoCheckpoint = horasActuales !== null ? columnas.find(c => c % intervalo === 0 && c > horasActuales) : null;
-        const celdas = columnas.map(h => {
-          if (h % intervalo !== 0) return '<td style="border-left:1px solid var(--border)"></td>';
-          const cumplido = horasActuales !== null && h <= horasActuales;
-          const esProximo = h === proximoCheckpoint;
-          const color = esProximo ? '#dc2626' : (cumplido ? '#16a34a' : '#86efac');
-          return `<td style="background:${color};border-left:1px solid var(--border)" title="${h.toLocaleString('es-CO')} h"></td>`;
-        }).join('');
-        filas += `<tr>
-          <td style="padding:4px 10px 4px 22px;font-size:11.5px;color:var(--text2);position:sticky;left:0;background:var(--surface)">${esc(p.Descripcion || ('Cada ' + intervalo + ' h'))}</td>
-          ${celdas}
-        </tr>`;
-      });
+    block.actividades.forEach(act => {
+      const marcas = new Set(act.marcas);
+      const celdas = columnas.map(h => `<td style="background:${marcas.has(h) ? '#C6E0B4' : 'transparent'};border:${BORDE}" title="${h.toLocaleString('es-CO')} h"></td>`).join('');
+      filas += `<tr>
+        <td style="padding:6px 12px;font-size:12px;color:var(--text2);white-space:nowrap;position:sticky;left:0;background:var(--surface);border:${BORDE}">${esc(act.nombre)}</td>
+        ${celdas}
+      </tr>`;
     });
   });
 
   cont.innerHTML = `
     <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;font-size:11px;color:var(--text2)">
-      <span><span style="display:inline-block;width:10px;height:10px;background:#86efac;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Programado</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Cumplido</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Próximo</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:var(--accent2);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Horas acumuladas</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#C6E0B4;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Punto de mantenimiento programado</span>
     </div>
     <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
-      <table style="border-collapse:collapse;width:100%;font-size:12px">
-        <thead><tr><th style="text-align:left;padding:6px 10px;font-size:11px;color:var(--text3);position:sticky;left:0;background:var(--surface)">Equipo / Actividad</th>${thCols}</tr></thead>
+      <table style="border-collapse:collapse;width:auto;font-size:12px">
+        <thead><tr><th style="text-align:left;padding:8px 12px;font-size:12px;color:var(--text3);white-space:nowrap;min-width:260px;position:sticky;left:0;background:var(--surface);border:${BORDE}">Equipo / Actividad</th>${thCols}</tr></thead>
         <tbody>${filas}</tbody>
       </table>
     </div>`;
