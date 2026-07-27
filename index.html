@@ -2156,6 +2156,7 @@ body.inv-activo .container { max-width: 1800px; }
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:2px">
         <button class="inv-subtab active" data-pmtab="registro" onclick="pmMostrarSubTab('registro')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Registro</button>
         <button class="inv-subtab" data-pmtab="horas" onclick="pmMostrarSubTab('horas')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Horas de Mantenimiento</button>
+        <button class="inv-subtab" data-pmtab="programa2026" onclick="pmMostrarSubTab('programa2026')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Programa 2026</button>
       </div>
 
       <div id="pmSub-registro" class="inv-subpanel active">
@@ -2259,6 +2260,17 @@ body.inv-activo .container { max-width: 1800px; }
           </div>
           <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Progreso de cada equipo hacia su próximo mantenimiento por horas de operación (ver "Registro" → Horas de Operación de Equipos y planes con Tipo de Frecuencia "Por horas"). Se alimenta de las horas registradas para cada equipo — hoy manual, y en el futuro directo desde tu formulario de operarios.</div>
           <div class="card-body" style="padding:18px" id="pmHorasContenido"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
+        </div>
+      </div>
+
+      <div id="pmSub-programa2026" class="inv-subpanel">
+        <div class="card">
+          <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+            <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Programa de Mantenimiento 2026</span>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="pmRenderPrograma2026()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
+          </div>
+          <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Réplica completa del Programa de Mantenimiento 2026 real de Zipaquirá: cada actividad por equipo, con responsable, documento/registro, frecuencia y los meses en que está programada.</div>
+          <div class="card-body" style="padding:18px" id="pmPrograma2026Contenido"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
       </div>
 
@@ -4787,6 +4799,126 @@ const HORAS_MANTENIMIENTO_REAL_ZIPAQUIRA = [
   },
 ];
 
+
+/** Réplica literal y completa de la hoja "Programa_2026" del Excel real
+ *  del cliente: cada una de las 109 actividades (una fila por equipo),
+ *  con su responsable, documento/registro, frecuencia tal como está
+ *  escrita en el archivo, y los meses en que el Excel la marca como
+ *  "P" (Programada). Es la fuente para la pestaña "Programa 2026"; los
+ *  planes que generan las órdenes automáticas siguen siendo los de
+ *  PLAN_2026_ZIPAQUIRA. */
+const PROGRAMA_2026_COMPLETO_ZIPAQUIRA = [
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por el proveedor', frecuencia:'CADA DOS AÑOS', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mensual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['JUN', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['JUL'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:['FEB', 'NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:['NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB1', actividad:'cambio de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'16000 horas 2 años', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por el proveedor', frecuencia:'CADA DOS AÑOS', meses:['MAR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mensual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['FEB', 'JUN', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['JUL'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:['NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:['NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB2', actividad:'Cambio de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'16000 horas 2 años', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por el proveedor', frecuencia:'CADA DOS AÑOS', meses:['MAR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mensual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['FEB', 'JUN', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['JUL'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:['NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:['NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB3', actividad:'cambio de aceite', responsable:'', documento:'', frecuencia:'16000 horas 2 años', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por el proveedor', frecuencia:'CADA DOS AÑOS', meses:['MAR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mensual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['FEB', 'JUN', 'DIC'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['JUL'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:['NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'Cambio de filtro separador', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'8000Horas', meses:['NOV'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'Limpieza aerodinamica', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:[] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'Anual', meses:['ABR'] },
+  { categoria:'Compresores de baja- IR', equipo:'CB4', actividad:'cambio de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe generado por solucionAIRE', frecuencia:'16000 horas 2 años', meses:[] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Infrome generado por el proveedor', frecuencia:'Anual', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'Cambio filtros de acumulador de gases', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['ABR', 'OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA1', actividad:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Infrome generado por el proveedor', frecuencia:'Anual', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'Cambio filtros de acumulador de gases', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['ABR', 'OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA', documento:'Informe generado por solucionAIRE.', frecuencia:'Anual', meses:['OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA2', actividad:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA', documento:'Informe generado por solucionAIRE.', frecuencia:'Anual', meses:['OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'Mantenimiento preventivo (recomendado por fabricante)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Infrome generado por el proveedor', frecuencia:'Anual', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'inspeccion de equipos (generacion de reporte) nivel de aceite, sensores, temepratura, aire, agua, vibracion, voltajes, amperajes entre otros.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'Cambio filtros de acumulador de gases', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'Cambio de filtros primarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'cambio filtros secundarios', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['MAY'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'cambio filtros de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'2000Hr', meses:['ABR', 'OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'Limpieza Coolers aire', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA', documento:'Informe generado por solucionAIRE.', frecuencia:'Anual', meses:['OCT'] },
+  { categoria:'compresores de alta- ELLIOT', equipo:'CA3', actividad:'Limpiez Cooler de aceite', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE, EHS ASIGNADO A PLANTA', documento:'Informe generado por solucionAIRE.', frecuencia:'Anual', meses:['OCT'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 1', actividad:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 1', actividad:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Reporte al personal a cargo', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 1', actividad:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'mesual', meses:['MAR', 'JUL', 'NOV'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 1', actividad:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['SEP'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 1', actividad:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 1', actividad:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 1', actividad:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['NOV'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 2', actividad:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 2', actividad:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Reporte al personal a cargo', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 2', actividad:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'mesual', meses:['MAR', 'JUL', 'NOV'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 2', actividad:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['SEP'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 2', actividad:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 2', actividad:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 2', actividad:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['NOV'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 3', actividad:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 3', actividad:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Reporte al personal a cargo', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 3', actividad:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'mesual', meses:['MAR', 'JUL', 'NOV'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 3', actividad:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['SEP'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 3', actividad:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 3', actividad:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 3', actividad:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['NOV'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 4', actividad:'Limpieza de mallas', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 4', actividad:'limpieza de filtros de entrada de agua sistema diabatico', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Reporte al personal a cargo', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 4', actividad:'limpieza de drycooler de adentro hacia afuera', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'mesual', meses:['MAR', 'JUL', 'NOV'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 4', actividad:'Limpieza de filtros de circuito cerrado de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Semestral', meses:['SEP'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 4', actividad:'Mantenimiento bombas y motores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 4', actividad:'Inspeccion y limpieza de desaireadores', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'semanal', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Drycoolers', equipo:'DRYCOOLER 4', actividad:'lavado de rediador con quimico desincrustante.', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Anual', meses:['NOV'] },
+  { categoria:'Secadores (refrigerados)', equipo:'SCB1', actividad:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Secadores (refrigerados)', equipo:'SCB2', actividad:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Secadores (refrigerados)', equipo:'SCB3', actividad:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'Secadores (refrigerados)', equipo:'SCB4', actividad:'inspeccion niveles de refrigerante, funcionamiento de drenajes', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'informe consolidado de forma mesual en power BI.', frecuencia:'Diario', meses:['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'] },
+  { categoria:'HOC', equipo:'HOC 1', actividad:'Cambio de alumina (REVISION)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Informe generado por solucionAIRE.', frecuencia:'CADA SEIS AÑOS', meses:[] },
+  { categoria:'HOC', equipo:'HOC 1', actividad:'Limpieza de cooler de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Informe generado por solucionAIRE.', frecuencia:'CADA DOS AÑOS', meses:[] },
+  { categoria:'HOC', equipo:'HOC 2', actividad:'Cambio de alumina (REVISION)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Informe generado por solucionAIRE.', frecuencia:'CADA SEIS AÑOS', meses:[] },
+  { categoria:'HOC', equipo:'HOC 2', actividad:'Limpieza de cooler de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Informe generado por solucionAIRE.', frecuencia:'CADA DOS AÑOS', meses:[] },
+  { categoria:'HOC', equipo:'HOC 3', actividad:'Cambio de alumina (REVISION)', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Informe generado por solucionAIRE.', frecuencia:'CADA SEIS AÑOS', meses:[] },
+  { categoria:'HOC', equipo:'HOC 3', actividad:'Limpieza de cooler de agua', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'Informe generado por solucionAIRE.', frecuencia:'CADA DOS AÑOS', meses:['DIC'] },
+  { categoria:'MANTENIMIENNTOS UPS DE COMPRESORES', equipo:'CA1', actividad:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Cada 6 meses', meses:['ABR', 'OCT'] },
+  { categoria:'MANTENIMIENNTOS UPS DE COMPRESORES', equipo:'CA2', actividad:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Cada 6 meses', meses:['ABR', 'OCT'] },
+  { categoria:'MANTENIMIENNTOS UPS DE COMPRESORES', equipo:'CA3', actividad:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Cada 6 meses', meses:['ABR', 'OCT'] },
+  { categoria:'MANTENIMIENNTOS UPS DE COMPRESORES', equipo:'CB1', actividad:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Cada 6 meses', meses:['ABR', 'OCT'] },
+  { categoria:'MANTENIMIENNTOS UPS DE COMPRESORES', equipo:'CB2', actividad:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Cada 6 meses', meses:['ABR', 'OCT'] },
+  { categoria:'MANTENIMIENNTOS UPS DE COMPRESORES', equipo:'CB3', actividad:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Cada 6 meses', meses:['ABR', 'OCT'] },
+  { categoria:'MANTENIMIENNTOS UPS DE COMPRESORES', equipo:'CB4', actividad:'LIMPIEZA DE UPS', responsable:'COORDINADOR DE OPERACIONES , INGENIERIA SOLUCIONAIRE.', documento:'hoja de vida de equipos', frecuencia:'Cada 6 meses', meses:['ABR', 'OCT'] },
+];
+
 // Nombres de hojas
 const SH = {
   ordenes:   'Ordenes',
@@ -7056,6 +7188,7 @@ function pmMostrarSubTab(nombre) {
   document.getElementById('pmSub-' + nombre).classList.add('active');
   panel.querySelector(`.inv-subtab[data-pmtab="${nombre}"]`).classList.add('active');
   if (nombre === 'horas') pmRenderHorasMantenimiento();
+  if (nombre === 'programa2026') pmRenderPrograma2026();
 }
 
 /** Pinta la tabla-matriz (equipo/actividad × horas) replicando LITERALMENTE
@@ -7128,6 +7261,102 @@ async function pmRenderHorasMantenimiento() {
     <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
       <table style="border-collapse:collapse;width:auto;font-size:12px">
         <thead><tr><th style="text-align:left;padding:8px 12px;font-size:12px;color:var(--text3);white-space:nowrap;min-width:260px;position:sticky;left:0;background:var(--surface);border:${BORDE}">Equipo / Actividad</th>${thCols}</tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+}
+
+/** Pinta la réplica completa de la hoja "Programa_2026" del cliente
+ *  (ver PROGRAMA_2026_COMPLETO_ZIPAQUIRA): categoría → equipo → cada
+ *  actividad con su responsable, documento/registro, frecuencia (tal
+ *  como está escrita en el Excel) y los meses en que está programada. */
+async function pmRenderPrograma2026() {
+  const cont = document.getElementById('pmPrograma2026Contenido');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando…</div>';
+
+  if (planMantOperacionActual !== 'zipaquira') {
+    cont.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Esta tabla replica el Programa de Mantenimiento real de Zipaquirá — todavía no está disponible para esta sede.</div>';
+    return;
+  }
+
+  let horasEquipos;
+  try {
+    horasEquipos = await cargarHorasEquipos();
+  } catch (e) {
+    cont.innerHTML = `<div style="color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
+    return;
+  }
+
+  function horasDe(equipo) {
+    const fila = horasEquipos.find(f => f.Equipo === equipo);
+    if (!fila || fila.HorasActuales === '') return null;
+    const n = Number(fila.HorasActuales);
+    return isNaN(n) ? null : n;
+  }
+
+  const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  const BORDE = '1px solid #b9c2d0';
+  const COLS_TOTALES = 4 + MESES.length;
+
+  // Agrupa el listado plano por categoría → equipo, preservando el orden
+  // en que aparecen en el Excel.
+  const categorias = [];
+  const mapaCategorias = new Map();
+  PROGRAMA_2026_COMPLETO_ZIPAQUIRA.forEach(a => {
+    if (!mapaCategorias.has(a.categoria)) {
+      const cat = { nombre: a.categoria, equipos: [], mapaEquipos: new Map() };
+      mapaCategorias.set(a.categoria, cat);
+      categorias.push(cat);
+    }
+    const cat = mapaCategorias.get(a.categoria);
+    if (!cat.mapaEquipos.has(a.equipo)) {
+      const eq = { equipo: a.equipo, actividades: [] };
+      cat.mapaEquipos.set(a.equipo, eq);
+      cat.equipos.push(eq);
+    }
+    cat.mapaEquipos.get(a.equipo).actividades.push(a);
+  });
+
+  const thMeses = MESES.map(m => `<th style="text-align:center;min-width:44px;padding:6px 4px;font-size:10.5px;color:var(--text3);font-weight:600;border:${BORDE}">${m}</th>`).join('');
+
+  let filas = '';
+  categorias.forEach(cat => {
+    filas += `<tr><td colspan="${COLS_TOTALES}" style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:14px 10px 4px;background:var(--surface);border:${BORDE}">${esc(cat.nombre)}</td></tr>`;
+
+    cat.equipos.forEach(eq => {
+      const horasActuales = horasDe(eq.equipo);
+      filas += `<tr style="background:var(--surface2)">
+        <td colspan="${COLS_TOTALES}" style="padding:6px 10px;border:${BORDE}"><strong style="font-size:12.5px">${esc(eq.equipo)}</strong>${horasActuales === null ? '' : ` <span style="font-size:11px;color:var(--text3)">— ${horasActuales.toLocaleString('es-CO')} h</span>`}</td>
+      </tr>`;
+
+      eq.actividades.forEach(a => {
+        const marcasMes = new Set(a.meses);
+        const celdasMes = MESES.map(m => `<td style="background:${marcasMes.has(m) ? '#C6E0B4' : 'transparent'};border:${BORDE}"></td>`).join('');
+        filas += `<tr>
+          <td style="padding:6px 10px;font-size:12px;color:var(--text2);border:${BORDE}">${esc(a.actividad)}</td>
+          <td style="padding:6px 10px;font-size:11px;color:var(--text3);border:${BORDE}">${esc(a.responsable)}</td>
+          <td style="padding:6px 10px;font-size:11px;color:var(--text3);border:${BORDE}">${esc(a.documento)}</td>
+          <td style="padding:6px 10px;font-size:11px;color:var(--text2);white-space:nowrap;border:${BORDE}">${esc(a.frecuencia)}</td>
+          ${celdasMes}
+        </tr>`;
+      });
+    });
+  });
+
+  cont.innerHTML = `
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;font-size:11px;color:var(--text2)">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#C6E0B4;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Mes programado</span>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
+      <table style="border-collapse:collapse;width:auto;font-size:12px">
+        <thead><tr>
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text3);white-space:nowrap;min-width:240px;border:${BORDE}">Actividad</th>
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text3);white-space:nowrap;min-width:200px;border:${BORDE}">Responsable</th>
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text3);white-space:nowrap;min-width:180px;border:${BORDE}">Documento / Registro</th>
+          <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--text3);white-space:nowrap;min-width:120px;border:${BORDE}">Frecuencia</th>
+          ${thMeses}
+        </tr></thead>
         <tbody>${filas}</tbody>
       </table>
     </div>`;
