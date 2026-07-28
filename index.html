@@ -9433,6 +9433,17 @@ async function _actualizarFilaPorClave(hoja, cols, colClave, valorClave, datosPa
   const hdrs = { Authorization: 'Bearer ' + googleAccessToken };
   const resp = await fetch(base + '/values/' + encodeURIComponent(hoja + '!A:Z'), { headers: hdrs });
   if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado'); }
+  // Si esta lectura falla por cualquier otro motivo (permisos, rate limit,
+  // etc.) NO se puede seguir: antes, un error aquí se interpretaba
+  // silenciosamente como "la hoja está vacía", así que nunca encontraba la
+  // fila a actualizar y terminaba agregando una fila nueva (casi en blanco)
+  // cada vez, duplicando datos en vez de corregir el registro existente.
+  if (!resp.ok) {
+    const txt = await resp.text();
+    let msg = 'Error ' + resp.status;
+    try { msg = JSON.parse(txt).error?.message || msg; } catch (_) {}
+    throw new Error('No se pudo leer la hoja ' + hoja + ' antes de actualizar: ' + msg);
+  }
   const d = await resp.json();
   const valores = d.values || [];
   const idxCol = colsReales.indexOf(colClave);
