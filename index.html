@@ -7393,20 +7393,36 @@ async function guardarHorasEquiposGrid() {
       { estado: estadoAnu, hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS },
     ];
 
+    // Arma todos los cambios en memoria y los guarda en UN SOLO viaje por
+    // hoja (en vez de una lectura+escritura por cada equipo) — así no se
+    // agota la cuota de lecturas por minuto de Sheets al guardar varios
+    // equipos de una vez.
+    const ahora = new Date().toLocaleString('es-CO');
+    const cambiosHoras = {};
     for (const { equipo, horas } of cambios) {
-      await actualizarHorasEquipo(equipo, horas);
-      for (const { estado, hoja, cols } of estados) {
+      cambiosHoras[equipo] = { HorasActuales: horas, UltimaActualizacion: ahora };
+    }
+    await _actualizarFilasPorClaveEnLote(SH.horasEquipos, HORAS_EQUIPOS_COLS, 'Equipo', cambiosHoras);
+
+    for (const { estado, hoja, cols } of estados) {
+      const cambiosEstado = {};
+      for (const { equipo, horas } of cambios) {
         const fila = estado.find(f => f.Equipo === equipo);
-        if (!fila || fila.UltimaGeneracionHoras === '') {
-          await _actualizarFilaPorClave(hoja, cols, 'Equipo', equipo, { UltimaGeneracionHoras: String(horas) });
-        }
+        if (!fila || fila.UltimaGeneracionHoras === '') cambiosEstado[equipo] = { UltimaGeneracionHoras: String(horas) };
       }
+      await _actualizarFilasPorClaveEnLote(hoja, cols, 'Equipo', cambiosEstado);
+    }
+
+    const cambiosPlanes = {};
+    for (const { equipo, horas } of cambios) {
       for (const plan of planes) {
         if (plan.Equipo === equipo && (plan.TipoFrecuencia || '') === 'horas' && plan.UltimaGeneracionHoras === '') {
-          await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', plan.ID, { UltimaGeneracionHoras: String(horas) });
+          cambiosPlanes[plan.ID] = { UltimaGeneracionHoras: String(horas) };
         }
       }
     }
+    await _actualizarFilasPorClaveEnLote(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', cambiosPlanes);
+
     await pmRenderRegistroHoras();
     const msgNuevo = document.getElementById('rhMsg');
     msgNuevo.style.color = '#15803d';
@@ -7491,11 +7507,13 @@ async function reiniciarHorasYLimpiarAutomaticasClick() {
     await eliminarFilasDondeCumple(SH.informeAnualEstado, () => true);
 
     const planes = await cargarPlanesMantenimiento();
+    const cambiosPlanes = {};
     for (const plan of planes) {
       if ((plan.TipoFrecuencia || '') === 'horas' && plan.UltimaGeneracionHoras !== '') {
-        await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', plan.ID, { UltimaGeneracionHoras: '' });
+        cambiosPlanes[plan.ID] = { UltimaGeneracionHoras: '' };
       }
     }
+    await _actualizarFilasPorClaveEnLote(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', cambiosPlanes);
 
     const nOrdenes = await limpiarOrdenesAutomaticas();
 
@@ -9582,6 +9600,60 @@ async function _actualizarFilaPorClave(hoja, cols, colClave, valorClave, datosPa
   } else {
     await appendHoja(hoja, [filaCompleta]);
   }
+}
+
+/** Igual que _actualizarFilaPorClave, pero para actualizar MUCHAS filas de
+ *  una sola hoja en un solo viaje (1 lectura + 1 escritura), en vez de una
+ *  lectura+escritura POR fila — necesario para no agotar la cuota de
+ *  "Read requests per minute" de Sheets cuando se guardan de una vez las
+ *  horas de muchos equipos (ver guardarHorasEquiposGrid).
+ *  cambiosPorClave: { [valorDeLaClave]: { columna: valor, ... } } — si la
+ *  clave no existe todavía en la hoja, agrega una fila nueva al final. */
+async function _actualizarFilasPorClaveEnLote(hoja, cols, colClave, cambiosPorClave) {
+  const claves = Object.keys(cambiosPorClave);
+  if (!claves.length) return;
+
+  const colsReales = await asegurarHoja(hoja, cols);
+  const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+  const hdrs = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
+  const resp = await fetch(base + '/values/' + encodeURIComponent(hoja + '!A:Z'), { headers: { Authorization: hdrs.Authorization } });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado'); }
+  if (!resp.ok) {
+    const txt = await resp.text();
+    let msg = 'Error ' + resp.status;
+    try { msg = JSON.parse(txt).error?.message || msg; } catch (_) {}
+    throw new Error('No se pudo leer la hoja ' + hoja + ' antes de actualizar: ' + msg);
+  }
+  const d = await resp.json();
+  const idxCol = colsReales.indexOf(colClave);
+  const filasExistentes = (d.values || []).slice(1); // sin encabezado
+
+  const clavesEncontradas = new Set();
+  const filasActualizadas = filasExistentes.map(fila => {
+    const valorClave = fila[idxCol];
+    const cambios = cambiosPorClave[valorClave];
+    if (!cambios) return colsReales.map((c, i) => fila[i] || '');
+    clavesEncontradas.add(valorClave);
+    return colsReales.map((c, i) => {
+      if (Object.prototype.hasOwnProperty.call(cambios, c)) return cambios[c];
+      return fila[i] || '';
+    });
+  });
+
+  const filasNuevas = claves.filter(k => !clavesEncontradas.has(k)).map(k => {
+    const cambios = cambiosPorClave[k];
+    return colsReales.map(c => {
+      if (c === colClave) return k;
+      return Object.prototype.hasOwnProperty.call(cambios, c) ? cambios[c] : '';
+    });
+  });
+
+  const todasLasFilas = [...filasActualizadas, ...filasNuevas];
+  if (!todasLasFilas.length) return;
+  const colFin = numToCol(colsReales.length - 1);
+  await fetch(base + '/values/' + encodeURIComponent(hoja + `!A2:${colFin}${1 + todasLasFilas.length}`) + '?valueInputOption=RAW', {
+    method: 'PUT', headers: hdrs, body: JSON.stringify({ values: todasLasFilas })
+  });
 }
 
 /* ══════════════════════════════════════════════
