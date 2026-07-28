@@ -5406,6 +5406,7 @@ async function appendHoja(nombre, rows) {
     try { msg = JSON.parse(txt).error?.message || msg; } catch(_) {}
     throw new Error('Hoja ' + nombre + ': ' + msg);
   }
+  _invalidarCacheHoja(nombre);
 }
 
 /* ══════════════════════════════════════════════
@@ -7382,9 +7383,9 @@ async function guardarHorasEquiposGrid() {
   msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
   try {
     const [estadoTri, estadoSem, estadoAnu, planes] = await Promise.all([
-      leerHojaGenerica(SH.informeTrimestralEstado).catch(() => []),
-      leerHojaGenerica(SH.informeSemestralEstado).catch(() => []),
-      leerHojaGenerica(SH.informeAnualEstado).catch(() => []),
+      leerHojaGenericaCacheada(SH.informeTrimestralEstado).catch(() => []),
+      leerHojaGenericaCacheada(SH.informeSemestralEstado).catch(() => []),
+      leerHojaGenericaCacheada(SH.informeAnualEstado).catch(() => []),
       cargarPlanesMantenimiento().catch(() => []),
     ]);
     const estados = [
@@ -7470,6 +7471,7 @@ async function eliminarFilasDondeCumple(hoja, predicado) {
     deleteDimension: { range: { sheetId, dimension: 'ROWS', startIndex: fila - 1, endIndex: fila } }
   }));
   await fetch(base + ':batchUpdate', { method: 'POST', headers: hdrs, body: JSON.stringify({ requests }) });
+  _invalidarCacheHoja(hoja);
   return filasABorrar.length;
 }
 
@@ -7922,7 +7924,7 @@ async function _pmRenderInformePeriodico(contId, informeId, { nombreCorto, activ
   try {
     horasEquipos = await cargarHorasEquipos();
     await asegurarHoja(hojaEstado, colsEstado);
-    estado = await leerHojaGenerica(hojaEstado);
+    estado = await leerHojaGenericaCacheada(hojaEstado);
   } catch (e) {
     cont.innerHTML = `<div style="color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
     return;
@@ -9303,6 +9305,28 @@ async function leerHojaGenerica(nombre) {
   });
 }
 
+// Caché en memoria (unos segundos) para lecturas que se repiten mucho al
+// cambiar rápido de pestaña (HorasEquipos, el estado de los informes
+// periódicos, PlanesMantenimiento) — sin esto, entrar a Registro, Horas de
+// Mantenimiento, Programa 2026 e Informe Trimestral/Semestral/Anual
+// seguidos vuelve a leer las mismas hojas una y otra vez, y agota la cuota
+// de "Read requests per minute" de Sheets. Cualquier escritura sobre una
+// de estas hojas invalida su entrada en la caché.
+const _cacheLecturasHojas = {}; // { [hoja]: { data, timestamp } }
+const CACHE_LECTURAS_TTL_MS = 8000;
+
+async function leerHojaGenericaCacheada(nombre) {
+  const c = _cacheLecturasHojas[nombre];
+  if (c && (Date.now() - c.timestamp) < CACHE_LECTURAS_TTL_MS) return c.data;
+  const data = await leerHojaGenerica(nombre);
+  _cacheLecturasHojas[nombre] = { data, timestamp: Date.now() };
+  return data;
+}
+
+function _invalidarCacheHoja(nombre) {
+  delete _cacheLecturasHojas[nombre];
+}
+
 /** Registra los datos FIJOS de un equipo — una sola vez. Si la
  *  codificación ya existía, actualiza esa misma fila en vez de duplicarla
  *  (así uno puede corregir un dato sin crear un equipo repetido). */
@@ -9624,8 +9648,9 @@ async function _actualizarFilaPorClave(hoja, cols, colClave, valorClave, datosPa
       method: 'PUT', headers: { ...hdrs, 'Content-Type': 'application/json' },
       body: JSON.stringify({ values: [filaCompleta] })
     });
+    _invalidarCacheHoja(hoja);
   } else {
-    await appendHoja(hoja, [filaCompleta]);
+    await appendHoja(hoja, [filaCompleta]); // ya invalida la caché de "hoja" internamente
   }
 }
 
@@ -9681,6 +9706,7 @@ async function _actualizarFilasPorClaveEnLote(hoja, cols, colClave, cambiosPorCl
   await fetch(base + '/values/' + encodeURIComponent(hoja + `!A2:${colFin}${1 + todasLasFilas.length}`) + '?valueInputOption=RAW', {
     method: 'PUT', headers: hdrs, body: JSON.stringify({ values: todasLasFilas })
   });
+  _invalidarCacheHoja(hoja);
 }
 
 /* ══════════════════════════════════════════════
@@ -9697,7 +9723,7 @@ async function _actualizarFilasPorClaveEnLote(hoja, cols, colClave, cambiosPorCl
 ══════════════════════════════════════════════ */
 async function cargarPlanesMantenimiento() {
   await asegurarHoja(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS);
-  return leerHojaGenerica(SH.planesMantenimiento);
+  return leerHojaGenericaCacheada(SH.planesMantenimiento);
 }
 
 /** Registra un plan de mantenimiento nuevo. UltimaGeneracion/
@@ -9724,7 +9750,7 @@ async function registrarPlanMantenimiento(datos) {
 /* ── Horas de operación por equipo (para las frecuencias "por horas") ── */
 async function cargarHorasEquipos() {
   await asegurarHoja(SH.horasEquipos, HORAS_EQUIPOS_COLS);
-  return leerHojaGenerica(SH.horasEquipos);
+  return leerHojaGenericaCacheada(SH.horasEquipos);
 }
 
 async function obtenerHorasEquipo(equipo) {
@@ -9985,7 +10011,7 @@ async function _verificarInformePeriodicoYGenerar({ nombre, tituloCorto, activid
   try {
     [horasEquipos, estado] = await Promise.all([
       cargarHorasEquipos(),
-      asegurarHoja(hojaEstado, colsEstado).then(() => leerHojaGenerica(hojaEstado)),
+      asegurarHoja(hojaEstado, colsEstado).then(() => leerHojaGenericaCacheada(hojaEstado)),
     ]);
   } catch (e) { console.warn(`No se pudo revisar el ${nombre}:`, e.message); return; }
 
