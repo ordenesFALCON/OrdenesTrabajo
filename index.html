@@ -5502,44 +5502,71 @@ async function guardarOrdenEnSheets(datos) {
   const num = datos.NumeroOrden || '';
 
   // ── 2. Hoja Tareas ──
+  // Usa el orden REAL de columnas de la hoja (no la constante local): si la
+  // hoja creció con columnas agregadas en una versión posterior (como pasó
+  // con ObservacionCierre), asegurarHoja las agrega al final, y ese orden
+  // puede no coincidir con el de la constante — armar la fila por posición
+  // fija desalinearía los datos silenciosamente.
   if (datos.tareas && datos.tareas.length) {
-    await asegurarHoja(SH.tareas, TAREAS_COLS);
+    const colsTareas = await asegurarHoja(SH.tareas, TAREAS_COLS);
     const filasTareas = datos.tareas
       .filter(t => t.descripcion || t.Descripcion)
-      .map((t, i) => [
-        num, i + 1,
-        t.descripcion || t.Descripcion || '',
-        t.tiempoEstimado || '',
-        t.tiempoReal || '',
-        t.ok ? 'SI' : 'NO',
-        t.responsable || '',
-        t.observacionFantasma || ''
-      ]);
+      .map((t, i) => colsTareas.map(c => {
+        if (c === 'NumeroOrden') return num;
+        if (c === '#') return i + 1;
+        if (c === 'Descripcion') return t.descripcion || t.Descripcion || '';
+        if (c === 'TiempoEstimado') return t.tiempoEstimado || '';
+        if (c === 'TiempoReal') return t.tiempoReal || '';
+        if (c === 'OK') return t.ok ? 'SI' : 'NO';
+        if (c === 'Responsable') return t.responsable || '';
+        if (c === 'ObservacionCierre') return t.observacionFantasma || '';
+        return '';
+      }));
     if (filasTareas.length) await appendHoja(SH.tareas, filasTareas);
   }
 
   // ── 3. Hoja Repuestos ──
   if (datos.repuestos && datos.repuestos.length) {
-    await asegurarHoja(SH.repuestos, REPUESTOS_COLS);
+    const colsRep = await asegurarHoja(SH.repuestos, REPUESTOS_COLS);
     const filasRep = datos.repuestos
       .filter(r => r.nombre || r.Nombre)
       .map((r, i) => {
         const cant = Number(r.cantidad || 0);
         const costo = Number(r.costoUnitario || r.costoUnit || 0);
-        return [num, i + 1, r.codigo || '', r.nombre || '', cant, r.unidades || 'und', costo, cant * costo];
+        return colsRep.map(c => {
+          if (c === 'NumeroOrden') return num;
+          if (c === '#') return i + 1;
+          if (c === 'Codigo') return r.codigo || '';
+          if (c === 'Nombre') return r.nombre || '';
+          if (c === 'Cantidad') return cant;
+          if (c === 'Unidades') return r.unidades || 'und';
+          if (c === 'CostoUnitario') return costo;
+          if (c === 'Subtotal') return cant * costo;
+          return '';
+        });
       });
     if (filasRep.length) await appendHoja(SH.repuestos, filasRep);
   }
 
   // ── 4. Hoja Insumos ──
   if (datos.insumos && datos.insumos.length) {
-    await asegurarHoja(SH.insumos, INSUMOS_COLS);
+    const colsIns = await asegurarHoja(SH.insumos, INSUMOS_COLS);
     const filasIns = datos.insumos
       .filter(i => i.nombre || i.Nombre)
       .map((ins, i) => {
         const cant = Number(ins.cantidad || 0);
         const costo = Number(ins.costoUnitario || ins.costoUnit || 0);
-        return [num, i + 1, ins.codigo || '', ins.nombre || '', cant, ins.unidades || 'und', costo, cant * costo];
+        return colsIns.map(c => {
+          if (c === 'NumeroOrden') return num;
+          if (c === '#') return i + 1;
+          if (c === 'Codigo') return ins.codigo || '';
+          if (c === 'Nombre') return ins.nombre || '';
+          if (c === 'Cantidad') return cant;
+          if (c === 'Unidades') return ins.unidades || 'und';
+          if (c === 'CostoUnitario') return costo;
+          if (c === 'Subtotal') return cant * costo;
+          return '';
+        });
       });
     if (filasIns.length) await appendHoja(SH.insumos, filasIns);
   }
