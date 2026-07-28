@@ -2180,92 +2180,21 @@ body.inv-activo .container { max-width: 1800px; }
       <div id="pmSub-registro" class="inv-subpanel active">
 
       <div class="card" style="margin-bottom:14px">
-        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Registrar Plan de Mantenimiento</div>
-        <div class="card-body" style="padding:18px">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
-            <div class="field" style="grid-column:span 2"><label>Equipo *</label>
-              <select id="pm_equipo"><option value="">Selecciona un equipo...</option></select>
-            </div>
-            <div class="field"><label>Tipo de Mantenimiento</label>
-              <select id="pm_tipo">
-                <option value="Preventivo">Preventivo</option>
-                <option value="Predictivo">Predictivo</option>
-                <option value="Correctivo">Correctivo</option>
-                <option value="Mejora">Mejora</option>
-              </select>
-            </div>
-            <div class="field"><label>Tipo de Frecuencia *</label>
-              <select id="pm_tipoFrecuencia" onchange="planMantToggleTipoFrecuencia()">
-                <option value="calendario">Por calendario (fecha)</option>
-                <option value="horas">Por horas de operación del equipo</option>
-              </select>
-            </div>
-            <div class="field" id="pm_grupoFrecCalendario"><label>Frecuencia *</label>
-              <select id="pm_frecuencia">
-                <option value="">Selecciona...</option>
-                <option value="diario">Diario</option>
-                <option value="semanal">Semanal</option>
-                <option value="quincenal">Quincenal</option>
-                <option value="mensual">Mensual</option>
-                <option value="bimestral">Bimestral</option>
-                <option value="trimestral">Trimestral</option>
-                <option value="semestral">Semestral</option>
-                <option value="anual">Anual</option>
-                <option value="bienal">Cada 2 años</option>
-                <option value="sexenal">Cada 6 años</option>
-              </select>
-            </div>
-            <div class="field" id="pm_grupoFrecHoras" style="display:none"><label>Cada cuántas horas *</label>
-              <input id="pm_frecuenciaHoras" type="number" min="1" placeholder="Ej: 8000">
-            </div>
-            <div class="field" id="pm_grupoFechaInicio"><label>Fecha de inicio *</label><input id="pm_fechaInicio" type="date"></div>
-            <div class="field"><label>Responsable sugerido</label><input id="pm_responsable" placeholder="Nombre (opcional)"></div>
-            <div class="field" style="grid-column:1/-1"><label>Descripción de la tarea</label><input id="pm_descripcion" placeholder="Ej: Cambio de filtros y revisión general"></div>
-          </div>
-          <button class="btn btn-primary" onclick="planMantRegistrar()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Registrar Plan</button>
-          <div id="pmMsg" style="margin-top:10px;font-size:13px"></div>
+        <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Horas de Operación de Equipos</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="pmRenderRegistroHoras()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
         </div>
-      </div>
-
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Horas de Operación de Equipos</div>
-        <div class="card-body" style="padding:18px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Actualiza aquí las horas acumuladas de cada equipo — los planes "por horas de operación" las usan para saber cuándo generar la próxima orden.</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
-            <div class="field" style="grid-column:span 2"><label>Equipo *</label>
-              <select id="he_equipo"><option value="">Selecciona un equipo...</option></select>
-            </div>
-            <div class="field"><label>Horas actuales *</label><input id="he_horas" type="number" min="0" step="1" placeholder="Ej: 24228"></div>
-          </div>
-          <button class="btn btn-primary" onclick="horasEquipoActualizar()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Actualizar Horas</button>
-          <div id="heMsg" style="margin-top:10px;font-size:13px"></div>
-          <div style="margin-top:16px;overflow-x:auto" id="heTabla"><div style="padding:10px 0;color:var(--text3);font-size:13px">Cargando…</div></div>
-        </div>
+        <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Digita aquí las horas actuales de cada equipo — de ahí se alimentan los planes de mantenimiento, y los informes Trimestral/Semestral/Anual para generar las órdenes automáticas.</div>
+        <div class="card-body" style="padding:18px" id="pmRegistroHorasContenido"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
       </div>
 
       <div class="card">
-        <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-          <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Planes Registrados</span>
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="pmFiltroFrecuencia" onchange="planMantFiltrar()" style="font-size:12px;padding:4px 8px;min-width:150px">
-              <option value="">Todas las frecuencias</option>
-              <option value="diario">Diario</option>
-              <option value="semanal">Semanal</option>
-              <option value="quincenal">Quincenal</option>
-              <option value="mensual">Mensual</option>
-              <option value="bimestral">Bimestral</option>
-              <option value="trimestral">Trimestral</option>
-              <option value="semestral">Semestral</option>
-              <option value="anual">Anual</option>
-              <option value="bienal">Cada 2 años</option>
-              <option value="sexenal">Cada 6 años</option>
-              <option value="horas">Por horas de operación</option>
-            </select>
-            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="planMantCargarLista()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
-            <button id="btnImportarPlan2026" class="btn btn-primary" style="display:none;font-size:11px;padding:4px 10px" onclick="importarPlan2026Click()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Importar Plan 2026</button>
-          </div>
+        <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Reiniciar Horas</div>
+        <div class="card-body" style="padding:18px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Borra todas las horas guardadas y todas las órdenes que se generaron automáticamente hasta ahora. Úsalo una sola vez, antes de empezar a digitar las horas reales de hoy en adelante — así el sistema no genera de una vez todas las órdenes atrasadas, y solo empieza a generar automáticamente a partir de las horas que digites desde hoy.</div>
+          <button class="btn btn-ghost" style="color:var(--danger);border-color:var(--danger)" onclick="reiniciarHorasYLimpiarAutomaticasClick()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Reiniciar Horas y Limpiar Órdenes Automáticas</button>
+          <div id="reinicioMsg" style="margin-top:10px;font-size:13px"></div>
         </div>
-        <div style="padding:0;overflow-x:auto" id="pmTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
       </div>
 
       </div><!-- /pmSub-registro -->
@@ -7320,20 +7249,9 @@ function abrirPlanMantenimiento(opKey) {
   if (navTabs) navTabs.style.display = 'none';
   document.body.classList.add('inv-activo');
 
-  const sel = document.getElementById('pm_equipo');
-  const selHoras = document.getElementById('he_equipo');
-  const grupos = EQUIPOS_POR_SEDE[opKey] || EQUIPOS_LISTADO_GENERAL;
-  if (sel) sel.innerHTML = '<option value="">Selecciona un equipo...</option>' + _renderOptionsGrupo(grupos);
-  if (selHoras) selHoras.innerHTML = '<option value="">Selecciona un equipo...</option>' + _renderOptionsGrupo(grupos);
-  document.getElementById('pm_fechaInicio').valueAsDate = new Date();
-  planMantToggleTipoFrecuencia();
   pmMostrarSubTab('registro');
-  const btnImportar = document.getElementById('btnImportarPlan2026');
-  if (btnImportar) btnImportar.style.display = (opKey === 'zipaquira') ? '' : 'none';
 
   renderSidebarOperaciones();
-  planMantCargarLista();
-  horasEquipoCargarTabla();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -7395,173 +7313,199 @@ function etMostrarSubTab(nombre) {
   if (nombre === 'alertas') pmRenderAlertas();
 }
 
-/** Muestra el selector de Frecuencia (calendario) o el campo numérico de
- *  horas, según el Tipo de Frecuencia elegido — nunca los dos a la vez. */
-function planMantToggleTipoFrecuencia() {
-  const esHoras = document.getElementById('pm_tipoFrecuencia').value === 'horas';
-  document.getElementById('pm_grupoFrecCalendario').style.display = esHoras ? 'none' : 'block';
-  document.getElementById('pm_grupoFrecHoras').style.display = esHoras ? 'block' : 'none';
-  document.getElementById('pm_grupoFechaInicio').style.display = esHoras ? 'none' : 'block';
-}
+/** Grupos de equipo que se muestran en el cuadro de "Horas de Operación
+ *  de Equipos" — la misma clasificación que usa el filtro "Tipo de
+ *  equipo" de los informes periódicos, ya que es de ahí de donde se
+ *  alimentan (además de los planes de mantenimiento por horas). */
+const REGISTRO_HORAS_GRUPOS = [
+  { tipo: 'compresores', nombreTipo: 'Compresores' },
+  { tipo: 'secadores', nombreTipo: 'Secadores' },
+  { tipo: 'drycoolers', nombreTipo: 'Dry Coolers' },
+  { tipo: 'tornillo', nombreTipo: 'Compresores de Tornillo' },
+];
 
-async function planMantRegistrar() {
-  const equipo        = document.getElementById('pm_equipo').value;
-  const tipo           = document.getElementById('pm_tipo').value;
-  const tipoFrecuencia = document.getElementById('pm_tipoFrecuencia').value;
-  const frecuencia     = tipoFrecuencia === 'horas'
-    ? document.getElementById('pm_frecuenciaHoras').value
-    : document.getElementById('pm_frecuencia').value;
-  const fechaInicio    = document.getElementById('pm_fechaInicio').value;
-  const responsable    = document.getElementById('pm_responsable').value.trim();
-  const descripcion    = document.getElementById('pm_descripcion').value.trim();
-  const msg = document.getElementById('pmMsg');
-
-  const faltaFecha = tipoFrecuencia !== 'horas' && !fechaInicio;
-  if (!equipo || !frecuencia || faltaFecha) {
-    msg.style.color = 'var(--danger)';
-    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Equipo y Frecuencia son obligatorios' + (tipoFrecuencia !== 'horas' ? ' (y la Fecha de inicio)' : '') + '.';
-    return;
-  }
-
-  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
-  try {
-    await registrarPlanMantenimiento({
-      Equipo: equipo, TipoMantenimiento: tipo, TipoFrecuencia: tipoFrecuencia, Frecuencia: frecuencia,
-      FechaInicio: fechaInicio, Descripcion: descripcion, Responsable: responsable,
-    });
-    msg.style.color = '#15803d';
-    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Plan registrado correctamente.';
-    document.getElementById('pm_descripcion').value = '';
-    document.getElementById('pm_responsable').value = '';
-    document.getElementById('pm_frecuencia').value = '';
-    document.getElementById('pm_frecuenciaHoras').value = '';
-    planMantCargarLista();
-  } catch (e) {
-    msg.style.color = 'var(--danger)';
-    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
-  }
-}
-
-let _ultimosPlanesCache = [];
-
-async function planMantCargarLista() {
-  const cont = document.getElementById('pmTabla');
+/** Pinta el cuadro de "Horas de Operación de Equipos": todos los equipos
+ *  agrupados por tipo, cada uno con un campo para digitar sus horas
+ *  actuales. Reemplaza el formulario anterior (uno-a-la-vez) por un
+ *  cuadro único donde se pueden actualizar todos de una sola vez. */
+async function pmRenderRegistroHoras() {
+  const cont = document.getElementById('pmRegistroHorasContenido');
   if (!cont) return;
-  cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
+  cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando…</div>';
+
+  let horasEquipos;
   try {
-    _ultimosPlanesCache = await cargarPlanesMantenimiento();
-  } catch (e) {
-    cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
-    return;
-  }
-  planMantFiltrar();
-}
-
-function planMantFiltrar() {
-  const cont   = document.getElementById('pmTabla');
-  const filtro = document.getElementById('pmFiltroFrecuencia')?.value || '';
-  if (!cont) return;
-
-  const planes = _ultimosPlanesCache.filter(p => {
-    if (!filtro) return true;
-    const esHoras = (p.TipoFrecuencia || 'calendario') === 'horas';
-    if (filtro === 'horas') return esHoras;
-    return !esHoras && (p.Frecuencia || '').toLowerCase() === filtro;
-  });
-
-  if (!planes.length) {
-    cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No hay planes de mantenimiento registrados' + (filtro ? ' con esa frecuencia' : '') + '.</div>';
-    return;
-  }
-
-  cont.innerHTML = `<table class="ie-table"><thead><tr>
-      <th>Equipo</th><th>Tipo</th><th>Frecuencia</th><th>Fecha Inicio / Últ. Generación</th>
-      <th>Descripción</th><th>Estado</th>
-    </tr></thead><tbody>` +
-    planes.map(p => {
-      const esHoras = (p.TipoFrecuencia || 'calendario') === 'horas';
-      const freq = FRECUENCIAS_PLAN.find(f => f.key === (p.Frecuencia || '').toLowerCase());
-      const activo = p.Activo !== 'NO';
-      const etiquetaFrecuencia = esHoras ? `Cada ${esc(p.Frecuencia)} horas` : esc(freq ? freq.nombre : p.Frecuencia);
-      const infoFecha = esHoras
-        ? (p.UltimaGeneracionHoras ? `Últ. gen.: ${esc(p.UltimaGeneracionHoras)} h` : 'Aún no generada')
-        : (p.UltimaGeneracion ? 'Últ. gen.: ' + fmtFecha(p.UltimaGeneracion) : 'Inicio: ' + fmtFecha(p.FechaInicio));
-      return `<tr>
-        <td><strong>${esc(p.Equipo)}</strong></td>
-        <td>${esc(p.TipoMantenimiento)}</td>
-        <td>${etiquetaFrecuencia}</td>
-        <td>${infoFecha}</td>
-        <td>${esc(p.Descripcion || '—')}</td>
-        <td><span class="badge" style="background:${activo ? '#e6f4ea' : '#eee'};color:${activo ? '#1e7e34' : '#666'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
-      </tr>`;
-    }).join('') +
-    `</tbody></table>`;
-}
-
-/** Botón "Importar Plan 2026" — solo visible en Zipaquirá. Registra de una
- *  vez las ~109 actividades reales del Programa de Mantenimiento 2026 y
- *  las horas actuales conocidas de los compresores, y refresca las tablas
- *  de la pestaña Registro y la de Horas de Mantenimiento. */
-async function importarPlan2026Click() {
-  if (!confirm('Esto va a registrar las ' + PLAN_2026_ZIPAQUIRA.length + ' actividades del Programa de Mantenimiento 2026 (Compresores de baja/alta, Drycoolers, Secadores, HOC y UPS) y las horas actuales conocidas de los compresores. Si ya habías importado antes, esto reemplaza esos datos por los nuevos. ¿Continuar?')) return;
-  const btn = document.getElementById('btnImportarPlan2026');
-  if (btn) { btn.disabled = true; btn.textContent = 'Importando…'; }
-  try {
-    const res = await importarPlan2026Zipaquira();
-    const notaReemplazo = res.reemplazados ? ` Se reemplazó una importación anterior de ${res.reemplazados} planes.` : '';
-    alert(`Listo: se registraron ${res.planes} planes de mantenimiento y se actualizaron las horas de ${res.equiposConHoras} equipos.${notaReemplazo} Ve a la pestaña "Horas de Mantenimiento" para ver la tabla. Las órdenes que ya estén vencidas según las horas/fechas reales se generarán automáticamente al revisar los planes.`);
-    planMantCargarLista();
-    horasEquipoCargarTabla();
-    pmRenderHorasMantenimiento();
-  } catch (e) {
-    alert('No se pudo importar: ' + e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Importar Plan 2026'; }
-  }
-}
-
-async function horasEquipoActualizar() {
-  const equipo = document.getElementById('he_equipo').value;
-  const horas  = document.getElementById('he_horas').value;
-  const msg = document.getElementById('heMsg');
-
-  if (!equipo || horas === '') {
-    msg.style.color = 'var(--danger)';
-    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Equipo y Horas actuales son obligatorios.';
-    return;
-  }
-
-  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
-  try {
-    await actualizarHorasEquipo(equipo, horas);
-    msg.style.color = '#15803d';
-    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Horas actualizadas correctamente.';
-    document.getElementById('he_horas').value = '';
-    horasEquipoCargarTabla();
-  } catch (e) {
-    msg.style.color = 'var(--danger)';
-    msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
-  }
-}
-
-async function horasEquipoCargarTabla() {
-  const cont = document.getElementById('heTabla');
-  if (!cont) return;
-  cont.innerHTML = '<div style="padding:10px 0;color:var(--text3);font-size:13px">Cargando…</div>';
-  let filas;
-  try {
-    filas = await cargarHorasEquipos();
+    horasEquipos = await cargarHorasEquipos();
   } catch (e) {
     cont.innerHTML = `<div style="color:var(--danger);font-size:13px">${esc(e.message)}</div>`;
     return;
   }
-  if (!filas.length) {
-    cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Todavía no hay horas registradas para ningún equipo.</div>';
+  function horasDe(equipo) {
+    const fila = horasEquipos.find(f => f.Equipo === equipo);
+    return fila ? fila.HorasActuales : '';
+  }
+
+  cont.innerHTML = REGISTRO_HORAS_GRUPOS.map(grupo => `
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">${esc(grupo.nombreTipo)}</div>
+      <table class="ie-table"><thead><tr><th>Equipo</th><th style="width:180px">Horas actuales</th></tr></thead><tbody>
+        ${INFORME_EQUIPOS_POR_TIPO[grupo.tipo].map(eq => `<tr>
+          <td><strong>${esc(eq)}</strong></td>
+          <td><input type="number" min="0" step="1" data-equipo-horas="${esc(eq)}" value="${esc(horasDe(eq))}" placeholder="Ej: 24228" style="width:160px"></td>
+        </tr>`).join('')}
+      </tbody></table>
+    </div>`).join('') +
+    `<button class="btn btn-primary" onclick="guardarHorasEquiposGrid()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Guardar Horas</button>
+    <div id="rhMsg" style="margin-top:10px;font-size:13px"></div>`;
+}
+
+/** Guarda las horas digitadas para todos los equipos del cuadro (solo los
+ *  que tengan un valor, sin necesidad de llenarlos todos). Por cada
+ *  equipo que todavía no tenga una base de referencia guardada para los
+ *  informes periódicos o los planes por horas, la siembra con el valor
+ *  recién digitado — así el sistema no genera de una vez todas las
+ *  órdenes "atrasadas" según ese número, sino que empieza a contar el
+ *  intervalo desde ahora. Si el equipo ya tenía una base, no se toca —
+ *  el chequeo automático normal sigue su curso. */
+async function guardarHorasEquiposGrid() {
+  const msg = document.getElementById('rhMsg');
+  const cambios = [...document.querySelectorAll('[data-equipo-horas]')]
+    .map(inp => ({ equipo: inp.dataset.equipoHoras, horas: inp.value.trim() }))
+    .filter(c => c.horas !== '');
+
+  if (!cambios.length) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = 'Digita al menos un valor de horas para guardar.';
     return;
   }
-  cont.innerHTML = `<table class="ie-table"><thead><tr><th>Equipo</th><th>Horas Actuales</th><th>Última Actualización</th></tr></thead><tbody>` +
-    filas.map(f => `<tr><td><strong>${esc(f.Equipo)}</strong></td><td>${esc(f.HorasActuales)}</td><td>${esc(f.UltimaActualizacion || '—')}</td></tr>`).join('') +
-    `</tbody></table>`;
+
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
+  try {
+    const [estadoTri, estadoSem, estadoAnu, planes] = await Promise.all([
+      leerHojaGenerica(SH.informeTrimestralEstado).catch(() => []),
+      leerHojaGenerica(SH.informeSemestralEstado).catch(() => []),
+      leerHojaGenerica(SH.informeAnualEstado).catch(() => []),
+      cargarPlanesMantenimiento().catch(() => []),
+    ]);
+    const estados = [
+      { estado: estadoTri, hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS },
+      { estado: estadoSem, hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS },
+      { estado: estadoAnu, hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS },
+    ];
+
+    for (const { equipo, horas } of cambios) {
+      await actualizarHorasEquipo(equipo, horas);
+      for (const { estado, hoja, cols } of estados) {
+        const fila = estado.find(f => f.Equipo === equipo);
+        if (!fila || fila.UltimaGeneracionHoras === '') {
+          await _actualizarFilaPorClave(hoja, cols, 'Equipo', equipo, { UltimaGeneracionHoras: String(horas) });
+        }
+      }
+      for (const plan of planes) {
+        if (plan.Equipo === equipo && (plan.TipoFrecuencia || '') === 'horas' && plan.UltimaGeneracionHoras === '') {
+          await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', plan.ID, { UltimaGeneracionHoras: String(horas) });
+        }
+      }
+    }
+    await pmRenderRegistroHoras();
+    const msgNuevo = document.getElementById('rhMsg');
+    msgNuevo.style.color = '#15803d';
+    msgNuevo.textContent = `Horas guardadas para ${cambios.length} equipo(s).`;
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = e.message;
+  }
+}
+
+/** Borra todas las filas (excepto el encabezado) de una hoja que cumplan
+ *  el predicado, indexando por los encabezados reales — de abajo hacia
+ *  arriba en un solo batchUpdate para no desplazar índices a mitad de
+ *  camino. Devuelve cuántas filas borró. */
+async function eliminarFilasDondeCumple(hoja, predicado) {
+  const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+  const hdrs = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
+  const resp = await fetch(base + '/values/' + encodeURIComponent(hoja + '!A:Z'), { headers: hdrs });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado'); }
+  if (!resp.ok) {
+    const txt = await resp.text();
+    let msg = 'Error ' + resp.status;
+    try { msg = JSON.parse(txt).error?.message || msg; } catch (_) {}
+    throw new Error('No se pudo leer ' + hoja + ' antes de borrar: ' + msg);
+  }
+  const d = await resp.json();
+  const valores = d.values || [];
+  if (valores.length < 2) return 0;
+  const cols = valores[0];
+  const filasABorrar = [];
+  for (let i = 1; i < valores.length; i++) {
+    const obj = {};
+    cols.forEach((c, j) => { obj[c] = valores[i][j] || ''; });
+    if (predicado(obj)) filasABorrar.push(i + 1); // número de fila real en la hoja (1-based)
+  }
+  if (!filasABorrar.length) return 0;
+
+  const metaR = await fetch(base + '?fields=sheets.properties', { headers: hdrs });
+  const meta = await metaR.json();
+  const sheetProps = (meta.sheets || []).find(s => s.properties.title === hoja);
+  if (!sheetProps) throw new Error('No se encontró la hoja ' + hoja);
+  const sheetId = sheetProps.properties.sheetId;
+
+  const requests = filasABorrar.slice().sort((a, b) => b - a).map(fila => ({
+    deleteDimension: { range: { sheetId, dimension: 'ROWS', startIndex: fila - 1, endIndex: fila } }
+  }));
+  await fetch(base + ':batchUpdate', { method: 'POST', headers: hdrs, body: JSON.stringify({ requests }) });
+  return filasABorrar.length;
+}
+
+/** Borra de Ordenes (y sus Tareas/Repuestos/Insumos) todas las órdenes
+ *  marcadas como creadas automáticamente, y las quita también de la
+ *  caché local. */
+async function limpiarOrdenesAutomaticas() {
+  const ordenes = await leerHojaGenerica(SH.ordenes);
+  const numeros = new Set(ordenes.filter(o => o.CreadaAutomaticamente === 'SI').map(o => o.NumeroOrden));
+  if (!numeros.size) return 0;
+  await eliminarFilasDondeCumple(SH.ordenes, o => numeros.has(o.NumeroOrden));
+  await eliminarFilasDondeCumple(SH.tareas, t => numeros.has(t.NumeroOrden));
+  await eliminarFilasDondeCumple(SH.repuestos, r => numeros.has(r.NumeroOrden));
+  await eliminarFilasDondeCumple(SH.insumos, i => numeros.has(i.NumeroOrden));
+  allOrdenes = allOrdenes.filter(o => !numeros.has(o.NumeroOrden) && !numeros.has(o.id));
+  guardarLocal();
+  return numeros.size;
+}
+
+/** Botón "Reiniciar Horas y Limpiar Órdenes Automáticas": borra todas las
+ *  horas guardadas, el estado de "última generación" de los informes
+ *  periódicos y de los planes por horas, y las órdenes ya generadas
+ *  automáticamente — para empezar de cero con las horas que se van a
+ *  digitar desde hoy, sin que el sistema regenere de una vez todo el
+ *  historial atrasado. Acción destructiva: pide confirmación explícita. */
+async function reiniciarHorasYLimpiarAutomaticasClick() {
+  if (!confirm('Esto va a borrar PERMANENTEMENTE:\n\n• Todas las horas guardadas de los equipos.\n• El progreso ("última generación") de los informes Trimestral/Semestral/Anual y de los planes por horas.\n• Todas las órdenes de trabajo creadas automáticamente hasta ahora (y sus tareas/repuestos/insumos).\n\nLas órdenes creadas manualmente NO se tocan. Esta acción no se puede deshacer.\n\n¿Continuar?')) return;
+
+  const msg = document.getElementById('reinicioMsg');
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Limpiando…';
+  try {
+    await eliminarFilasDondeCumple(SH.horasEquipos, () => true);
+    await eliminarFilasDondeCumple(SH.informeTrimestralEstado, () => true);
+    await eliminarFilasDondeCumple(SH.informeSemestralEstado, () => true);
+    await eliminarFilasDondeCumple(SH.informeAnualEstado, () => true);
+
+    const planes = await cargarPlanesMantenimiento();
+    for (const plan of planes) {
+      if ((plan.TipoFrecuencia || '') === 'horas' && plan.UltimaGeneracionHoras !== '') {
+        await _actualizarFilaPorClave(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', plan.ID, { UltimaGeneracionHoras: '' });
+      }
+    }
+
+    const nOrdenes = await limpiarOrdenesAutomaticas();
+
+    msg.style.color = '#15803d';
+    msg.textContent = `Listo: horas reiniciadas y ${nOrdenes} orden(es) automática(s) eliminada(s). Ya puedes empezar a digitar las horas de hoy.`;
+    pmRenderRegistroHoras();
+  } catch (e) {
+    msg.style.color = 'var(--danger)';
+    msg.textContent = e.message;
+  }
 }
 
 async function operarioAgregarClick() {
@@ -7723,6 +7667,7 @@ function pmMostrarSubTab(nombre) {
   panel.querySelectorAll('.inv-subtab').forEach(b => b.classList.remove('active'));
   document.getElementById('pmSub-' + nombre).classList.add('active');
   panel.querySelector(`.inv-subtab[data-pmtab="${nombre}"]`).classList.add('active');
+  if (nombre === 'registro') pmRenderRegistroHoras();
   if (nombre === 'horas') pmRenderHorasMantenimiento();
   if (nombre === 'programa2026') pmRenderPrograma2026();
   if (nombre === 'informetrimestral') pmRenderInformeTrimestral();
