@@ -2283,7 +2283,7 @@ body.inv-activo .container { max-width: 1800px; }
             <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="13" y1="16" x2="15" y2="16"></line><line x1="9" y1="16" x2="11" y2="16"></line></svg> Informe Cada Trimestral</span>
             <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="pmRenderInformeTrimestral()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
           </div>
-          <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Réplica del formulario de inspección "Informe Cada Trimestral": estas 8 actividades se revisan cada 4.000 horas de operación en cada compresor. El sistema genera solo, automáticamente, UNA orden con las 8 tareas cada vez que un compresor llega a un múltiplo de 4.000 horas — no requiere importar ni registrar nada manualmente.</div>
+          <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Réplica del formulario de inspección "Informe Cada Trimestral": estas 8 actividades se revisan cada 2.000 horas de operación en cada compresor. El sistema genera solo, automáticamente, UNA orden con las 8 tareas cada vez que un compresor llega a un múltiplo de 2.000 horas — no requiere importar ni registrar nada manualmente.</div>
           <div class="card-body" style="padding:18px" id="pmInformeTrimestralContenido"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
       </div>
@@ -2294,7 +2294,7 @@ body.inv-activo .container { max-width: 1800px; }
             <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1" ry="1"></rect><line x1="9" y1="12" x2="15" y2="12"></line><line x1="9" y1="16" x2="15" y2="16"></line></svg> Informe Cada Semestral</span>
             <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="pmRenderInformeSemestral()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Actualizar</button>
           </div>
-          <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Réplica del formulario de inspección "Informe Cada Semestral": estas 10 actividades se revisan cada 8.000 horas de operación en cada compresor. El sistema genera solo, automáticamente, UNA orden con las 10 tareas cada vez que un compresor llega a un múltiplo de 8.000 horas — no requiere importar ni registrar nada manualmente.</div>
+          <div style="font-size:12px;color:var(--text3);padding:12px 18px 0">Réplica del formulario de inspección "Informe Cada Semestral": estas 10 actividades se revisan cada 4.000 horas de operación en cada compresor. El sistema genera solo, automáticamente, UNA orden con las 10 tareas cada vez que un compresor llega a un múltiplo de 4.000 horas — no requiere importar ni registrar nada manualmente.</div>
           <div class="card-body" style="padding:18px" id="pmInformeSemestralContenido"><div style="color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
       </div>
@@ -4959,11 +4959,11 @@ const PROGRAMA_2026_COMPLETO_ZIPAQUIRA = [
 ];
 
 /** Checklist del "Informe Cada Trimestral" del cliente — un formulario de
- *  inspección con estas 8 actividades, que se repite cada 4.000 horas de
- *  operación (los hitos de referencia del propio informe van de 2.000 en
- *  2.000, en pasos de 4.000: 2000, 6000, 10000... hasta 190000). No trae
- *  un equipo fijo (el campo "EQUIPO:" del formulario está en blanco para
- *  llenar a mano) — se aplica a los 7 compresores. */
+ *  inspección con estas 8 actividades, que se repite cada 2.000 horas de
+ *  operación (Trimestral=2.000 h, Semestral=4.000 h, Anual=8.000 h — cada
+ *  uno el doble de frecuente que el siguiente). No trae un equipo fijo (el
+ *  campo "EQUIPO:" del formulario está en blanco para llenar a mano) — se
+ *  aplica a los 7 compresores. */
 const INFORME_TRIMESTRAL_ACTIVIDADES = [
   { actividad: 'Fugas', descripcion: 'Revisar si hay fugas de aceite o agua, y apretar o remplazar si es necesario.' },
   { actividad: 'Nivel de aceite', descripcion: 'Verificar nivel de aceite en el reservorio' },
@@ -4975,13 +4975,12 @@ const INFORME_TRIMESTRAL_ACTIVIDADES = [
   { actividad: 'Parámetros del compresor', descripcion: 'Graficar parámetros importantes y relevantes' },
 ];
 const INFORME_TRIMESTRAL_EQUIPOS = ['CB1', 'CB2', 'CB3', 'CB4', 'CA1', 'CA2', 'CA3'];
-const INFORME_TRIMESTRAL_INTERVALO_HORAS = 4000;
+const INFORME_TRIMESTRAL_INTERVALO_HORAS = 2000;
 
 /** Checklist del "Informe Cada Semestral" del cliente — el mismo tipo de
- *  formulario que el trimestral, pero con 10 actividades y cada 8.000
- *  horas de operación (los hitos de referencia van de 8.000 en 8.000:
- *  4000, 12000, 20000... hasta 124000). Igual que el trimestral, se
- *  aplica a los 7 compresores. */
+ *  formulario que el trimestral, pero con 10 actividades y cada 4.000
+ *  horas de operación (el doble del trimestral, la mitad del anual).
+ *  Igual que el trimestral, se aplica a los 7 compresores. */
 const INFORME_SEMESTRAL_ACTIVIDADES = [
   { actividad: 'Fugas', descripcion: 'Revisar si hay fugas de aceite o agua, y apretar o remplazar si es necesario.' },
   { actividad: 'Nivel de aceite', descripcion: 'Verificar nivel de aceite en el reservorio' },
@@ -4995,14 +4994,12 @@ const INFORME_SEMESTRAL_ACTIVIDADES = [
   { actividad: 'Válvulas', descripcion: 'Inspeccionar y probar la válvula de succión y válvula de descarga. Válvulas operando correctamente.' },
 ];
 const INFORME_SEMESTRAL_EQUIPOS = ['CB1', 'CB2', 'CB3', 'CB4', 'CA1', 'CA2', 'CA3'];
-const INFORME_SEMESTRAL_INTERVALO_HORAS = 8000;
+const INFORME_SEMESTRAL_INTERVALO_HORAS = 4000;
 
 /** Checklist del "Informe Cada Anual" del cliente — el mismo tipo de
  *  formulario que el trimestral/semestral, pero con 21 actividades y
- *  cada 8.000 horas de operación (los hitos de referencia van de 8.000
- *  en 8.000: 8000, 16000, 24000... hasta 128000, tal como está escrito
- *  en la hoja "_INFORME_CADA_ANUAL" del Excel real). Igual que los
- *  otros dos, se aplica a los 7 compresores. */
+ *  cada 8.000 horas de operación (el doble del semestral). Igual que
+ *  los otros dos, se aplica a los 7 compresores. */
 const INFORME_ANUAL_ACTIVIDADES = [
   { actividad: 'Fugas', descripcion: 'Revisar si hay fugas de aceite o agua, y apretar o remplazar si es necesario.' },
   { actividad: 'Nivel de aceite', descripcion: 'Verificar nivel de aceite en el reservorio' },
