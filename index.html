@@ -9420,7 +9420,7 @@ async function verificarPlanesMantenimientoYGenerar() {
  *  horas se generó la última orden por equipo (para no repetirla hasta
  *  el próximo múltiplo). Usado por verificarInformeTrimestralYGenerar()
  *  y verificarInformeSemestralYGenerar(). */
-async function _verificarInformePeriodicoYGenerar({ nombre, actividades, equipos, intervaloHoras, hojaEstado, colsEstado }) {
+async function _verificarInformePeriodicoYGenerar({ nombre, tituloCorto, actividades, equipos, intervaloHoras, hojaEstado, colsEstado }) {
   if (operacionActual !== 'zipaquira') return;
 
   let horasEquipos, estado;
@@ -9452,7 +9452,7 @@ async function _verificarInformePeriodicoYGenerar({ nombre, actividades, equipos
       const numOrden = 'OT-' + String(Date.now() + i).slice(-5);
       const nuevaOrden = {
         id: numOrden, NumeroOrden: numOrden,
-        Title: nombre,
+        Title: tituloCorto + ' ' + equipo,
         Equipo: equipo,
         TipoMantenimiento: 'Preventivo',
         Prioridad: 'Media', Estado: 'Pendiente',
@@ -9483,6 +9483,7 @@ async function _verificarInformePeriodicoYGenerar({ nombre, actividades, equipos
 function verificarInformeTrimestralYGenerar() {
   return _verificarInformePeriodicoYGenerar({
     nombre: 'Informe Cada Trimestral',
+    tituloCorto: 'Mantenimiento Trimestral',
     actividades: INFORME_TRIMESTRAL_ACTIVIDADES,
     equipos: INFORME_TRIMESTRAL_EQUIPOS,
     intervaloHoras: INFORME_TRIMESTRAL_INTERVALO_HORAS,
@@ -9494,6 +9495,7 @@ function verificarInformeTrimestralYGenerar() {
 function verificarInformeSemestralYGenerar() {
   return _verificarInformePeriodicoYGenerar({
     nombre: 'Informe Cada Semestral',
+    tituloCorto: 'Mantenimiento Semestral',
     actividades: INFORME_SEMESTRAL_ACTIVIDADES,
     equipos: INFORME_SEMESTRAL_EQUIPOS,
     intervaloHoras: INFORME_SEMESTRAL_INTERVALO_HORAS,
@@ -9505,6 +9507,7 @@ function verificarInformeSemestralYGenerar() {
 function verificarInformeAnualYGenerar() {
   return _verificarInformePeriodicoYGenerar({
     nombre: 'Informe Cada Anual',
+    tituloCorto: 'Mantenimiento Anual',
     actividades: INFORME_ANUAL_ACTIVIDADES,
     equipos: INFORME_ANUAL_EQUIPOS,
     intervaloHoras: INFORME_ANUAL_INTERVALO_HORAS,
