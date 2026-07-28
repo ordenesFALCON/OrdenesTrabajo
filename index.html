@@ -2191,7 +2191,7 @@ body.inv-activo .container { max-width: 1800px; }
       <div class="card">
         <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Reiniciar Horas</div>
         <div class="card-body" style="padding:18px">
-          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Borra todas las horas guardadas y todas las órdenes que se generaron automáticamente hasta ahora. Úsalo una sola vez, antes de empezar a digitar las horas reales de hoy en adelante — así el sistema no genera de una vez todas las órdenes atrasadas, y solo empieza a generar automáticamente a partir de las horas que digites desde hoy.</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Borra todas las horas guardadas y todas las órdenes que se generaron automáticamente hasta ahora. Antes de borrar, guarda como punto de partida las horas reales que tenga cada equipo en ese momento — así el sistema no genera de una vez todas las órdenes atrasadas, sin importar en qué orden vuelvas a digitar los equipos después. Importante: no escribas "0" de relleno en un equipo antes de tener su hora real — mejor déjalo en blanco hasta que la sepas.</div>
           <button class="btn btn-ghost" style="color:var(--danger);border-color:var(--danger)" onclick="reiniciarHorasYLimpiarAutomaticasClick()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Reiniciar Horas y Limpiar Órdenes Automáticas</button>
           <div id="reinicioMsg" style="margin-top:10px;font-size:13px"></div>
         </div>
@@ -7490,30 +7490,57 @@ async function limpiarOrdenesAutomaticas() {
 }
 
 /** Botón "Reiniciar Horas y Limpiar Órdenes Automáticas": borra todas las
- *  horas guardadas, el estado de "última generación" de los informes
- *  periódicos y de los planes por horas, y las órdenes ya generadas
- *  automáticamente — para empezar de cero con las horas que se van a
- *  digitar desde hoy, sin que el sistema regenere de una vez todo el
- *  historial atrasado. Acción destructiva: pide confirmación explícita. */
+ *  horas guardadas y las órdenes ya generadas automáticamente — pero
+ *  ANTES de borrar, fija la base ("última generación") de los informes
+ *  periódicos y de los planes por horas usando las horas reales que
+ *  había en ESE MOMENTO (no las que se digiten después). Así, sin
+ *  importar en qué orden se vuelvan a digitar los equipos después
+ *  (incluyendo si alguien digita "0" como relleno antes de la hora real),
+ *  el sistema solo cuenta el intervalo hacia adelante desde la última
+ *  hora real conocida, y nunca vuelve a tomar un valor recién digitado
+ *  como si fuera la base. Acción destructiva: pide confirmación
+ *  explícita. */
 async function reiniciarHorasYLimpiarAutomaticasClick() {
   if (!confirm('Esto va a borrar PERMANENTEMENTE:\n\n• Todas las horas guardadas de los equipos.\n• El progreso ("última generación") de los informes Trimestral/Semestral/Anual y de los planes por horas.\n• Todas las órdenes de trabajo creadas automáticamente hasta ahora (y sus tareas/repuestos/insumos).\n\nLas órdenes creadas manualmente NO se tocan. Esta acción no se puede deshacer.\n\n¿Continuar?')) return;
 
   const msg = document.getElementById('reinicioMsg');
   msg.style.color = 'var(--text3)'; msg.textContent = 'Limpiando…';
   try {
-    await eliminarFilasDondeCumple(SH.horasEquipos, () => true);
-    await eliminarFilasDondeCumple(SH.informeTrimestralEstado, () => true);
-    await eliminarFilasDondeCumple(SH.informeSemestralEstado, () => true);
-    await eliminarFilasDondeCumple(SH.informeAnualEstado, () => true);
+    const horasEquipos = await cargarHorasEquipos();
+    function horasDe(equipo) {
+      const fila = horasEquipos.find(f => f.Equipo === equipo);
+      if (!fila || fila.HorasActuales === '') return null;
+      const n = Number(fila.HorasActuales);
+      return isNaN(n) ? null : n;
+    }
+
+    const estadosDef = [
+      { hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS },
+      { hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS },
+      { hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS },
+    ];
+    const todosLosEquipos = Object.values(INFORME_EQUIPOS_POR_TIPO).flat();
+    for (const { hoja, cols } of estadosDef) {
+      const cambiosEstado = {};
+      for (const equipo of todosLosEquipos) {
+        const h = horasDe(equipo);
+        if (h !== null) cambiosEstado[equipo] = { UltimaGeneracionHoras: String(h) };
+      }
+      await eliminarFilasDondeCumple(hoja, () => true);
+      await _actualizarFilasPorClaveEnLote(hoja, cols, 'Equipo', cambiosEstado);
+    }
 
     const planes = await cargarPlanesMantenimiento();
     const cambiosPlanes = {};
     for (const plan of planes) {
-      if ((plan.TipoFrecuencia || '') === 'horas' && plan.UltimaGeneracionHoras !== '') {
-        cambiosPlanes[plan.ID] = { UltimaGeneracionHoras: '' };
+      if ((plan.TipoFrecuencia || '') === 'horas') {
+        const h = horasDe(plan.Equipo);
+        cambiosPlanes[plan.ID] = { UltimaGeneracionHoras: h !== null ? String(h) : '' };
       }
     }
     await _actualizarFilasPorClaveEnLote(SH.planesMantenimiento, PLANES_MANTENIMIENTO_COLS, 'ID', cambiosPlanes);
+
+    await eliminarFilasDondeCumple(SH.horasEquipos, () => true);
 
     const nOrdenes = await limpiarOrdenesAutomaticas();
 
