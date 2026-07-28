@@ -5436,6 +5436,15 @@ async function asegurarHoja(nombre, cols) {
   // Leer fila 1
   const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A1:' + colFin + '1'), { headers: hdrs });
   if (r.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  // Si esta lectura falla por cualquier otro motivo, NO se puede asumir que
+  // la hoja está vacía (eso dispara una reescritura de encabezados sobre
+  // datos que sí existen) — hay que avisar en vez de seguir silenciosamente.
+  if (!r.ok) {
+    const txt = await r.text();
+    let msg = 'Error ' + r.status;
+    try { msg = JSON.parse(txt).error?.message || msg; } catch (_) {}
+    throw new Error('No se pudo leer los encabezados de ' + nombre + ': ' + msg);
+  }
   const d = await r.json();
   const existing = (d.values && d.values[0]) ? d.values[0] : [];
   const missing  = cols.filter(c => !existing.includes(c));
@@ -9284,6 +9293,16 @@ async function leerHojaGenerica(nombre) {
     headers: { Authorization: 'Bearer ' + googleAccessToken }
   });
   if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado'); }
+  // Si la lectura falla por cualquier otro motivo (permisos, límite de
+  // peticiones, etc.) hay que avisar en vez de asumir silenciosamente que
+  // la hoja está vacía — si no, datos que sí existen se ven como si se
+  // hubieran "desaparecido" cada vez que esta lectura falla.
+  if (!resp.ok) {
+    const txt = await resp.text();
+    let msg = 'Error ' + resp.status;
+    try { msg = JSON.parse(txt).error?.message || msg; } catch (_) {}
+    throw new Error('No se pudo leer la hoja ' + nombre + ': ' + msg);
+  }
   const d = await resp.json();
   if (!d.values || d.values.length < 2) return [];
   const cols = d.values[0];
