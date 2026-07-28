@@ -1,0 +1,30 @@
+name: Validar sintaxis
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validar sintaxis de los bloques <script> en index.html
+        run: |
+          node -e "
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+          if (!scripts.length) { console.log('No se encontraron bloques <script>.'); process.exit(1); }
+          let hayError = false;
+          scripts.forEach((s, i) => {
+            try { new Function(s); console.log('Script ' + i + ': OK'); }
+            catch (e) { console.log('Script ' + i + ': ERROR - ' + e.message); hayError = true; }
+          });
+          if (hayError) process.exit(1);
+          "
