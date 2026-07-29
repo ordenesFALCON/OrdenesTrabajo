@@ -374,16 +374,6 @@ body.inv-activo .container { max-width: 1800px; }
 .ie-table tr:nth-child(even) td { background: var(--surface2); }
 .ie-table tr:hover td { background: #eaf2ff; }
 .card:hover { box-shadow: var(--shadow-md); }
-.section-header {
-  background: linear-gradient(90deg, var(--brand) 0%, #1a4a8a 100%);
-  color: #fff;
-  padding: 9px 16px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  border-left: 4px solid var(--accent);
-}
 .card-head {
   background: var(--brand);
   color: #fff;
@@ -397,13 +387,12 @@ body.inv-activo .container { max-width: 1800px; }
 
 /* ── Grid layouts ── */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
 /* Lista de equipos + panel de detalle (Histórico por Equipo, Hoja de Vida):
    columna angosta fija para la lista en escritorio, apilada en celular. */
 .grid-lista-detalle { display: grid; grid-template-columns: var(--lista-w, 240px) 1fr; gap: 14px; align-items: start; }
 @media(max-width:720px) {
-  .grid-2,.grid-3,.grid-4,.grid-lista-detalle { grid-template-columns: 1fr; }
+  .grid-2,.grid-4,.grid-lista-detalle { grid-template-columns: 1fr; }
 }
 
 /* ── Form fields ── */
@@ -434,7 +423,6 @@ body.inv-activo .container { max-width: 1800px; }
   box-shadow: 0 0 0 3px rgba(0,120,212,.12);
 }
 .field textarea { resize: vertical; min-height: 76px; }
-.field .help { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
 /* ── Signature field ── */
 .sig-pad {
@@ -518,8 +506,6 @@ body.inv-activo .container { max-width: 1800px; }
 .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 .btn-success { background: var(--accent2); color: #fff; box-shadow: 0 2px 8px rgba(16,124,16,.28); }
 .btn-success:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(16,124,16,.36); }
-.btn-danger  { background: var(--warn);   color: #fff; box-shadow: 0 2px 8px rgba(216,59,1,.28); }
-.btn-danger:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(216,59,1,.36); }
 .btn-ghost   { background: var(--brand-light); color: var(--brand); border: 1px solid var(--brand-mid); }
 .btn-ghost:hover:not(:disabled) { background: var(--brand-mid); }
 .btn-block   { width: 100%; margin-top: 8px; }
@@ -616,16 +602,6 @@ body.inv-activo .container { max-width: 1800px; }
 .kpi-label { font-size: 11px; color: var(--text2); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
 .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
-/* ── Approval panel ── */
-.approval-box {
-  background: #fff9f0;
-  border: 1px solid #f3d9a0;
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  margin-bottom: 14px;
-}
-.approval-box.rejected { background: #fff0f0; border-color: #f3a0a0; }
-.approval-box h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
 
 /* ── Alerts ── */
 .alert {
@@ -635,7 +611,6 @@ body.inv-activo .container { max-width: 1800px; }
 .alert.show { display: block; }
 .alert-ok  { background: #dff6dd; color: #1a6b1a; border: 1px solid #92d89e; }
 .alert-err { background: #fde8e8; color: #a80000; border: 1px solid #f3a0a0; }
-.alert-info{ background: #e6f3fb; color: #004e8c; border: 1px solid #92c8e8; }
 
 /* ── Loading spinner ── */
 .spinner {
@@ -693,7 +668,6 @@ body.inv-activo .container { max-width: 1800px; }
   min-height: 60px; display: flex; align-items: center; justify-content: center;
 }
 .sig-img-wrap img { max-height: 60px; max-width: 100%; object-fit: contain; }
-.sig-empty { font-size: 12px; color: var(--text3); font-style: italic; }
 
 /* ── Empty state ── */
 .empty-state {
@@ -725,7 +699,7 @@ body.inv-activo .container { max-width: 1800px; }
 /* Print */
 @media print {
   @page { margin: 16mm 14mm; }
-  .app-header, .nav-tabs, .action-bar,
+  .app-header, .nav-tabs,
   #panel-nueva, #panel-lista, #panel-dashboard, #panel-novedades, #sidebarOperaciones,
   #barraInstalarApp, #appVersionTag { display: none !important; }
   #panel-detalle { display: block !important; }
@@ -2730,17 +2704,26 @@ async function registrarProductoInventarioDirecto(sede, producto) {
   await _invAppend(spreadsheetId, 'Productos', [fila]);
 }
 
+/** Antes esta función sumaba/restaba Ingresos y Salidas en línea recta
+ *  (sin pasar por lotes), lo que puede quedar en desacuerdo con el stock
+ *  que muestra el Dashboard (obtenerStockInventarioDirecto, que sí usa
+ *  lotes FIFO): si en el historial de un producto alguna vez se registró
+ *  una Salida por más de lo que en verdad había disponible en ese momento
+ *  (ej. una edición manual de la hoja, una importación, o una versión
+ *  anterior sin esta misma validación), la suma en línea recta puede
+ *  quedar momentáneamente negativa y luego "recuperarse" con un ingreso
+ *  posterior — mientras que los lotes FIFO nunca dejan un lote en
+ *  negativo, así que ese exceso de consumo se pierde para siempre en vez
+ *  de arrastrarse. El resultado: el Dashboard mostraba stock disponible,
+ *  pero registrar una Salida de esa misma cantidad fallaba con "Stock
+ *  insuficiente" porque este cálculo daba un número más bajo. Ahora usa
+ *  los MISMOS lotes FIFO que el Dashboard, para que la validación nunca
+ *  contradiga lo que el usuario está viendo en pantalla. */
 async function _invStockDeUnProducto(spreadsheetId, codigo) {
-  const movimientos = await _invGet(spreadsheetId, 'Movimientos!A2:D100000');
-  let cantidad = 0;
-  const cod = codigo.toUpperCase();
-  movimientos.forEach(row => {
-    if ((row[0] || '').toString().trim().toUpperCase() !== cod) return;
-    const tipo = (row[2] || '').toString().trim().toUpperCase();
-    const val  = parseFloat(row[3]) || 0;
-    if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') cantidad += val;
-    else if (tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') cantidad -= val;
-  });
+  const movimientos = await _invGet(spreadsheetId, 'Movimientos!A2:M100000');
+  const lotesPorCodigo = _agruparLotesFIFO(movimientos);
+  const lotes = lotesPorCodigo.get(codigo.toUpperCase()) || [];
+  const cantidad = lotes.reduce((s, l) => s + l.restante, 0);
   return Math.max(0, Math.round(cantidad * 100) / 100);
 }
 
@@ -3509,9 +3492,6 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent     = currentUser.name;
   document.getElementById('userInitials').textContent = currentUser.initials;
   document.getElementById('f_solicitadaPor').value    = currentUser.name;
-
-  const portadaLogo = document.getElementById('portadaLogoImg');
-  if (portadaLogo) portadaLogo.src = getLogoDataUrl();
 
   // Solo precarga datos de Sheets si ya estás autenticado en una sede esta sesión
   // (evita traer datos de la operación sin haber puesto la contraseña primero).
@@ -8354,6 +8334,13 @@ function invHandleTipoChange() {
   const esSalida = tipo === 'SALIDA';
   document.getElementById('invm_grupoEquipo').style.display = esSalida ? 'flex' : 'none';
   document.getElementById('invm_equipoMarca').style.display = esSalida ? 'inline' : 'none';
+  // Si se cambia el tipo lejos de "Salida", el equipo destino deja de tener
+  // sentido — hay que limpiarlo, no solo ocultarlo. Si no, alguien que
+  // primero elige Salida + un equipo y después cambia de opinión a Ingreso
+  // termina guardando ese equipo "pegado" a un ingreso, y ese movimiento
+  // nunca aparece en Destino de Repuestos / Consumo por Equipo (que solo
+  // cuentan Salidas) aunque sí tenga un equipo guardado.
+  if (!esSalida) document.getElementById('invm_equipo').value = '';
 
   const esEntrada = tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO';
   document.getElementById('invm_grupoPrecio').style.display = esEntrada ? 'flex' : 'none';
@@ -8394,7 +8381,12 @@ async function invRegistrarMovimiento() {
       cantidad: document.getElementById('invm_cantidad').value,
       precioUnitario: esEntrada ? precio : '',
       tipoDocumento, numeroDocumento: tipoDocumento ? numeroDocumento : '',
-      responsable, equipo,
+      // Un equipo destino solo tiene sentido en una Salida (consumo real de
+      // repuesto) — se descarta para cualquier otro tipo aunque el campo
+      // (oculto) traiga un valor pegado de una selección anterior, para que
+      // nunca se guarde un Ingreso/Ajuste con un equipo que después haga
+      // ver el movimiento como "consumo" a medias en el dashboard.
+      responsable, equipo: tipo === 'SALIDA' ? equipo : '',
       observaciones: document.getElementById('invm_obs').value.trim(),
     });
     msg.style.color = '#15803d'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Movimiento registrado correctamente.';
@@ -8403,6 +8395,11 @@ async function invRegistrarMovimiento() {
     document.getElementById('invm_grupoDocNumero').style.display = 'none';
     document.getElementById('invm_fecha').valueAsDate = new Date();
     _stockInventarioCache = null;
+    // Refresca el Dashboard en segundo plano — si ya estaba abierto en otra
+    // pestaña del navegador o si el usuario vuelve a él sin recargar toda
+    // la app, no debe quedarse mostrando el stock de antes de este
+    // movimiento recién guardado.
+    invCargarDashboard().catch(() => {});
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
   }
