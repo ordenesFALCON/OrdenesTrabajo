@@ -5135,6 +5135,19 @@ const INFORME_ANUAL_ACTIVIDADES_POR_TIPO = {
   drycoolers: INFORME_ANUAL_ACTIVIDADES, tornillo: INFORME_ANUAL_ACTIVIDADES,
 };
 
+/** La "próxima orden" de un informe periódico tiene que caer en un múltiplo
+ *  fijo del intervalo (2000, 4000, 6000... para el trimestral) — no en
+ *  "las horas que había cuando se guardó por última vez". Si se guardara la
+ *  hora exacta como base, cada vez que se digita un nuevo valor de horas la
+ *  meta se correría con él (ej. 24.353 -> próxima 26.353), en vez de quedar
+ *  fija en el número redondo que de verdad corresponde al mantenimiento
+ *  (26.000). Redondeando la base hacia abajo al último múltiplo cumplido,
+ *  la meta siempre es ese número fijo, sin importar el valor exacto de
+ *  horas que se haya digitado. */
+function _baseGridHoras(horas, intervaloHoras) {
+  return Math.floor(horas / intervaloHoras) * intervaloHoras;
+}
+
 // Nombres de hojas
 const SH = {
   ordenes:   'Ordenes',
@@ -7389,9 +7402,9 @@ async function guardarHorasEquiposGrid() {
       cargarPlanesMantenimiento().catch(() => []),
     ]);
     const estados = [
-      { estado: estadoTri, hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS },
-      { estado: estadoSem, hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS },
-      { estado: estadoAnu, hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS },
+      { estado: estadoTri, hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS, intervalo: INFORME_TRIMESTRAL_INTERVALO_HORAS },
+      { estado: estadoSem, hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS, intervalo: INFORME_SEMESTRAL_INTERVALO_HORAS },
+      { estado: estadoAnu, hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS, intervalo: INFORME_ANUAL_INTERVALO_HORAS },
     ];
 
     // Arma todos los cambios en memoria y los guarda en UN SOLO viaje por
@@ -7405,11 +7418,13 @@ async function guardarHorasEquiposGrid() {
     }
     await _actualizarFilasPorClaveEnLote(SH.horasEquipos, HORAS_EQUIPOS_COLS, 'Equipo', cambiosHoras);
 
-    for (const { estado, hoja, cols } of estados) {
+    for (const { estado, hoja, cols, intervalo } of estados) {
       const cambiosEstado = {};
       for (const { equipo, horas } of cambios) {
         const fila = estado.find(f => f.Equipo === equipo);
-        if (!fila || fila.UltimaGeneracionHoras === '') cambiosEstado[equipo] = { UltimaGeneracionHoras: String(horas) };
+        if (!fila || fila.UltimaGeneracionHoras === '') {
+          cambiosEstado[equipo] = { UltimaGeneracionHoras: String(_baseGridHoras(Number(horas), intervalo)) };
+        }
       }
       await _actualizarFilasPorClaveEnLote(hoja, cols, 'Equipo', cambiosEstado);
     }
@@ -7517,16 +7532,16 @@ async function reiniciarHorasYLimpiarAutomaticasClick() {
     }
 
     const estadosDef = [
-      { hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS },
-      { hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS },
-      { hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS },
+      { hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS, intervalo: INFORME_TRIMESTRAL_INTERVALO_HORAS },
+      { hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS, intervalo: INFORME_SEMESTRAL_INTERVALO_HORAS },
+      { hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS, intervalo: INFORME_ANUAL_INTERVALO_HORAS },
     ];
     const todosLosEquipos = Object.values(INFORME_EQUIPOS_POR_TIPO).flat();
-    for (const { hoja, cols } of estadosDef) {
+    for (const { hoja, cols, intervalo } of estadosDef) {
       const cambiosEstado = {};
       for (const equipo of todosLosEquipos) {
         const h = horasDe(equipo);
-        if (h !== null) cambiosEstado[equipo] = { UltimaGeneracionHoras: String(h) };
+        if (h !== null) cambiosEstado[equipo] = { UltimaGeneracionHoras: String(_baseGridHoras(h, intervalo)) };
       }
       await eliminarFilasDondeCumple(hoja, () => true);
       await _actualizarFilasPorClaveEnLote(hoja, cols, 'Equipo', cambiosEstado);
@@ -10054,7 +10069,7 @@ async function _verificarInformePeriodicoYGenerar({ nombre, tituloCorto, activid
         allOrdenes.push(nuevaOrden);
         guardarLocal();
         await guardarOrdenEnSheets(nuevaOrden);
-        await _actualizarFilaPorClave(hojaEstado, colsEstado, 'Equipo', equipo, { UltimaGeneracionHoras: String(horasActuales) });
+        await _actualizarFilaPorClave(hojaEstado, colsEstado, 'Equipo', equipo, { UltimaGeneracionHoras: String(_baseGridHoras(horasActuales, intervaloHoras)) });
         await registrarNotificacion(
           `Se generó automáticamente la orden ${numOrden} para ${equipo} (${nombre}, cada ${intervaloHoras} horas).`,
           numOrden, equipo
