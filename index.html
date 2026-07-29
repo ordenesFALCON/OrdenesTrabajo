@@ -2423,11 +2423,16 @@ window.addEventListener('load', () => {
    ► Reemplaza estos valores con los de tu proyecto
 ══════════════════════════════════════════════ */
 const GOOGLE_CONFIG = {
-  clientId:      '418486085956-n09evlttjt7qad6ur1j22c52b9nr0fg2.apps.googleusercontent.com', // ← Tu Google OAuth Client ID
   spreadsheetId: '1TGz9MSbcVlK2GYCzsliKQK6-BxUnuF7B_f9gqxH1fjw', // ← se sobreescribe según la operación elegida (ver OPERACIONES)
   sheetName:     'Ordenes', // ← Nombre de la hoja
-  scopes:        'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive.file',
 };
+
+// ── LOGIN POR DOCUMENTO + PIN ──
+// URL "/exec" del Apps Script (ver Code.gs del proyecto "Login Operarios")
+// que valida documento+PIN contra su hoja "Usuarios" y, si es válido,
+// entrega un token de acceso de Google para hablar con Sheets — el
+// operario nunca inicia sesión con su propia cuenta de Google.
+const LOGIN_APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXYJOJkuDpILDZgnh11bsmbxmk8OYgpUeLKwkfodqdVPA3Pwra6lunhia1PdE3_VTN5g/exec';
 
 /* ══════════════════════════════════════════════
    OPERACIONES / SEDES
@@ -3453,6 +3458,8 @@ let googleAccessToken = null;
 function cerrarSesion() {
   sessionStorage.removeItem('gUser');
   sessionStorage.removeItem('gToken');
+  sessionStorage.removeItem('docPinDocumento');
+  sessionStorage.removeItem('docPinPin');
   googleAccessToken = null;
   location.reload();
 }
@@ -3461,35 +3468,16 @@ function cerrarSesion() {
    INICIALIZACIÓN
 ══════════════════════════════════════════════ */
 window.addEventListener('load', async () => {
-  // Manejar callback de OAuth2 (hash en URL)
-  const params = new URLSearchParams(window.location.hash.replace('#','?'));
-  if (params.get('access_token')) {
-    googleAccessToken = params.get('access_token');
-    // Obtener perfil
-    try {
-      const profileResp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: 'Bearer ' + googleAccessToken }
-      });
-      const profile = await profileResp.json();
-      currentUser = {
-        name:     profile.name || profile.email,
-        email:    profile.email,
-        initials: (profile.name || profile.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
-      };
-      sessionStorage.setItem('gUser', JSON.stringify(currentUser));
-      sessionStorage.setItem('gToken', googleAccessToken);
-      history.replaceState(null, '', window.location.pathname);
-    } catch(e) {
-      console.warn('Error obteniendo perfil Google:', e);
-    }
-  } else {
-    // Verificar sesión guardada
-    const savedUser  = sessionStorage.getItem('gUser');
-    const savedToken = sessionStorage.getItem('gToken');
-    if (savedUser && savedToken) {
-      currentUser = JSON.parse(savedUser);
-      googleAccessToken = savedToken;
-    }
+  // Verificar sesión guardada (login por Documento + PIN — ver
+  // loginConDocumentoPinClick()). El token en sí no viene de un OAuth
+  // propio del operario: lo entrega el Apps Script tras validar su
+  // documento+PIN, pero de ahí en adelante se usa exactamente igual que
+  // cualquier token de Google.
+  const savedUser  = sessionStorage.getItem('gUser');
+  const savedToken = sessionStorage.getItem('gToken');
+  if (savedUser && savedToken) {
+    currentUser = JSON.parse(savedUser);
+    googleAccessToken = savedToken;
   }
 
   if (!googleAccessToken) {
@@ -5181,8 +5169,30 @@ const INFORME_ANUAL_ESTADO_COLS = ['Equipo', 'UltimaGeneracionHoras'];
 
 /** Modal centrado y amigable cuando el token de Google caduca (pasa cada
  *  ~1 hora si dejas la pestaña abierta). Reemplaza los errores técnicos en JSON. */
-function mostrarModalSesionExpirada() {
+/** El token que usa toda la app (claves de sede, Órdenes, Inventario...)
+ *  dura ~1 hora, lo entregue Google o el Apps Script de login. En vez de
+ *  mandar de una al operario a volver a escribir su documento+PIN, primero
+ *  se intenta pedir un token nuevo EN SILENCIO con las mismas credenciales
+ *  que ya escribió al entrar (guardadas solo en esta pestaña) — si eso
+ *  funciona, se recarga sin que se note. Solo si ese intento falla (o si
+ *  no hay credenciales guardadas) se le muestra el aviso para que vuelva a
+ *  escribir su documento+PIN. */
+async function mostrarModalSesionExpirada() {
   if (document.getElementById('modalSesionExpirada')) return; // ya está mostrándose
+
+  const documento = sessionStorage.getItem('docPinDocumento');
+  const pin       = sessionStorage.getItem('docPinPin');
+  if (documento && pin) {
+    try {
+      const data = await _loginAppsScript(documento, pin);
+      if (data.ok) {
+        sessionStorage.setItem('gToken', data.accessToken);
+        location.reload();
+        return;
+      }
+    } catch (e) { /* sigue abajo y muestra el aviso */ }
+  }
+
   const overlay = document.createElement('div');
   overlay.id = 'modalSesionExpirada';
   overlay.style = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:5000;padding:16px';
@@ -5191,10 +5201,10 @@ function mostrarModalSesionExpirada() {
       <div style="margin-bottom:10px;color:var(--brand)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:42px;height:42px"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3 2 6"></path><path d="M22 6l-3-3"></path></svg></div>
       <div style="font-weight:800;font-size:17px;color:var(--brand);margin-bottom:8px">Tu sesión expiró</div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:22px;line-height:1.5">
-        Por seguridad, Google cierra el acceso después de un tiempo de inactividad.
-        Vuelve a iniciar sesión para continuar donde estabas.
+        Por seguridad, el acceso se cierra después de un tiempo de inactividad.
+        Vuelve a iniciar sesión con tu documento y PIN para continuar donde estabas.
       </div>
-      <button class="btn btn-primary" style="width:100%" onclick="location.reload()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Volver a iniciar sesión</button>
+      <button class="btn btn-primary" style="width:100%" onclick="cerrarSesion()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Volver a iniciar sesión</button>
     </div>`;
   document.body.appendChild(overlay);
 }
@@ -6075,36 +6085,74 @@ function mostrarLoginOverlay() {
     <div style="background:white;border-radius:14px;padding:44px 52px;text-align:center;max-width:400px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.3)">
       <div style="margin-bottom:12px;color:#1a3a6b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:42px;height:42px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg></div>
       <h2 style="font-size:22px;font-weight:700;color:#1a3a6b;margin-bottom:8px">Órdenes de Trabajo</h2>
-      <p style="font-size:13px;color:#605e5c;margin-bottom:28px;line-height:1.5">
-        Inicia sesión con tu cuenta de Google para acceder a la aplicación. Los datos se guardan en tu Google Sheets.
+      <p style="font-size:13px;color:#605e5c;margin-bottom:22px;line-height:1.5">
+        Ingresa con tu número de documento y tu PIN para acceder a la aplicación.
       </p>
-      <button onclick="loginConGoogle()" style="
-        display:inline-flex;align-items:center;gap:10px;padding:11px 28px;
-        background:white;border:1.5px solid #dadce0;border-radius:8px;
-        font-size:14px;font-weight:600;color:#3c4043;cursor:pointer;
-        box-shadow:0 1px 3px rgba(0,0,0,.12);transition:box-shadow .2s;
-        font-family:inherit;
-      " onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.2)'" onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,.12)'">
-        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-        Iniciar sesión con Google
-      </button>
-      <p style="font-size:11px;color:#a19f9d;margin-top:20px">
-        Se solicitará permiso para leer y escribir en Google Sheets.
-      </p>
+      <div style="text-align:left;margin-bottom:14px">
+        <label style="font-size:12px;font-weight:600;color:#3c4043;display:block;margin-bottom:4px">Número de documento</label>
+        <input id="loginDocumento" type="text" inputmode="numeric" placeholder="Ej: 1007788656" style="width:100%;padding:10px 12px;border:1.5px solid #dadce0;border-radius:8px;font-size:15px;box-sizing:border-box">
+      </div>
+      <div style="text-align:left;margin-bottom:8px">
+        <label style="font-size:12px;font-weight:600;color:#3c4043;display:block;margin-bottom:4px">PIN</label>
+        <input id="loginPin" type="password" inputmode="numeric" maxlength="8" placeholder="••••" style="width:100%;padding:10px 12px;border:1.5px solid #dadce0;border-radius:8px;font-size:15px;box-sizing:border-box">
+      </div>
+      <div id="loginError" style="min-height:18px;font-size:12.5px;color:#c0392b;margin-bottom:6px;text-align:left"></div>
+      <button id="loginBtn" onclick="loginConDocumentoPinClick()" class="btn btn-primary btn-block">Ingresar</button>
     </div>`;
   document.body.appendChild(overlay);
+
+  const intentarConEnter = (e) => { if (e.key === 'Enter') loginConDocumentoPinClick(); };
+  document.getElementById('loginDocumento').addEventListener('keydown', intentarConEnter);
+  document.getElementById('loginPin').addEventListener('keydown', intentarConEnter);
 }
 
-function loginConGoogle() {
-  const params = new URLSearchParams({
-    client_id: GOOGLE_CONFIG.clientId,
-    redirect_uri: window.location.origin + window.location.pathname,
-    response_type: 'token',
-    scope: GOOGLE_CONFIG.scopes,
-    include_granted_scopes: 'true',
-    prompt: 'select_account consent'
+/** Llama al Apps Script de login (ver LOGIN_APPSCRIPT_URL) que valida
+ *  documento+PIN contra su hoja "Usuarios" y, si es válido, devuelve un
+ *  token de acceso de Google — el mismo tipo de token que antes entregaba
+ *  el login de Google, así que el resto de la app (claves de sede,
+ *  Órdenes, Inventario) sigue funcionando exactamente igual sin saber que
+ *  el origen del token cambió. */
+async function _loginAppsScript(documento, pin) {
+  const resp = await fetch(LOGIN_APPSCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ accion: 'login', documento, pin }),
   });
-  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+  if (!resp.ok) throw new Error('No se pudo contactar el servicio de login (Error ' + resp.status + ').');
+  return resp.json();
+}
+
+async function loginConDocumentoPinClick() {
+  const documento = document.getElementById('loginDocumento').value.trim();
+  const pin       = document.getElementById('loginPin').value.trim();
+  const errorEl   = document.getElementById('loginError');
+  const btn       = document.getElementById('loginBtn');
+  errorEl.textContent = '';
+
+  if (!documento || !pin) { errorEl.textContent = 'Escribe tu documento y tu PIN.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Verificando…';
+  try {
+    const data = await _loginAppsScript(documento, pin);
+    if (!data.ok) { errorEl.textContent = data.error || 'Documento o PIN incorrecto.'; return; }
+
+    currentUser = {
+      name: data.nombre || documento,
+      email: documento, // no hay correo de Google — se usa el documento como identificador
+      initials: (data.nombre || documento).split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+    };
+    sessionStorage.setItem('gUser', JSON.stringify(currentUser));
+    sessionStorage.setItem('gToken', data.accessToken);
+    // Se guardan (solo en esta pestaña) para poder pedir un token nuevo en
+    // silencio cuando el actual expire (~1 hora) sin tener que devolver al
+    // operario a la pantalla de login — ver mostrarModalSesionExpirada().
+    sessionStorage.setItem('docPinDocumento', documento);
+    sessionStorage.setItem('docPinPin', pin);
+    location.reload();
+  } catch (e) {
+    errorEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ingresar';
+  }
 }
 
 function mostrarIndicadorStorage(sheetsOk) {
