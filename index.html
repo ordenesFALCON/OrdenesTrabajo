@@ -374,16 +374,6 @@ body.inv-activo .container { max-width: 1800px; }
 .ie-table tr:nth-child(even) td { background: var(--surface2); }
 .ie-table tr:hover td { background: #eaf2ff; }
 .card:hover { box-shadow: var(--shadow-md); }
-.section-header {
-  background: linear-gradient(90deg, var(--brand) 0%, #1a4a8a 100%);
-  color: #fff;
-  padding: 9px 16px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  border-left: 4px solid var(--accent);
-}
 .card-head {
   background: var(--brand);
   color: #fff;
@@ -397,13 +387,12 @@ body.inv-activo .container { max-width: 1800px; }
 
 /* ── Grid layouts ── */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
 .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
 /* Lista de equipos + panel de detalle (Histórico por Equipo, Hoja de Vida):
    columna angosta fija para la lista en escritorio, apilada en celular. */
 .grid-lista-detalle { display: grid; grid-template-columns: var(--lista-w, 240px) 1fr; gap: 14px; align-items: start; }
 @media(max-width:720px) {
-  .grid-2,.grid-3,.grid-4,.grid-lista-detalle { grid-template-columns: 1fr; }
+  .grid-2,.grid-4,.grid-lista-detalle { grid-template-columns: 1fr; }
 }
 
 /* ── Form fields ── */
@@ -434,7 +423,6 @@ body.inv-activo .container { max-width: 1800px; }
   box-shadow: 0 0 0 3px rgba(0,120,212,.12);
 }
 .field textarea { resize: vertical; min-height: 76px; }
-.field .help { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
 /* ── Signature field ── */
 .sig-pad {
@@ -518,8 +506,6 @@ body.inv-activo .container { max-width: 1800px; }
 .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 .btn-success { background: var(--accent2); color: #fff; box-shadow: 0 2px 8px rgba(16,124,16,.28); }
 .btn-success:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(16,124,16,.36); }
-.btn-danger  { background: var(--warn);   color: #fff; box-shadow: 0 2px 8px rgba(216,59,1,.28); }
-.btn-danger:hover:not(:disabled) { box-shadow: 0 5px 16px rgba(216,59,1,.36); }
 .btn-ghost   { background: var(--brand-light); color: var(--brand); border: 1px solid var(--brand-mid); }
 .btn-ghost:hover:not(:disabled) { background: var(--brand-mid); }
 .btn-block   { width: 100%; margin-top: 8px; }
@@ -616,16 +602,6 @@ body.inv-activo .container { max-width: 1800px; }
 .kpi-label { font-size: 11px; color: var(--text2); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
 .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
-/* ── Approval panel ── */
-.approval-box {
-  background: #fff9f0;
-  border: 1px solid #f3d9a0;
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  margin-bottom: 14px;
-}
-.approval-box.rejected { background: #fff0f0; border-color: #f3a0a0; }
-.approval-box h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
 
 /* ── Alerts ── */
 .alert {
@@ -635,7 +611,6 @@ body.inv-activo .container { max-width: 1800px; }
 .alert.show { display: block; }
 .alert-ok  { background: #dff6dd; color: #1a6b1a; border: 1px solid #92d89e; }
 .alert-err { background: #fde8e8; color: #a80000; border: 1px solid #f3a0a0; }
-.alert-info{ background: #e6f3fb; color: #004e8c; border: 1px solid #92c8e8; }
 
 /* ── Loading spinner ── */
 .spinner {
@@ -693,7 +668,6 @@ body.inv-activo .container { max-width: 1800px; }
   min-height: 60px; display: flex; align-items: center; justify-content: center;
 }
 .sig-img-wrap img { max-height: 60px; max-width: 100%; object-fit: contain; }
-.sig-empty { font-size: 12px; color: var(--text3); font-style: italic; }
 
 /* ── Empty state ── */
 .empty-state {
@@ -725,7 +699,7 @@ body.inv-activo .container { max-width: 1800px; }
 /* Print */
 @media print {
   @page { margin: 16mm 14mm; }
-  .app-header, .nav-tabs, .action-bar,
+  .app-header, .nav-tabs,
   #panel-nueva, #panel-lista, #panel-dashboard, #panel-novedades, #sidebarOperaciones,
   #barraInstalarApp, #appVersionTag { display: none !important; }
   #panel-detalle { display: block !important; }
@@ -3509,9 +3483,6 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent     = currentUser.name;
   document.getElementById('userInitials').textContent = currentUser.initials;
   document.getElementById('f_solicitadaPor').value    = currentUser.name;
-
-  const portadaLogo = document.getElementById('portadaLogoImg');
-  if (portadaLogo) portadaLogo.src = getLogoDataUrl();
 
   // Solo precarga datos de Sheets si ya estás autenticado en una sede esta sesión
   // (evita traer datos de la operación sin haber puesto la contraseña primero).
