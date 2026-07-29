@@ -5254,6 +5254,13 @@ async function detectarNombreHoja() {
     if (!resp.ok) return;
     const data = await resp.json();
     const hojas = data.sheets || [];
+    // Deja lista la caché de "hojas existentes" que usa crearHojaSiNoExiste()
+    // (dentro de asegurarHoja) — esta misma llamada de metadata es la primera
+    // que se hace al recargar la app, así que sembrarla aquí evita que cada
+    // asegurarHoja() posterior (Ordenes, Tareas, HorasEquipos, los 3 Estado
+    // de informes, Planes...) repita la misma petición de metadata al
+    // arrancar, que era buena parte de la demora al reiniciar el sistema.
+    _hojasExistentesCache = new Set(hojas.map(h => h.properties.title));
     // Buscar hoja "Ordenes" primero, si no existe usar la primera hoja
     const ordenesHoja = hojas.find(h => h.properties.title === 'Ordenes');
     window._detectedSheetName = ordenesHoja
@@ -5851,12 +5858,18 @@ async function cargarOrdenesDeSheets() {
     } catch(e) { return []; }
   }
 
-  // Cargar hoja principal Ordenes
-  const hOrdenesHeaders = await asegurarHoja(SH.ordenes, SHEETS_COLS);
+  // Cargar hoja principal Ordenes — el chequeo de encabezados (que puede
+  // repararlos si faltan) y la lectura completa de la hoja no dependen uno
+  // del otro en el caso normal (encabezados ya completos), así que se
+  // piden en paralelo en vez de uno después del otro: esa espera
+  // secuencial era buena parte de la demora al reiniciar el sistema. La
+  // lectura completa usa un rango fijo generoso (A:AZ) en vez de esperar
+  // los encabezados para calcular hasta dónde leer.
+  const [hOrdenesHeaders, dOrden] = await Promise.all([
+    asegurarHoja(SH.ordenes, SHEETS_COLS),
+    fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A:AZ'), { headers: hdrs }).then(r => r.json()),
+  ]);
   window._sheetsHeaders = hOrdenesHeaders;
-  const colFin = numToCol(hOrdenesHeaders.length - 1);
-  const rOrden = await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A:' + colFin), { headers: hdrs });
-  const dOrden = await rOrden.json();
   if (!dOrden.values || dOrden.values.length < 2) return [];
   const ordenCols = dOrden.values[0];
   const ordenes = dOrden.values.slice(1).map((row, i) => {
