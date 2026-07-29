@@ -8325,6 +8325,13 @@ function invHandleTipoChange() {
   const esSalida = tipo === 'SALIDA';
   document.getElementById('invm_grupoEquipo').style.display = esSalida ? 'flex' : 'none';
   document.getElementById('invm_equipoMarca').style.display = esSalida ? 'inline' : 'none';
+  // Si se cambia el tipo lejos de "Salida", el equipo destino deja de tener
+  // sentido — hay que limpiarlo, no solo ocultarlo. Si no, alguien que
+  // primero elige Salida + un equipo y después cambia de opinión a Ingreso
+  // termina guardando ese equipo "pegado" a un ingreso, y ese movimiento
+  // nunca aparece en Destino de Repuestos / Consumo por Equipo (que solo
+  // cuentan Salidas) aunque sí tenga un equipo guardado.
+  if (!esSalida) document.getElementById('invm_equipo').value = '';
 
   const esEntrada = tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO';
   document.getElementById('invm_grupoPrecio').style.display = esEntrada ? 'flex' : 'none';
@@ -8365,7 +8372,12 @@ async function invRegistrarMovimiento() {
       cantidad: document.getElementById('invm_cantidad').value,
       precioUnitario: esEntrada ? precio : '',
       tipoDocumento, numeroDocumento: tipoDocumento ? numeroDocumento : '',
-      responsable, equipo,
+      // Un equipo destino solo tiene sentido en una Salida (consumo real de
+      // repuesto) — se descarta para cualquier otro tipo aunque el campo
+      // (oculto) traiga un valor pegado de una selección anterior, para que
+      // nunca se guarde un Ingreso/Ajuste con un equipo que después haga
+      // ver el movimiento como "consumo" a medias en el dashboard.
+      responsable, equipo: tipo === 'SALIDA' ? equipo : '',
       observaciones: document.getElementById('invm_obs').value.trim(),
     });
     msg.style.color = '#15803d'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Movimiento registrado correctamente.';
