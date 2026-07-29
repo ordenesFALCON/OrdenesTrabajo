@@ -5135,6 +5135,19 @@ const INFORME_ANUAL_ACTIVIDADES_POR_TIPO = {
   drycoolers: INFORME_ANUAL_ACTIVIDADES, tornillo: INFORME_ANUAL_ACTIVIDADES,
 };
 
+/** La "próxima orden" de un informe periódico tiene que caer en un múltiplo
+ *  fijo del intervalo (2000, 4000, 6000... para el trimestral) — no en
+ *  "las horas que había cuando se guardó por última vez". Si se guardara la
+ *  hora exacta como base, cada vez que se digita un nuevo valor de horas la
+ *  meta se correría con él (ej. 24.353 -> próxima 26.353), en vez de quedar
+ *  fija en el número redondo que de verdad corresponde al mantenimiento
+ *  (26.000). Redondeando la base hacia abajo al último múltiplo cumplido,
+ *  la meta siempre es ese número fijo, sin importar el valor exacto de
+ *  horas que se haya digitado. */
+function _baseGridHoras(horas, intervaloHoras) {
+  return Math.floor(horas / intervaloHoras) * intervaloHoras;
+}
+
 // Nombres de hojas
 const SH = {
   ordenes:   'Ordenes',
@@ -5339,24 +5352,41 @@ async function repararHoja() {
   }
 }
 
+// Cachés en memoria (viven mientras dure la sesión del navegador, se
+// pierden al recargar) para dos llamadas que asegurarHoja() repite
+// constantemente aunque casi nunca cambian dentro de una sesión: la lista
+// de hojas que existen en el spreadsheet, y los encabezados ya
+// confirmados de cada hoja. Sin esto, cada operación que toca varias
+// hojas (ej. generar varias órdenes automáticas de una vez porque varios
+// equipos cruzaron su intervalo al mismo tiempo) repetía estas dos
+// lecturas por cada hoja tocada en cada una de esas operaciones,
+// multiplicando peticiones y agotando la cuota por minuto sin que los
+// datos realmente hubieran cambiado.
+let _hojasExistentesCache = null; // Set<string> | null
+const _cacheEncabezadosHoja = {}; // { [hoja]: string[] }
+
 // ── Helper: crear hoja si no existe ──
 async function crearHojaSiNoExiste(nombre) {
   const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
   const hdrs = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
-  // Leer metadata del spreadsheet para ver qué hojas existen
-  const metaR = await fetch(base + '?fields=sheets.properties.title', { headers: hdrs });
-  const meta  = await metaR.json();
-  const hojas = (meta.sheets || []).map(s => s.properties.title);
-  if (hojas.includes(nombre)) return; // ya existe
+  if (!_hojasExistentesCache) {
+    // Leer metadata del spreadsheet para ver qué hojas existen
+    const metaR = await fetch(base + '?fields=sheets.properties.title', { headers: hdrs });
+    const meta  = await metaR.json();
+    _hojasExistentesCache = new Set((meta.sheets || []).map(s => s.properties.title));
+  }
+  if (_hojasExistentesCache.has(nombre)) return; // ya existe
   // Crear la hoja
   await fetch(base + ':batchUpdate', {
     method: 'POST', headers: hdrs,
     body: JSON.stringify({ requests: [{ addSheet: { properties: { title: nombre } } }] })
   });
+  _hojasExistentesCache.add(nombre);
 }
 
 // ── Helper: asegurar encabezados en una hoja específica ──
 async function asegurarHoja(nombre, cols) {
+  if (_cacheEncabezadosHoja[nombre]) return _cacheEncabezadosHoja[nombre];
   const base   = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
   const hdrs   = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
   const colFin = numToCol(cols.length - 1);
@@ -5383,8 +5413,10 @@ async function asegurarHoja(nombre, cols) {
     await fetch(base + '/values/' + encodeURIComponent(nombre + '!A1:' + cf2 + '1') + '?valueInputOption=RAW', {
       method: 'PUT', headers: hdrs, body: JSON.stringify({ values: [final] })
     });
+    _cacheEncabezadosHoja[nombre] = final;
     return final;
   }
+  _cacheEncabezadosHoja[nombre] = existing;
   return existing;
 }
 
@@ -5691,6 +5723,104 @@ async function guardarOrdenEnSheets(datos) {
           return '';
         });
       });
+    if (filasIns.length) await appendHoja(SH.insumos, filasIns);
+  }
+}
+
+/** Como guardarOrdenEnSheets, pero para varias órdenes a la vez: arma en
+ *  memoria las filas de Ordenes/Tareas/Repuestos/Insumos de TODAS las
+ *  órdenes recibidas y hace un solo append por hoja, en vez de repetir la
+ *  ida-y-vuelta a Sheets orden por orden. La usan las verificaciones
+ *  automáticas (informes periódicos, planes de mantenimiento) cuando
+ *  varios equipos cruzan su intervalo al mismo tiempo — generar y guardar
+ *  cada orden por separado en esos casos multiplica las peticiones a
+ *  Sheets y agota la cuota por minuto. */
+async function guardarOrdenesEnSheetsEnLote(ordenes) {
+  if (!ordenes || !ordenes.length) return;
+
+  const colsOrdenes = await asegurarHoja(SH.ordenes, SHEETS_COLS);
+  const filasOrdenes = ordenes.map(datos => colsOrdenes.map(col => {
+    const val = datos[col];
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object') return '';
+    return String(val);
+  }));
+  await appendHoja(SH.ordenes, filasOrdenes);
+
+  const hayTareas    = ordenes.some(o => o.tareas    && o.tareas.length);
+  const hayRepuestos = ordenes.some(o => o.repuestos && o.repuestos.length);
+  const hayInsumos   = ordenes.some(o => o.insumos   && o.insumos.length);
+
+  if (hayTareas) {
+    const colsTareas = await asegurarHoja(SH.tareas, TAREAS_COLS);
+    const filasTareas = [];
+    for (const datos of ordenes) {
+      const num = datos.NumeroOrden || '';
+      if (!datos.tareas || !datos.tareas.length) continue;
+      datos.tareas.filter(t => t.descripcion || t.Descripcion).forEach((t, i) => {
+        filasTareas.push(colsTareas.map(c => {
+          if (c === 'NumeroOrden') return num;
+          if (c === '#') return i + 1;
+          if (c === 'Descripcion') return t.descripcion || t.Descripcion || '';
+          if (c === 'TiempoEstimado') return t.tiempoEstimado || '';
+          if (c === 'TiempoReal') return t.tiempoReal || '';
+          if (c === 'OK') return t.ok ? 'SI' : 'NO';
+          if (c === 'Responsable') return t.responsable || '';
+          if (c === 'ObservacionCierre') return t.observacionFantasma || '';
+          return '';
+        }));
+      });
+    }
+    if (filasTareas.length) await appendHoja(SH.tareas, filasTareas);
+  }
+
+  if (hayRepuestos) {
+    const colsRep = await asegurarHoja(SH.repuestos, REPUESTOS_COLS);
+    const filasRep = [];
+    for (const datos of ordenes) {
+      const num = datos.NumeroOrden || '';
+      if (!datos.repuestos || !datos.repuestos.length) continue;
+      datos.repuestos.filter(r => r.nombre || r.Nombre).forEach((r, i) => {
+        const cant = Number(r.cantidad || 0);
+        const costo = Number(r.costoUnitario || r.costoUnit || 0);
+        filasRep.push(colsRep.map(c => {
+          if (c === 'NumeroOrden') return num;
+          if (c === '#') return i + 1;
+          if (c === 'Codigo') return r.codigo || '';
+          if (c === 'Nombre') return r.nombre || '';
+          if (c === 'Cantidad') return cant;
+          if (c === 'Unidades') return r.unidades || 'und';
+          if (c === 'CostoUnitario') return costo;
+          if (c === 'Subtotal') return cant * costo;
+          return '';
+        }));
+      });
+    }
+    if (filasRep.length) await appendHoja(SH.repuestos, filasRep);
+  }
+
+  if (hayInsumos) {
+    const colsIns = await asegurarHoja(SH.insumos, INSUMOS_COLS);
+    const filasIns = [];
+    for (const datos of ordenes) {
+      const num = datos.NumeroOrden || '';
+      if (!datos.insumos || !datos.insumos.length) continue;
+      datos.insumos.filter(i => i.nombre || i.Nombre).forEach((ins, i) => {
+        const cant = Number(ins.cantidad || 0);
+        const costo = Number(ins.costoUnitario || ins.costoUnit || 0);
+        filasIns.push(colsIns.map(c => {
+          if (c === 'NumeroOrden') return num;
+          if (c === '#') return i + 1;
+          if (c === 'Codigo') return ins.codigo || '';
+          if (c === 'Nombre') return ins.nombre || '';
+          if (c === 'Cantidad') return cant;
+          if (c === 'Unidades') return ins.unidades || 'und';
+          if (c === 'CostoUnitario') return costo;
+          if (c === 'Subtotal') return cant * costo;
+          return '';
+        }));
+      });
+    }
     if (filasIns.length) await appendHoja(SH.insumos, filasIns);
   }
 }
@@ -7389,9 +7519,9 @@ async function guardarHorasEquiposGrid() {
       cargarPlanesMantenimiento().catch(() => []),
     ]);
     const estados = [
-      { estado: estadoTri, hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS },
-      { estado: estadoSem, hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS },
-      { estado: estadoAnu, hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS },
+      { estado: estadoTri, hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS, intervalo: INFORME_TRIMESTRAL_INTERVALO_HORAS },
+      { estado: estadoSem, hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS, intervalo: INFORME_SEMESTRAL_INTERVALO_HORAS },
+      { estado: estadoAnu, hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS, intervalo: INFORME_ANUAL_INTERVALO_HORAS },
     ];
 
     // Arma todos los cambios en memoria y los guarda en UN SOLO viaje por
@@ -7405,11 +7535,13 @@ async function guardarHorasEquiposGrid() {
     }
     await _actualizarFilasPorClaveEnLote(SH.horasEquipos, HORAS_EQUIPOS_COLS, 'Equipo', cambiosHoras);
 
-    for (const { estado, hoja, cols } of estados) {
+    for (const { estado, hoja, cols, intervalo } of estados) {
       const cambiosEstado = {};
       for (const { equipo, horas } of cambios) {
         const fila = estado.find(f => f.Equipo === equipo);
-        if (!fila || fila.UltimaGeneracionHoras === '') cambiosEstado[equipo] = { UltimaGeneracionHoras: String(horas) };
+        if (!fila || fila.UltimaGeneracionHoras === '') {
+          cambiosEstado[equipo] = { UltimaGeneracionHoras: String(_baseGridHoras(Number(horas), intervalo)) };
+        }
       }
       await _actualizarFilasPorClaveEnLote(hoja, cols, 'Equipo', cambiosEstado);
     }
@@ -7517,16 +7649,16 @@ async function reiniciarHorasYLimpiarAutomaticasClick() {
     }
 
     const estadosDef = [
-      { hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS },
-      { hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS },
-      { hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS },
+      { hoja: SH.informeTrimestralEstado, cols: INFORME_TRIMESTRAL_ESTADO_COLS, intervalo: INFORME_TRIMESTRAL_INTERVALO_HORAS },
+      { hoja: SH.informeSemestralEstado, cols: INFORME_SEMESTRAL_ESTADO_COLS, intervalo: INFORME_SEMESTRAL_INTERVALO_HORAS },
+      { hoja: SH.informeAnualEstado, cols: INFORME_ANUAL_ESTADO_COLS, intervalo: INFORME_ANUAL_INTERVALO_HORAS },
     ];
     const todosLosEquipos = Object.values(INFORME_EQUIPOS_POR_TIPO).flat();
-    for (const { hoja, cols } of estadosDef) {
+    for (const { hoja, cols, intervalo } of estadosDef) {
       const cambiosEstado = {};
       for (const equipo of todosLosEquipos) {
         const h = horasDe(equipo);
-        if (h !== null) cambiosEstado[equipo] = { UltimaGeneracionHoras: String(h) };
+        if (h !== null) cambiosEstado[equipo] = { UltimaGeneracionHoras: String(_baseGridHoras(h, intervalo)) };
       }
       await eliminarFilasDondeCumple(hoja, () => true);
       await _actualizarFilasPorClaveEnLote(hoja, cols, 'Equipo', cambiosEstado);
@@ -10024,7 +10156,17 @@ async function _verificarInformePeriodicoYGenerar({ nombre, tituloCorto, activid
     return isNaN(n) ? 0 : n;
   }
 
+  // Arma en memoria TODAS las órdenes que tocan (puede ser más de un
+  // equipo cruzando el intervalo al mismo tiempo) y las cambios de base de
+  // cada una, y las guarda todas en un solo viaje por hoja al final — en
+  // vez de repetir guardarOrdenEnSheets + actualización de estado +
+  // notificación equipo por equipo, lo que multiplica las peticiones a
+  // Sheets y agota la cuota por minuto cuando varios equipos cruzan su
+  // intervalo a la vez (ej. justo después de digitar las horas de todos
+  // los equipos por primera vez).
   let i = 0;
+  const nuevasOrdenes = [];
+  const cambiosEstado = {};
   for (const { tipo } of INFORME_TIPOS_EQUIPO) {
     const actividades = actividadesPorTipo[tipo];
     for (const equipo of INFORME_EQUIPOS_POR_TIPO[tipo]) {
@@ -10035,34 +10177,43 @@ async function _verificarInformePeriodicoYGenerar({ nombre, tituloCorto, activid
       if (horasActuales < baseHoras + intervaloHoras) continue;
 
       i++;
-      try {
-        const numOrden = 'OT-' + String(Date.now() + i).slice(-5);
-        const nuevaOrden = {
-          id: numOrden, NumeroOrden: numOrden,
-          Title: tituloCorto + ' ' + equipo,
-          Equipo: equipo,
-          TipoMantenimiento: 'Preventivo',
-          Prioridad: 'Media', Estado: 'Pendiente',
-          Responsable: '',
-          FechaInicio: new Date().toISOString().split('T')[0],
-          FechaCreacion: new Date().toISOString(),
-          CreadaAutomaticamente: 'SI',
-          tareas: actividades.map(a => ({ descripcion: a.actividad + ': ' + a.descripcion, ok: false })),
-          repuestos: [], insumos: [],
-        };
-
-        allOrdenes.push(nuevaOrden);
-        guardarLocal();
-        await guardarOrdenEnSheets(nuevaOrden);
-        await _actualizarFilaPorClave(hojaEstado, colsEstado, 'Equipo', equipo, { UltimaGeneracionHoras: String(horasActuales) });
-        await registrarNotificacion(
-          `Se generó automáticamente la orden ${numOrden} para ${equipo} (${nombre}, cada ${intervaloHoras} horas).`,
-          numOrden, equipo
-        );
-      } catch (e) {
-        console.warn(`No se pudo generar la orden del ${nombre} para`, equipo, e.message);
-      }
+      const numOrden = 'OT-' + String(Date.now() + i).slice(-5);
+      nuevasOrdenes.push({
+        id: numOrden, NumeroOrden: numOrden,
+        Title: tituloCorto + ' ' + equipo,
+        Equipo: equipo,
+        TipoMantenimiento: 'Preventivo',
+        Prioridad: 'Media', Estado: 'Pendiente',
+        Responsable: '',
+        FechaInicio: new Date().toISOString().split('T')[0],
+        FechaCreacion: new Date().toISOString(),
+        CreadaAutomaticamente: 'SI',
+        tareas: actividades.map(a => ({ descripcion: a.actividad + ': ' + a.descripcion, ok: false })),
+        repuestos: [], insumos: [],
+      });
+      cambiosEstado[equipo] = { UltimaGeneracionHoras: String(_baseGridHoras(horasActuales, intervaloHoras)) };
     }
+  }
+
+  if (!nuevasOrdenes.length) return;
+
+  try {
+    nuevasOrdenes.forEach(o => allOrdenes.push(o));
+    guardarLocal();
+
+    await guardarOrdenesEnSheetsEnLote(nuevasOrdenes);
+    await _actualizarFilasPorClaveEnLote(hojaEstado, colsEstado, 'Equipo', cambiosEstado);
+
+    await asegurarHoja(SH.notificaciones, NOTIFICACIONES_COLS);
+    const filasNotif = nuevasOrdenes.map(o => [
+      'NOTIF-' + Date.now() + '-' + Math.floor(Math.random() * 1000) + '-' + o.NumeroOrden,
+      new Date().toLocaleString('es-CO'),
+      `Se generó automáticamente la orden ${o.NumeroOrden} para ${o.Equipo} (${nombre}, cada ${intervaloHoras} horas).`,
+      o.NumeroOrden, o.Equipo,
+    ]);
+    await appendHoja(SH.notificaciones, filasNotif);
+  } catch (e) {
+    console.warn(`No se pudieron guardar las órdenes automáticas del ${nombre}:`, e.message);
   }
 
   actualizarBadgeNotificaciones();
