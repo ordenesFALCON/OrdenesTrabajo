@@ -2534,7 +2534,12 @@ async function _invGet(spreadsheetId, rango) {
   const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(rango)}`,
     { headers: { Authorization: 'Bearer ' + googleAccessToken } });
   if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
-  if (!resp.ok) { const t = await resp.text(); throw new Error('Error leyendo inventario: ' + t); }
+  if (!resp.ok) {
+    const t = await resp.text();
+    const err = new Error('Error leyendo inventario: ' + t);
+    err.status = resp.status; // _invAsegurarHoja lo usa para distinguir "la pestaña no existe" (400) de errores reales (429, 500...)
+    throw err;
+  }
   const d = await resp.json();
   return d.values || [];
 }
@@ -2549,11 +2554,23 @@ async function _invAppend(spreadsheetId, hoja, rows) {
 }
 
 async function _invAsegurarHoja(spreadsheetId, nombre, cols) {
+  // Antes, CUALQUIER error al leer los encabezados (incluyendo un 429 por
+  // cuota agotada, o una caída momentánea de red) se trataba igual que "la
+  // pestaña todavía no existe", y el código seguía de largo a CREAR la
+  // pestaña y SOBRESCRIBIR la fila de encabezados — si la pestaña sí
+  // existía con datos reales, esto podía corromper sus encabezados justo
+  // en medio de un error transitorio. Solo un 400 (el estado que Sheets
+  // devuelve cuando el rango pedido no existe) significa de verdad "la
+  // pestaña no existe todavía"; cualquier otro error debe propagarse en
+  // vez de tratarse como si la hoja estuviera vacía.
   let existing = [];
   try {
     const r = await _invGet(spreadsheetId, nombre + '!A1:' + numToCol(cols.length - 1) + '1');
     existing = r[0] || [];
-  } catch (e) { existing = []; }
+  } catch (e) {
+    if (e.status !== 400) throw e;
+    existing = [];
+  }
 
   if (existing.length === 0) {
     // La pestaña no existe todavía — crearla con todos los encabezados
@@ -5823,19 +5840,30 @@ async function cargarOrdenesDeSheets() {
   const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
   const hdrs = { Authorization: 'Bearer ' + googleAccessToken };
 
-  // Función auxiliar para leer una hoja completa
+  // Función auxiliar para leer una hoja completa. Si la petición falla por
+  // cualquier motivo (cuota, red, etc.) hay que avisar en vez de tratarlo
+  // como "la hoja está vacía" — si no, un error transitorio al leer, por
+  // ejemplo, Fotos, hacía ver como si TODAS las órdenes hubieran perdido
+  // sus fotos, aunque los datos sí estén en Sheets. cargarOrdenes() ya
+  // tiene un catch que cae a localStorage si esto falla, así que dejar que
+  // el error se propague es más seguro que devolver datos a medias.
   async function leerHoja(nombre) {
-    try {
-      const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A:Z'), { headers: hdrs });
-      const d = await r.json();
-      if (!d.values || d.values.length < 2) return [];
-      const cols = d.values[0];
-      return d.values.slice(1).map(row => {
-        const obj = {};
-        cols.forEach((c, j) => { obj[c] = row[j] || ''; });
-        return obj;
-      });
-    } catch(e) { return []; }
+    const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A:Z'), { headers: hdrs });
+    if (r.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+    if (!r.ok) {
+      const t = await r.text();
+      let msg = 'Error ' + r.status;
+      try { msg = JSON.parse(t).error?.message || msg; } catch (_) {}
+      throw new Error('No se pudo leer la hoja ' + nombre + ': ' + msg);
+    }
+    const d = await r.json();
+    if (!d.values || d.values.length < 2) return [];
+    const cols = d.values[0];
+    return d.values.slice(1).map(row => {
+      const obj = {};
+      cols.forEach((c, j) => { obj[c] = row[j] || ''; });
+      return obj;
+    });
   }
 
   // Cargar hoja principal Ordenes — el chequeo de encabezados (que puede
@@ -8644,27 +8672,37 @@ const FOTOS_NOVEDADES_COLS = ['Codigo','#','DriveFileId','UrlVer','UrlDescarga',
 
 let allNovedades = [];
 
-/** Lee una hoja completa y la devuelve como lista de objetos (clave = encabezado) */
+/** Lee una hoja completa y la devuelve como lista de objetos (clave = encabezado).
+ *  Si la petición falla (cuota, red, etc.) hay que avisar en vez de tratarlo
+ *  como "la hoja está vacía" — si no, un error transitorio hacía ver como si
+ *  todas las novedades hubieran desaparecido, aunque los datos sí estén en
+ *  Sheets. inicializarPanelNovedades() ya tiene un catch que muestra el
+ *  error en pantalla en vez de una lista vacía silenciosa. */
 async function _leerHojaGenerica(nombre) {
-  try {
-    const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
-    const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A:Z'),
-      { headers: { Authorization: 'Bearer ' + googleAccessToken } });
-    const d = await r.json();
-    if (!d.values || d.values.length < 2) return [];
-    const cols = d.values[0];
-    return d.values.slice(1).map((row, i) => {
-      const obj = { _row: i + 2 };
-      // Si hay columnas con el mismo nombre repetidas (sobrantes de versiones
-      // viejas de la hoja), que NO borren el valor ya leído de la primera
-      // ocurrencia con una posterior vacía.
-      cols.forEach((c, j) => {
-        const val = row[j] || '';
-        if (obj[c] === undefined || val) obj[c] = val;
-      });
-      return obj;
+  const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+  const r = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A:Z'),
+    { headers: { Authorization: 'Bearer ' + googleAccessToken } });
+  if (r.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  if (!r.ok) {
+    const t = await r.text();
+    let msg = 'Error ' + r.status;
+    try { msg = JSON.parse(t).error?.message || msg; } catch (_) {}
+    throw new Error('No se pudo leer la hoja ' + nombre + ': ' + msg);
+  }
+  const d = await r.json();
+  if (!d.values || d.values.length < 2) return [];
+  const cols = d.values[0];
+  return d.values.slice(1).map((row, i) => {
+    const obj = { _row: i + 2 };
+    // Si hay columnas con el mismo nombre repetidas (sobrantes de versiones
+    // viejas de la hoja), que NO borren el valor ya leído de la primera
+    // ocurrencia con una posterior vacía.
+    cols.forEach((c, j) => {
+      const val = row[j] || '';
+      if (obj[c] === undefined || val) obj[c] = val;
     });
-  } catch (e) { return []; }
+    return obj;
+  });
 }
 
 /** Carga todos los informes de novedad (con sus fotos) desde la hoja de la sede activa */
