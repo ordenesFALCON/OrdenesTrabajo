@@ -2704,17 +2704,26 @@ async function registrarProductoInventarioDirecto(sede, producto) {
   await _invAppend(spreadsheetId, 'Productos', [fila]);
 }
 
+/** Antes esta función sumaba/restaba Ingresos y Salidas en línea recta
+ *  (sin pasar por lotes), lo que puede quedar en desacuerdo con el stock
+ *  que muestra el Dashboard (obtenerStockInventarioDirecto, que sí usa
+ *  lotes FIFO): si en el historial de un producto alguna vez se registró
+ *  una Salida por más de lo que en verdad había disponible en ese momento
+ *  (ej. una edición manual de la hoja, una importación, o una versión
+ *  anterior sin esta misma validación), la suma en línea recta puede
+ *  quedar momentáneamente negativa y luego "recuperarse" con un ingreso
+ *  posterior — mientras que los lotes FIFO nunca dejan un lote en
+ *  negativo, así que ese exceso de consumo se pierde para siempre en vez
+ *  de arrastrarse. El resultado: el Dashboard mostraba stock disponible,
+ *  pero registrar una Salida de esa misma cantidad fallaba con "Stock
+ *  insuficiente" porque este cálculo daba un número más bajo. Ahora usa
+ *  los MISMOS lotes FIFO que el Dashboard, para que la validación nunca
+ *  contradiga lo que el usuario está viendo en pantalla. */
 async function _invStockDeUnProducto(spreadsheetId, codigo) {
-  const movimientos = await _invGet(spreadsheetId, 'Movimientos!A2:D100000');
-  let cantidad = 0;
-  const cod = codigo.toUpperCase();
-  movimientos.forEach(row => {
-    if ((row[0] || '').toString().trim().toUpperCase() !== cod) return;
-    const tipo = (row[2] || '').toString().trim().toUpperCase();
-    const val  = parseFloat(row[3]) || 0;
-    if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') cantidad += val;
-    else if (tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') cantidad -= val;
-  });
+  const movimientos = await _invGet(spreadsheetId, 'Movimientos!A2:M100000');
+  const lotesPorCodigo = _agruparLotesFIFO(movimientos);
+  const lotes = lotesPorCodigo.get(codigo.toUpperCase()) || [];
+  const cantidad = lotes.reduce((s, l) => s + l.restante, 0);
   return Math.max(0, Math.round(cantidad * 100) / 100);
 }
 
@@ -8386,6 +8395,11 @@ async function invRegistrarMovimiento() {
     document.getElementById('invm_grupoDocNumero').style.display = 'none';
     document.getElementById('invm_fecha').valueAsDate = new Date();
     _stockInventarioCache = null;
+    // Refresca el Dashboard en segundo plano — si ya estaba abierto en otra
+    // pestaña del navegador o si el usuario vuelve a él sin recargar toda
+    // la app, no debe quedarse mostrando el stock de antes de este
+    // movimiento recién guardado.
+    invCargarDashboard().catch(() => {});
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
   }
