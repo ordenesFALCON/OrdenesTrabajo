@@ -2069,6 +2069,9 @@ body.inv-activo .container { max-width: 1800px; }
               <div class="field"><label>Tipo</label>
                 <select id="invr_tipo"><option value="">Todos</option><option value="INGRESO">Ingreso</option><option value="SALIDA">Salida</option><option value="AJUSTE_POSITIVO">Ajuste +</option><option value="AJUSTE_NEGATIVO">Ajuste −</option></select>
               </div>
+              <div class="field"><label>Código Siesa</label>
+                <select id="invr_codigo"><option value="">Todos los productos</option></select>
+              </div>
             </div>
             <button class="btn btn-primary" onclick="invCargarHistorial()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Generar Reporte</button>
             <div style="overflow-x:auto;margin-top:14px" id="invHistorialTabla"></div>
@@ -2819,6 +2822,7 @@ async function obtenerHistorialInventarioDirecto(sede, filtros) {
     producto: prodMap[row[0].toString().trim().toUpperCase()] || 'Producto no encontrado',
   })).filter(m => {
     if (filtros.tipo && m.tipo !== filtros.tipo.toUpperCase()) return false;
+    if (filtros.codigo && m.codigo.toString().trim().toUpperCase() !== filtros.codigo.toString().trim().toUpperCase()) return false;
     if (fechaDesde || fechaHasta) {
       const f = new Date(m.fecha);
       if (fechaDesde && f < fechaDesde) return false;
@@ -8236,6 +8240,7 @@ function invMostrarSubTab(nombre) {
   if (nombre === 'proveedores') invCargarProveedores();
   if (nombre === 'lotes')     invCargarListaLotes();
   if (nombre === 'producto')  invPoblarProveedores();
+  if (nombre === 'reportes')  invPoblarCodigosReporte();
 }
 
 async function invCargarDashboard() {
@@ -8621,6 +8626,25 @@ function invSeleccionarProductoLotes(codigo) {
     }).join('') + `</tbody></table>`;
 }
 
+/** Llena el desplegable de "Código Siesa" en Reportes con todos los
+ *  productos ya registrados en esta sede (reutiliza el mismo stock que ya
+ *  usa el Dashboard/Stock, así no vuelve a leer la hoja si ya estaba
+ *  cacheado), para poder filtrar el historial de movimientos por un solo
+ *  producto sin tener que escribir su código de memoria. */
+async function invPoblarCodigosReporte() {
+  const sel = document.getElementById('invr_codigo');
+  if (!sel) return;
+  const actual = sel.value;
+  try {
+    const stock = await obtenerStockInventarioDirecto(inventarioOperacionActual);
+    sel.innerHTML = '<option value="">Todos los productos</option>' +
+      stock.map(p => `<option value="${esc(p.codigo)}">${esc(p.codigo)} — ${esc(p.nombre)}</option>`).join('');
+    if (stock.some(p => p.codigo === actual)) sel.value = actual;
+  } catch (e) {
+    sel.innerHTML = '<option value="">No se pudo cargar la lista de productos</option>';
+  }
+}
+
 async function invCargarHistorial() {
   const cont = document.getElementById('invHistorialTabla');
   cont.innerHTML = '<div style="color:var(--text3);font-size:13px">Cargando…</div>';
@@ -8629,6 +8653,7 @@ async function invCargarHistorial() {
       fechaDesde: document.getElementById('invr_desde').value,
       fechaHasta: document.getElementById('invr_hasta').value,
       tipo: document.getElementById('invr_tipo').value,
+      codigo: document.getElementById('invr_codigo').value,
     };
     const historial = await obtenerHistorialInventarioDirecto(inventarioOperacionActual, filtros);
     if (!historial.length) { cont.innerHTML = '<div style="color:var(--text3);font-size:13px">No hay movimientos en el período seleccionado</div>'; return; }
