@@ -8409,12 +8409,15 @@ async function invRegistrarProducto() {
 /** Llena el desplegable de "Equipo Destino" en Movimientos con la lista real
  *  de equipos de la sede activa — la MISMA lista que usa Órdenes de Trabajo
  *  (EQUIPOS_POR_SEDE), para que los nombres coincidan exactamente entre los
- *  dos sistemas y no se partan las gráficas de consumo por equipo. */
+ *  dos sistemas y no se partan las gráficas de consumo por equipo. Además
+ *  se agrega un grupo "Sedes" al final, para cuando una Salida no es un
+ *  consumo en un equipo sino un envío de repuestos/insumos a otra sede. */
 function invPoblarEquipos() {
   const sel = document.getElementById('invm_equipo');
   if (!sel) return;
   const grupos = EQUIPOS_POR_SEDE[inventarioOperacionActual] || EQUIPOS_LISTADO_GENERAL;
-  sel.innerHTML = '<option value="">Seleccionar equipo...</option>' + _renderOptionsGrupo(grupos);
+  const gruposConSedes = { ...grupos, Sedes: ['SEDE ANTIOQUIA', 'SEDE PERÚ', 'SEDE MÉXICO', 'SEDE SOACHA'] };
+  sel.innerHTML = '<option value="">Seleccionar equipo...</option>' + _renderOptionsGrupo(gruposConSedes);
 }
 
 function invHandleTipoChange() {
