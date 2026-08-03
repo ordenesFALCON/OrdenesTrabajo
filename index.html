@@ -2427,6 +2427,12 @@ const GOOGLE_CONFIG = {
   sheetName:     'Ordenes', // ← Nombre de la hoja
 };
 
+// Interruptor general de la generación automática de órdenes (Planes de
+// Mantenimiento + Informes Trimestral/Semestral/Anual). Apagado a pedido
+// del cliente mientras termina de definir bien esos planes y checklists —
+// cámbialo a true cuando ya estén listos para volver a generar órdenes solas.
+const GENERAR_ORDENES_AUTOMATICAS = false;
+
 // ── LOGIN POR DOCUMENTO + PIN ──
 // URL "/exec" del Apps Script (ver Code.gs del proyecto "Login Operarios")
 // que valida documento+PIN contra su hoja "Usuarios" y, si es válido,
@@ -3508,10 +3514,16 @@ window.addEventListener('load', async () => {
       // Revisa los planes de mantenimiento de esta sede y genera las
       // órdenes que ya toquen — no bloquea el resto de la app mientras
       // corre, y cualquier falla queda solo en consola.
-      verificarPlanesMantenimientoYGenerar().catch(e => console.warn('Planes de mantenimiento:', e.message));
-      verificarInformeTrimestralYGenerar().catch(e => console.warn('Informe Cada Trimestral:', e.message));
-      verificarInformeSemestralYGenerar().catch(e => console.warn('Informe Cada Semestral:', e.message));
-      verificarInformeAnualYGenerar().catch(e => console.warn('Informe Cada Anual:', e.message));
+      // Apagado a pedido del cliente (2026-07-29): el Plan de Mantenimiento
+      // y sus checklists todavía no están bien definidos, así que por ahora
+      // no se debe generar ninguna orden automática — pon esta constante en
+      // true cuando el plan ya esté listo para generarlas de nuevo.
+      if (GENERAR_ORDENES_AUTOMATICAS) {
+        verificarPlanesMantenimientoYGenerar().catch(e => console.warn('Planes de mantenimiento:', e.message));
+        verificarInformeTrimestralYGenerar().catch(e => console.warn('Informe Cada Trimestral:', e.message));
+        verificarInformeSemestralYGenerar().catch(e => console.warn('Informe Cada Semestral:', e.message));
+        verificarInformeAnualYGenerar().catch(e => console.warn('Informe Cada Anual:', e.message));
+      }
     });
     actualizarBadgeNotificaciones();
   }
