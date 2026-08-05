@@ -1665,14 +1665,26 @@ body.inv-activo .container { max-width: 1800px; }
       <button class="btn btn-success" onclick="generarInformeConsolidado()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Descargar Consolidado (PDF)</button>
     </div>
 
-    <!-- Días sin novedades — contador grande, cuenta desde NOVEDADES_DIAS_SIN_BASE -->
+    <!-- Días sin novedades — contador grande, cuenta desde el último reinicio registrado -->
     <div style="background:linear-gradient(135deg,#15803d 0%,#0d5c2c 100%);border-radius:14px;padding:26px 24px;margin-bottom:16px;text-align:center;box-shadow:0 4px 18px rgba(21,128,61,.25)">
       <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Días sin Novedades en Planta</div>
       <div id="novDiasSinNovedades" style="font-size:64px;font-weight:800;color:#fff;line-height:1">—</div>
       <div id="novDiasSinNovedadesDesde" style="font-size:12.5px;color:rgba(255,255,255,.75);margin-top:6px"></div>
     </div>
 
-    <!-- Gráfica: la racha subiendo día a día desde NOVEDADES_DIAS_SIN_BASE -->
+    <!-- Calendario para registrar el día de una novedad: reinicia el contador desde esa fecha -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-body" style="padding:14px 18px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="margin:0;min-width:180px">
+          <label style="margin-bottom:4px;display:block">Fecha de la novedad</label>
+          <input type="date" id="novRachaFecha" style="margin:0">
+        </div>
+        <button class="btn btn-primary" onclick="registrarNovedadRacha()">Registrar y reiniciar contador</button>
+        <div id="novRachaHistorial" style="flex-basis:100%;margin-top:2px"></div>
+      </div>
+    </div>
+
+    <!-- Gráfica: la racha subiendo día a día, con un punto marcado en cada novedad registrada -->
     <div class="card" style="margin-bottom:16px">
       <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Racha de Días sin Novedades</div>
       <div class="card-body" style="padding:14px"><div style="position:relative;height:220px"><canvas id="chartRachaDiasSinNovedades"></canvas></div></div>
@@ -5218,7 +5230,11 @@ const SH = {
   informeAnualEstado: 'InformeAnualEstado',
   operarios: 'Operarios',
   alertas: 'Alertas',
+  rachaNovedades: 'RachaNovedades',
 };
+// Cada fila = una fecha en la que ocurrió (o se registró manualmente) una
+// novedad, reiniciando desde ahí el conteo de "Días sin Novedades".
+const RACHA_NOVEDADES_COLS = ['Fecha', 'RegistradoPor'];
 const OPERARIOS_COLS = ['ID', 'Nombre', 'Numero', 'Turno', 'Activo'];
 const ALERTAS_COLS = ['ID', 'Hora', 'Mensaje', 'Activo'];
 const INVENTARIO_EQUIPOS_BASE_COLS = ['Codificacion','Equipo','Marca','DescripcionEspecifica','Ubicacion'];
@@ -8790,41 +8806,142 @@ const NOVEDADES_COLS = [
   'Correo','FechaRegistro','Estado'
 ];
 
-// Fecha desde la que se cuentan los "Días sin Novedades" en el banner de
-// arriba del panel — cámbiala manualmente cada vez que ocurra una
-// novedad nueva, para reiniciar el contador desde ese día.
-const NOVEDADES_DIAS_SIN_BASE = '2026-08-31';
+// Fecha por defecto desde la que se cuentan los "Días sin Novedades" —
+// solo se usa mientras todavía no se haya registrado ninguna fecha en la
+// hoja "RachaNovedades" (ver registrarNovedadRacha() más abajo, que es la
+// forma normal de fijar/reiniciar el contador desde la interfaz).
+const NOVEDADES_DIAS_SIN_BASE_DEFAULT = '2026-08-31';
 
-/** Pinta el banner de "Días sin Novedades" contando desde
- *  NOVEDADES_DIAS_SIN_BASE hasta hoy (nunca en negativo, por si la fecha
- *  base todavía no ha llegado). */
-function renderDiasSinNovedades() {
+/** Convierte un objeto Date a 'YYYY-MM-DD' en hora LOCAL (nunca usar
+ *  toISOString() para esto: usa UTC y puede correr la fecha un día). */
+function _isoLocal(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+/** Lee de Sheets el historial de fechas registradas en "RachaNovedades"
+ *  (cada una reinició el contador de días sin novedades), ordenadas de
+ *  más antigua a más reciente. Crea la hoja si todavía no existe. */
+async function obtenerRachaNovedades() {
+  await asegurarHoja(SH.rachaNovedades, RACHA_NOVEDADES_COLS);
+  const filas = await leerHojaGenericaCacheada(SH.rachaNovedades);
+  return filas
+    .filter(f => f.Fecha)
+    .map(f => ({ fecha: f.Fecha, registradoPor: f.RegistradoPor || '' }))
+    .sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
+}
+
+/** Registra en Sheets una nueva fecha de novedad — a partir de ahí el
+ *  contador y la gráfica se reinician desde ese día. */
+async function registrarFechaRacha(fecha) {
+  await asegurarHoja(SH.rachaNovedades, RACHA_NOVEDADES_COLS);
+  await appendHoja(SH.rachaNovedades, [[fecha, currentUser?.name || currentUser?.email || '']]);
+}
+
+/** Botón "Registrar y reiniciar contador" del calendario de novedades. */
+async function registrarNovedadRacha() {
+  const input = document.getElementById('novRachaFecha');
+  const fecha = input.value;
+  if (!fecha) { alert('Selecciona primero la fecha de la novedad.'); return; }
+  const hoyIso = _isoLocal(new Date());
+  if (fecha > hoyIso) { alert('La fecha no puede ser futura.'); return; }
+  const yaExiste = (await obtenerRachaNovedades()).some(r => r.fecha === fecha);
+  if (yaExiste) { alert('Ya hay una novedad registrada en esa fecha.'); return; }
+  if (!confirm('¿Confirmas que el ' + fmtFecha(fecha) + ' ocurrió una novedad?\n\nEsto reinicia el contador de "Días sin Novedades" desde esa fecha.')) return;
+  try {
+    await registrarFechaRacha(fecha);
+    input.value = '';
+    await renderDiasSinNovedades();
+    await renderGraficaRachaDiasSinNovedades();
+  } catch (e) {
+    alert('No se pudo registrar la novedad: ' + e.message);
+  }
+}
+
+/** Quita una fecha del historial (por si se registró una equivocada) —
+ *  reescribe toda la hoja sin esa fila. */
+async function eliminarFechaRacha(fecha) {
+  if (!confirm('¿Eliminar el registro del ' + fmtFecha(fecha) + '?')) return;
+  try {
+    const restantes = (await obtenerRachaNovedades()).filter(r => r.fecha !== fecha);
+    const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + GOOGLE_CONFIG.spreadsheetId;
+    const hdrs = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
+    await fetch(base + '/values/' + encodeURIComponent(SH.rachaNovedades + '!A2:B10000') + ':clear', { method: 'POST', headers: hdrs });
+    _invalidarCacheHoja(SH.rachaNovedades);
+    if (restantes.length) await appendHoja(SH.rachaNovedades, restantes.map(r => [r.fecha, r.registradoPor]));
+    await renderDiasSinNovedades();
+    await renderGraficaRachaDiasSinNovedades();
+  } catch (e) {
+    alert('No se pudo eliminar: ' + e.message);
+  }
+}
+
+/** Lista compacta de fechas ya registradas, debajo del calendario. */
+function renderHistorialRacha(racha) {
+  const cont = document.getElementById('novRachaHistorial');
+  if (!cont) return;
+  if (!racha.length) {
+    cont.innerHTML = '<span style="font-size:12px;color:var(--text3)">Aún no hay novedades registradas — el contador usa el ' + fmtFecha(NOVEDADES_DIAS_SIN_BASE_DEFAULT) + ' por defecto.</span>';
+    return;
+  }
+  cont.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Historial de novedades registradas</div>' +
+    [...racha].reverse().map(r =>
+      `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--brand-light);color:var(--brand);border-radius:12px;padding:3px 6px 3px 10px;margin:2px 5px 2px 0;font-size:11.5px">
+        ${fmtFecha(r.fecha)}${r.registradoPor ? ' · ' + esc(r.registradoPor) : ''}
+        <button onclick="eliminarFechaRacha('${r.fecha}')" title="Eliminar este registro" style="background:none;border:none;color:var(--warn);cursor:pointer;font-weight:800;padding:0 2px;line-height:1;font-size:14px">×</button>
+      </span>`
+    ).join('');
+}
+
+/** Pinta el banner de "Días sin Novedades" contando desde la fecha más
+ *  reciente registrada en "RachaNovedades" hasta hoy (o desde
+ *  NOVEDADES_DIAS_SIN_BASE_DEFAULT si todavía no hay ninguna registrada). */
+async function renderDiasSinNovedades() {
   const el = document.getElementById('novDiasSinNovedades');
   const sub = document.getElementById('novDiasSinNovedadesDesde');
   if (!el) return;
-  const base = _fechaLocalDesdeString(NOVEDADES_DIAS_SIN_BASE);
+  let base = NOVEDADES_DIAS_SIN_BASE_DEFAULT;
+  try {
+    const racha = await obtenerRachaNovedades();
+    if (racha.length) base = racha[racha.length - 1].fecha;
+    renderHistorialRacha(racha);
+  } catch (e) { /* si falla la lectura, se sigue mostrando con la fecha por defecto */ }
+  const fechaBase = _fechaLocalDesdeString(base);
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  const dias = Math.max(0, Math.round((hoy - base) / 86400000));
+  const dias = Math.max(0, Math.round((hoy - fechaBase) / 86400000));
   el.textContent = dias.toLocaleString('es-CO');
-  sub.textContent = 'Desde el ' + fmtFecha(NOVEDADES_DIAS_SIN_BASE);
+  sub.textContent = 'Desde el ' + fmtFecha(base);
 }
 
-/** Pinta la gráfica de línea que sube un día a la vez desde
- *  NOVEDADES_DIAS_SIN_BASE hasta hoy — la misma racha del banner grande,
- *  pero mostrando cómo se fue construyendo día por día. */
-function renderGraficaRachaDiasSinNovedades() {
+/** Pinta la gráfica de línea que sube un día a la vez desde la primera
+ *  fecha registrada hasta hoy — y en cada fecha de "RachaNovedades" marca
+ *  un punto (la novedad) donde la racha vuelve a 0 y empieza de nuevo,
+ *  formando un patrón de dientes de sierra con todo el historial. */
+async function renderGraficaRachaDiasSinNovedades() {
   const canvas = document.getElementById('chartRachaDiasSinNovedades');
   if (!canvas || typeof Chart === 'undefined') return;
-  const base = _fechaLocalDesdeString(NOVEDADES_DIAS_SIN_BASE);
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  const totalDias = Math.max(0, Math.round((hoy - base) / 86400000));
 
-  const labels = [];
-  const datos = [];
-  for (let i = 0; i <= totalDias; i++) {
-    const d = new Date(base); d.setDate(d.getDate() + i);
+  let eventos = [NOVEDADES_DIAS_SIN_BASE_DEFAULT];
+  try {
+    const racha = await obtenerRachaNovedades();
+    if (racha.length) eventos = racha.map(r => r.fecha);
+  } catch (e) { /* si falla la lectura, se usa la fecha por defecto */ }
+
+  const inicio = _fechaLocalDesdeString(eventos[0]);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  if (isNaN(inicio) || inicio > hoy) return;
+
+  const eventosSet = new Set(eventos);
+  const labels = [], datos = [], radios = [], colores = [];
+  let ultimoReinicio = inicio;
+  for (let d = new Date(inicio); d <= hoy; d.setDate(d.getDate() + 1)) {
+    const iso = _isoLocal(d);
+    const esReinicio = eventosSet.has(iso);
+    if (esReinicio && d.getTime() !== inicio.getTime()) ultimoReinicio = new Date(d);
+    const dias = Math.round((d - ultimoReinicio) / 86400000);
     labels.push(d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit' }));
-    datos.push(i);
+    datos.push(dias);
+    radios.push(esReinicio ? 5 : 0);
+    colores.push(esReinicio ? '#d9663f' : '#15803d');
   }
 
   if (window._chartRachaDiasSinNovedades) window._chartRachaDiasSinNovedades.destroy();
@@ -8833,11 +8950,18 @@ function renderGraficaRachaDiasSinNovedades() {
     data: { labels, datasets: [{
       label: 'Días sin novedades', data: datos,
       borderColor: '#15803d', backgroundColor: 'rgba(21,128,61,.15)',
-      fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2.5,
+      fill: true, tension: 0, borderWidth: 2.5,
+      pointRadius: radios, pointHoverRadius: radios.map(r => r ? 7 : 4),
+      pointBackgroundColor: colores, pointBorderColor: colores,
     }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => radios[ctx.dataIndex]
+          ? ' Novedad registrada — contador reiniciado'
+          : ' ' + ctx.raw + ' día(s) sin novedades' } },
+      },
       scales: {
         y: { beginAtZero: true, ticks: { precision: 0 } },
         x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
@@ -8938,8 +9062,8 @@ function _siguienteCodigo(prefijo) {
 
 /** Se llama cada vez que se entra a la pestaña Novedades */
 async function inicializarPanelNovedades() {
-  renderDiasSinNovedades();
-  renderGraficaRachaDiasSinNovedades();
+  renderDiasSinNovedades().catch(() => {});
+  renderGraficaRachaDiasSinNovedades().catch(() => {});
   const wrap = document.getElementById('novTablaWrap');
   wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Cargando informes...</div>';
   try {
