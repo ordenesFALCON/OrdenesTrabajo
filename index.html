@@ -6941,6 +6941,7 @@ async function verDetalle(id) {
   const tareas    = parseArr(orden.tareas).filter(t => (t.descripcion||'').trim() || (t.responsable||'').trim());
   const repuestos = parseArr(orden.repuestos).filter(r => (r.nombre||'').trim() || (r.codigo||'').trim());
   const insumos   = parseArr(orden.insumos).filter(i => (i.nombre||'').trim() || (i.codigo||'').trim());
+  const servicios = parseArr(orden.servicios).filter(s => (s.nombre||'').trim() || (s.codigo||'').trim());
 
   // (debug removed)
 
@@ -7086,6 +7087,39 @@ async function verDetalle(id) {
     html += '</tr></tbody></table></div>';
   } else {
     html += '<div style="padding:12px 18px;color:var(--text3);font-size:12px;font-style:italic">No se registraron insumos.</div>';
+  }
+  html += '</div>';
+
+  // ── Servicios ──
+  html += '<div class="detail-section"><div class="detail-section-title">Servicios Requeridos</div>';
+  if (servicios.length) {
+    var totalServ = servicios.reduce(function(s,sv){ return s + (Number(sv.cantidad||0) * Number(sv.costoUnitario||sv.costoUnit||0)); }, 0);
+    html += '<div style="padding:12px 18px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<thead><tr style="background:var(--brand-light)">';
+    html += '<th style="padding:7px 10px;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">Código</th>';
+    html += '<th style="padding:7px 10px;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">Nombre</th>';
+    html += '<th style="padding:7px 10px;text-align:right;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">Cantidad</th>';
+    html += '<th style="padding:7px 10px;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">Unidad</th>';
+    html += '<th style="padding:7px 10px;text-align:right;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">Costo unit.</th>';
+    html += '<th style="padding:7px 10px;text-align:right;color:var(--brand);font-size:11px;border-bottom:2px solid var(--brand-mid)">Subtotal</th>';
+    html += '</tr></thead><tbody>';
+    servicios.forEach(function(sv) {
+      var sub = Number(sv.cantidad||0) * Number(sv.costoUnitario||sv.costoUnit||0);
+      html += '<tr style="border-bottom:1px solid var(--border)">';
+      html += '<td style="padding:6px 10px;font-family:monospace">' + esc(sv.codigo||'—') + '</td>';
+      html += '<td style="padding:6px 10px">' + esc(sv.nombre||'—') + '</td>';
+      html += '<td style="padding:6px 10px;text-align:right">' + esc(sv.cantidad||'0') + '</td>';
+      html += '<td style="padding:6px 10px">' + esc(sv.unidades||'und') + '</td>';
+      html += '<td style="padding:6px 10px;text-align:right">' + fmtCOP(sv.costoUnitario||sv.costoUnit||0) + '</td>';
+      html += '<td style="padding:6px 10px;text-align:right;font-weight:600">' + fmtCOP(sub) + '</td>';
+      html += '</tr>';
+    });
+    html += '<tr style="background:var(--brand-light);font-weight:700">';
+    html += '<td colspan="5" style="padding:7px 10px;text-align:right;color:var(--brand)">TOTAL SERVICIOS</td>';
+    html += '<td style="padding:7px 10px;text-align:right;color:var(--brand)">' + fmtCOP(totalServ) + '</td>';
+    html += '</tr></tbody></table></div>';
+  } else {
+    html += '<div style="padding:12px 18px;color:var(--text3);font-size:12px;font-style:italic">No se registraron servicios.</div>';
   }
   html += '</div>';
 
@@ -11085,18 +11119,23 @@ function _renderHistorialOrdenesEquipo(equipo) {
 
   cont.innerHTML = `<table class="ie-table"><thead><tr>
       <th>Fecha</th><th>Realizado por</th><th>Descripción del mantenimiento</th>
-      <th>Repuestos instalados</th><th>Horas operación</th><th>Valor de repuesto</th><th>Orden de trabajo</th>
+      <th>Repuestos instalados</th><th>Horas operación</th><th>Costo total</th><th>Orden de trabajo</th>
     </tr></thead><tbody>` +
     ordenes.map(o => {
       const repuestos = (Array.isArray(o.repuestos) ? o.repuestos : []).map(r => `${r.nombre||r.codigo} (${r.cantidad})`).join(', ') || 'N/A';
-      const valorRepuestos = (Array.isArray(o.repuestos) ? o.repuestos : []).reduce((s,r) => s + (Number(r.cantidad||0)*Number(r.costoUnitario||r.costoUnit||0)), 0);
+      // El costo total de la orden (repuestos + insumos + servicios) ya
+      // queda calculado y guardado en CostoReal al cerrarla — usarlo
+      // directamente en vez de recalcular solo repuestos evita que el
+      // historial del equipo muestre $0 cuando el costo real vino de
+      // insumos o servicios en vez de repuestos.
+      const costoTotal = Number(o.CostoReal || 0);
       return `<tr>
         <td>${esc(o.FechaCierre || o.FechaInicio || '')}</td>
         <td>${esc(o.EjecutadoPor || o.Responsable || '')}</td>
         <td>${esc(o.Title || '')}${o.ObsCierre ? ' — ' + esc(o.ObsCierre) : ''}</td>
         <td>${esc(repuestos)}</td>
         <td>${esc(o.HorasEquipo || '')}</td>
-        <td>${fmtCOP(valorRepuestos)}</td>
+        <td>${fmtCOP(costoTotal)}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Ver orden</button></td>
       </tr>`;
     }).join('') + `</tbody></table>`;
