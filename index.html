@@ -11119,10 +11119,9 @@ function _renderHistorialOrdenesEquipo(equipo) {
 
   cont.innerHTML = `<table class="ie-table"><thead><tr>
       <th>Fecha</th><th>Realizado por</th><th>Descripción del mantenimiento</th>
-      <th>Repuestos instalados</th><th>Horas operación</th><th>Costo total</th><th>Orden de trabajo</th>
+      <th>Horas operación</th><th>Costo total</th><th>Orden de trabajo</th>
     </tr></thead><tbody>` +
     ordenes.map(o => {
-      const repuestos = (Array.isArray(o.repuestos) ? o.repuestos : []).map(r => `${r.nombre||r.codigo} (${r.cantidad})`).join(', ') || 'N/A';
       // El costo total de la orden (repuestos + insumos + servicios) ya
       // queda calculado y guardado en CostoReal al cerrarla — usarlo
       // directamente en vez de recalcular solo repuestos evita que el
@@ -11133,7 +11132,6 @@ function _renderHistorialOrdenesEquipo(equipo) {
         <td>${esc(o.FechaCierre || o.FechaInicio || '')}</td>
         <td>${esc(o.EjecutadoPor || o.Responsable || '')}</td>
         <td>${esc(o.Title || '')}${o.ObsCierre ? ' — ' + esc(o.ObsCierre) : ''}</td>
-        <td>${esc(repuestos)}</td>
         <td>${esc(o.HorasEquipo || '')}</td>
         <td>${fmtCOP(costoTotal)}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="verDetalle('${esc(o.id||o.NumeroOrden)}');showPanel('detalle')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Ver orden</button></td>
