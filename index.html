@@ -1665,6 +1665,12 @@ body.inv-activo .container { max-width: 1800px; }
       <div id="novDiasSinNovedadesDesde" style="font-size:12.5px;color:rgba(255,255,255,.75);margin-top:6px"></div>
     </div>
 
+    <!-- Gráfica: la racha subiendo día a día desde NOVEDADES_DIAS_SIN_BASE -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Racha de Días sin Novedades</div>
+      <div class="card-body" style="padding:14px"><div style="position:relative;height:220px"><canvas id="chartRachaDiasSinNovedades"></canvas></div></div>
+    </div>
+
     <!-- Filtro de mes/año (arriba del dashboard) -->
     <div class="card" style="margin-bottom:14px">
       <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
@@ -8782,6 +8788,43 @@ function renderDiasSinNovedades() {
   el.textContent = dias.toLocaleString('es-CO');
   sub.textContent = 'Desde el ' + fmtFecha(NOVEDADES_DIAS_SIN_BASE);
 }
+
+/** Pinta la gráfica de línea que sube un día a la vez desde
+ *  NOVEDADES_DIAS_SIN_BASE hasta hoy — la misma racha del banner grande,
+ *  pero mostrando cómo se fue construyendo día por día. */
+function renderGraficaRachaDiasSinNovedades() {
+  const canvas = document.getElementById('chartRachaDiasSinNovedades');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const base = _fechaLocalDesdeString(NOVEDADES_DIAS_SIN_BASE);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const totalDias = Math.max(0, Math.round((hoy - base) / 86400000));
+
+  const labels = [];
+  const datos = [];
+  for (let i = 0; i <= totalDias; i++) {
+    const d = new Date(base); d.setDate(d.getDate() + i);
+    labels.push(d.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit' }));
+    datos.push(i);
+  }
+
+  if (window._chartRachaDiasSinNovedades) window._chartRachaDiasSinNovedades.destroy();
+  window._chartRachaDiasSinNovedades = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Días sin novedades', data: datos,
+      borderColor: '#15803d', backgroundColor: 'rgba(21,128,61,.15)',
+      fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2.5,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+        x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+      },
+    },
+  });
+}
 const FOTOS_NOVEDADES_COLS = ['Codigo','#','DriveFileId','UrlVer','UrlDescarga','Titulo','Descripcion','SubidoPor','Fecha'];
 
 let allNovedades = [];
@@ -8876,6 +8919,7 @@ function _siguienteCodigo(prefijo) {
 /** Se llama cada vez que se entra a la pestaña Novedades */
 async function inicializarPanelNovedades() {
   renderDiasSinNovedades();
+  renderGraficaRachaDiasSinNovedades();
   const wrap = document.getElementById('novTablaWrap');
   wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Cargando informes...</div>';
   try {
