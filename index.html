@@ -1658,6 +1658,13 @@ body.inv-activo .container { max-width: 1800px; }
       <button class="btn btn-success" onclick="generarInformeConsolidado()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> Descargar Consolidado (PDF)</button>
     </div>
 
+    <!-- Días sin novedades — contador grande, cuenta desde NOVEDADES_DIAS_SIN_BASE -->
+    <div style="background:linear-gradient(135deg,#15803d 0%,#0d5c2c 100%);border-radius:14px;padding:26px 24px;margin-bottom:16px;text-align:center;box-shadow:0 4px 18px rgba(21,128,61,.25)">
+      <div style="font-size:13px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Días sin Novedades en Planta</div>
+      <div id="novDiasSinNovedades" style="font-size:64px;font-weight:800;color:#fff;line-height:1">—</div>
+      <div id="novDiasSinNovedadesDesde" style="font-size:12.5px;color:rgba(255,255,255,.75);margin-top:6px"></div>
+    </div>
+
     <!-- Filtro de mes/año (arriba del dashboard) -->
     <div class="card" style="margin-bottom:14px">
       <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px">
@@ -8756,6 +8763,25 @@ const NOVEDADES_COLS = [
   'ElaboradoNombre','ElaboradoCargo','ElaboradoTel','RevisadoNombre','RevisadoCargo','RevisadoTel',
   'Correo','FechaRegistro','Estado'
 ];
+
+// Fecha desde la que se cuentan los "Días sin Novedades" en el banner de
+// arriba del panel — cámbiala manualmente cada vez que ocurra una
+// novedad nueva, para reiniciar el contador desde ese día.
+const NOVEDADES_DIAS_SIN_BASE = '2026-08-31';
+
+/** Pinta el banner de "Días sin Novedades" contando desde
+ *  NOVEDADES_DIAS_SIN_BASE hasta hoy (nunca en negativo, por si la fecha
+ *  base todavía no ha llegado). */
+function renderDiasSinNovedades() {
+  const el = document.getElementById('novDiasSinNovedades');
+  const sub = document.getElementById('novDiasSinNovedadesDesde');
+  if (!el) return;
+  const base = _fechaLocalDesdeString(NOVEDADES_DIAS_SIN_BASE);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const dias = Math.max(0, Math.round((hoy - base) / 86400000));
+  el.textContent = dias.toLocaleString('es-CO');
+  sub.textContent = 'Desde el ' + fmtFecha(NOVEDADES_DIAS_SIN_BASE);
+}
 const FOTOS_NOVEDADES_COLS = ['Codigo','#','DriveFileId','UrlVer','UrlDescarga','Titulo','Descripcion','SubidoPor','Fecha'];
 
 let allNovedades = [];
@@ -8849,6 +8875,7 @@ function _siguienteCodigo(prefijo) {
 
 /** Se llama cada vez que se entra a la pestaña Novedades */
 async function inicializarPanelNovedades() {
+  renderDiasSinNovedades();
   const wrap = document.getElementById('novTablaWrap');
   wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Cargando informes...</div>';
   try {
