@@ -3174,6 +3174,7 @@ async function recalcularTodosLosFIFO() {
   try {
     stock = await _obtenerStockSedeActual();
   } catch (e) {
+    autocalcularCierre(); // aunque no haya inventario configurado, el Costo Total del cierre debe reflejar lo que ya se escribió a mano
     return;
   }
 
@@ -3240,6 +3241,7 @@ async function recalcularTodosLosFIFO() {
       }
     });
   });
+  autocalcularCierre(); // el Costo Total del cierre depende de estos mismos costos unitarios (no-op si el modal no está abierto)
 }
 
 async function buscarProductoEnInventario(inputEl, campo) {
@@ -3316,6 +3318,7 @@ async function buscarServicioEnInventario(inputEl, campo) {
     hint.innerHTML  = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> No existe en el catálogo de servicios — puedes escribirlo igual';
     hint.style.display = 'block';
   }
+  autocalcularCierre(); // el precio autocompletado (o no) puede haber cambiado el Costo Total del cierre
 }
 
 /** Cada vez que se cambia la cantidad de una fila, se recalcula TODO el
@@ -4031,7 +4034,7 @@ function abrirModalCompletar(id) {
       <td><select>
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${r.unidades===u?'selected':''}>${u}</option>`).join('')}
       </select></td>
-      <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(r.costoUnitario||r.costoUnit||'')}"></td>
+      <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(r.costoUnitario||r.costoUnit||'')}" oninput="autocalcularCierre()"></td>
       <td><button class="btn-del-row" onclick="this.closest('tr').remove(); recalcularTodosLosFIFO();">✕</button></td>`;
     eRep.appendChild(tr);
   });
@@ -4051,7 +4054,7 @@ function abrirModalCompletar(id) {
       <td><select>
         ${['und','m','Lt','kg','gl','Ft'].map(u=>`<option value="${u}" ${i.unidades===u?'selected':''}>${u}</option>`).join('')}
       </select></td>
-      <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(i.costoUnitario||i.costoUnit||'')}"></td>
+      <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(i.costoUnitario||i.costoUnit||'')}" oninput="autocalcularCierre()"></td>
       <td><button class="btn-del-row" onclick="this.closest('tr').remove(); recalcularTodosLosFIFO();">✕</button></td>`;
     eIns.appendChild(tr);
   });
@@ -4067,12 +4070,12 @@ function abrirModalCompletar(id) {
       <td><input type="text" placeholder="Nombre" value="${esc(s.nombre||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarServicioEnInventario(this,'nombre')">
         <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
       </td>
-      <td><input type="number" placeholder="0" min="0" step="any" value="${esc(s.cantidad||'')}"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" value="${esc(s.cantidad||'')}" oninput="autocalcularCierre()"></td>
       <td><select>
         ${['und','horas','visita','m'].map(u=>`<option value="${u}" ${s.unidades===u?'selected':''}>${u}</option>`).join('')}
       </select></td>
-      <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(s.costoUnitario||s.costoUnit||'')}"></td>
-      <td><button class="btn-del-row" onclick="this.closest('tr').remove();">✕</button></td>`;
+      <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(s.costoUnitario||s.costoUnit||'')}" oninput="autocalcularCierre()"></td>
+      <td><button class="btn-del-row" onclick="this.closest('tr').remove(); autocalcularCierre();">✕</button></td>`;
     eServ.appendChild(tr);
   });
 
@@ -4323,7 +4326,7 @@ function autocalcularCierre() {
   if (campoTiempo) campoTiempo.value = _formatearMinutosATiempo(minutosTotal);
 
   let costoTotal = 0;
-  ['e_tbody_repuestos','e_tbody_insumos'].forEach(tbodyId => {
+  ['e_tbody_repuestos','e_tbody_insumos','e_tbody_servicios'].forEach(tbodyId => {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
     Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
@@ -4678,15 +4681,15 @@ function addRow(tbodyId, tipo) {
       <td><input type="text" placeholder="Nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarServicioEnInventario(this,'nombre')">
         <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
       </td>
-      <td><input type="number" placeholder="0" min="0" step="any"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" oninput="autocalcularCierre()"></td>
       <td>
         <select>
           <option value="und">und</option><option value="horas">horas</option>
           <option value="visita">visita</option><option value="m">m</option>
         </select>
       </td>
-      <td><input type="number" placeholder="0.00" min="0" step="0.01"></td>
-      <td><button class="btn-del-row" onclick="this.closest('tr').remove();">✕</button></td>`;
+      <td><input type="number" placeholder="0.00" min="0" step="0.01" oninput="autocalcularCierre()"></td>
+      <td><button class="btn-del-row" onclick="this.closest('tr').remove(); autocalcularCierre();">✕</button></td>`;
   } else {
     tr.innerHTML = `
       <td><input type="text" placeholder="COD-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'codigo')"></td>
@@ -4701,7 +4704,7 @@ function addRow(tbodyId, tipo) {
           <option value="gl">gl</option><option value="Ft">Ft</option>
         </select>
       </td>
-      <td><input type="number" placeholder="0.00" min="0" step="0.01"></td>
+      <td><input type="number" placeholder="0.00" min="0" step="0.01" oninput="autocalcularCierre()"></td>
       <td><button class="btn-del-row" onclick="this.closest('tr').remove(); recalcularTodosLosFIFO();">✕</button></td>`;
   }
   tbody.appendChild(tr);
@@ -6737,6 +6740,7 @@ async function guardarOrden() {
       tareas:    datos.tareas    || [],
       repuestos: datos.repuestos || [],
       insumos:   datos.insumos   || [],
+      servicios: datos.servicios || [],
       CostoTotal: 0, FechaCreacion: new Date().toISOString()
     };
 
