@@ -2652,27 +2652,37 @@ async function _invAsegurarHoja(spreadsheetId, nombre, cols) {
 
   if (existing.length === 0) {
     // La pestaña no existe todavía — crearla con todos los encabezados
-    try {
-      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requests: [{ addSheet: { properties: { title: nombre } } }] })
-      });
-    } catch (e) { /* puede que ya exista la pestaña, seguimos */ }
+    const addResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: nombre } } }] })
+    });
+    if (!addResp.ok) {
+      const txt = await addResp.text();
+      // Un 400 porque ya existe una hoja con ese nombre (carrera con otra
+      // pestaña/usuario) es inofensivo; cualquier otro error (permisos,
+      // cuota, red) debe propagarse en vez de seguir de largo a escribir
+      // encabezados en una hoja que nunca se creó.
+      if (!(addResp.status === 400 && /already exists/i.test(txt))) {
+        throw new Error('No se pudo crear la hoja ' + nombre + ' (HTTP ' + addResp.status + ')');
+      }
+    }
     const colFin = numToCol(cols.length - 1);
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(nombre + '!A1:' + colFin + '1')}?valueInputOption=RAW`, {
+    const putResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(nombre + '!A1:' + colFin + '1')}?valueInputOption=RAW`, {
       method: 'PUT', headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ values: [cols] })
     });
+    if (!putResp.ok) throw new Error('No se pudieron escribir los encabezados de ' + nombre + ' (HTTP ' + putResp.status + ')');
   } else if (existing.length < cols.length) {
     // La pestaña ya existía, pero le faltan encabezados de columnas
     // agregadas después (ej. cuando el sistema evoluciona) — se completan
     // solo los que faltan, sin tocar los que ya estaban.
     const colFin = numToCol(cols.length - 1);
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(nombre + '!A1:' + colFin + '1')}?valueInputOption=RAW`, {
+    const putResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(nombre + '!A1:' + colFin + '1')}?valueInputOption=RAW`, {
       method: 'PUT', headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ values: [cols] })
     });
+    if (!putResp.ok) throw new Error('No se pudieron escribir los encabezados de ' + nombre + ' (HTTP ' + putResp.status + ')');
   }
 }
 
@@ -5686,11 +5696,20 @@ async function crearHojaSiNoExiste(nombre) {
   }
   if (_hojasExistentesCache.has(nombre)) return; // ya existe
   // Crear la hoja
-  await fetch(base + ':batchUpdate', {
+  const resp = await fetch(base + ':batchUpdate', {
     method: 'POST', headers: hdrs,
     body: JSON.stringify({ requests: [{ addSheet: { properties: { title: nombre } } }] })
   });
-  _hojasExistentesCache.add(nombre);
+  // Si esto falla por una razón real (permisos, cuota, red) y de todos
+  // modos se marca como "ya existe" en el caché, ninguna otra parte de la
+  // app vuelve a intentar crearla en el resto de la sesión — quedaría
+  // fallando silenciosamente hasta recargar la página. Un 400 porque ya
+  // existe una hoja con ese nombre (carrera con otra pestaña/usuario) sí
+  // se trata como éxito; cualquier otro error se propaga.
+  if (resp.ok) { _hojasExistentesCache.add(nombre); return; }
+  const txt = await resp.text();
+  if (resp.status === 400 && /already exists/i.test(txt)) { _hojasExistentesCache.add(nombre); return; }
+  throw new Error('No se pudo crear la hoja ' + nombre + ' (HTTP ' + resp.status + ')');
 }
 
 // ── Helper: asegurar encabezados en una hoja específica ──
@@ -5719,9 +5738,13 @@ async function asegurarHoja(nombre, cols) {
   if (existing.length === 0 || missing.length > 0) {
     const final = existing.length === 0 ? cols : [...existing, ...missing];
     const cf2   = numToCol(final.length - 1);
-    await fetch(base + '/values/' + encodeURIComponent(nombre + '!A1:' + cf2 + '1') + '?valueInputOption=RAW', {
+    const putResp = await fetch(base + '/values/' + encodeURIComponent(nombre + '!A1:' + cf2 + '1') + '?valueInputOption=RAW', {
       method: 'PUT', headers: hdrs, body: JSON.stringify({ values: [final] })
     });
+    // No cachear "final" como si ya estuviera escrito si la escritura
+    // falló — de lo contrario, llamadas futuras en la misma sesión creen
+    // que los encabezados ya están correctos y nunca vuelven a intentarlo.
+    if (!putResp.ok) throw new Error('No se pudieron escribir los encabezados de ' + nombre + ' (HTTP ' + putResp.status + ')');
     _cacheEncabezadosHoja[nombre] = final;
     return final;
   }
@@ -6312,15 +6335,29 @@ async function actualizarOrdenEnSheets(numeroOrden, campos) {
     const hdrs    = { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' };
 
     // ── 1. Actualizar fila en hoja principal (todos los campos, arrays como JSON) ──
+    // Antes, si CUALQUIERA de las dos lecturas de abajo fallaba a medias
+    // (401 justo cuando el token expira, 429 por cuota, un corte de red),
+    // el código seguía de largo tratando la fila como si estuviera vacía y
+    // terminaba escribiendo una fila casi en blanco (incluyendo la propia
+    // columna A con el NumeroOrden) encima de la fila real en Sheets — es
+    // decir, una edición fallida podía borrar el pedido para todos los
+    // demás dispositivos aunque en este mismo equipo siguiera viéndose
+    // bien (por venir de localStorage). Ahora cualquier fallo de lectura
+    // aborta antes de escribir nada.
     const colAResp = await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A:A'), { headers: hdrs });
+    if (!colAResp.ok) throw new Error('No se pudo leer la hoja de Órdenes (HTTP ' + colAResp.status + ')');
     const colAData = await colAResp.json();
     if (colAData.values) {
       const rowIdx = colAData.values.findIndex((r, i) => i > 0 && r[0] === numeroOrden);
       if (rowIdx >= 0) {
         const sheetRow = rowIdx + 1;
         const rowResp  = await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A' + sheetRow + ':' + colFin + sheetRow), { headers: hdrs });
-        const rowData  = await rowResp.json();
-        const row = (rowData.values && rowData.values[0]) ? [...rowData.values[0]] : [];
+        if (!rowResp.ok) throw new Error('No se pudo leer la fila de la orden ' + numeroOrden + ' (HTTP ' + rowResp.status + ')');
+        const rowData = await rowResp.json();
+        if (!rowData.values || !rowData.values[0] || !rowData.values[0].length) {
+          throw new Error('La fila de la orden ' + numeroOrden + ' vino vacía al leerla — se aborta para no sobrescribirla con datos en blanco');
+        }
+        const row = [...rowData.values[0]];
         while (row.length < headers.length) row.push('');
 
         // Actualizar todos los campos (escalares Y arrays como JSON)
@@ -6332,9 +6369,10 @@ async function actualizarOrdenEnSheets(numeroOrden, campos) {
           else                               { row[ci] = String(v); }
         });
 
-        await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A' + sheetRow + ':' + colFin + sheetRow) + '?valueInputOption=RAW', {
+        const putResp = await fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A' + sheetRow + ':' + colFin + sheetRow) + '?valueInputOption=RAW', {
           method: 'PUT', headers: hdrs, body: JSON.stringify({ values: [row] })
         });
+        if (!putResp.ok) throw new Error('No se pudo guardar la fila de la orden ' + numeroOrden + ' (HTTP ' + putResp.status + ')');
       }
     }
 
@@ -6345,6 +6383,12 @@ async function actualizarOrdenEnSheets(numeroOrden, campos) {
       await asegurarHoja(sheetName, colsDef);
       // Leer hoja completa para encontrar filas de esta orden
       const rAll = await fetch(base + '/values/' + encodeURIComponent(sheetName + '!A:A'), { headers: hdrs });
+      // Si esta lectura falla, NO se puede asumir que la orden no tiene
+      // filas previas en esta hoja — seguir de largo dejaría las filas
+      // viejas sin borrar y agregaría las nuevas de todos modos, duplicando
+      // repuestos/insumos/servicios/tareas cada vez que se reintente
+      // guardar tras un fallo transitorio.
+      if (!rAll.ok) throw new Error('No se pudo leer ' + sheetName + ' para reemplazar filas de la orden (HTTP ' + rAll.status + ')');
       const dAll = await rAll.json();
       const allRows = dAll.values || [];
       // Recopilar índices de filas (1-based) que pertenecen a esta orden
@@ -6352,16 +6396,20 @@ async function actualizarOrdenEnSheets(numeroOrden, campos) {
       for (let i = 1; i < allRows.length; i++) { // skip header row (i=0)
         if (allRows[i] && allRows[i][0] === numeroOrden) toDelete.push(i + 1); // +1 = sheet row number
       }
-      // Borrar de abajo hacia arriba para no desplazar índices
+      // Borrar de abajo hacia arriba para no desplazar índices — si en
+      // algún punto no se puede obtener el sheetId o el borrado falla, se
+      // aborta en vez de continuar a insertar las filas nuevas encima de
+      // las viejas todavía no borradas (misma razón que arriba).
       for (let k = toDelete.length - 1; k >= 0; k--) {
         const sheetId = await obtenerSheetId(sheetName);
-        if (sheetId === null) break;
-        await fetch(base + ':batchUpdate', {
+        if (sheetId === null) throw new Error('No se pudo obtener el ID de la hoja ' + sheetName + ' para borrar filas viejas de la orden');
+        const delResp = await fetch(base + ':batchUpdate', {
           method: 'POST', headers: hdrs,
           body: JSON.stringify({ requests: [{ deleteDimension: {
             range: { sheetId, dimension: 'ROWS', startIndex: toDelete[k] - 1, endIndex: toDelete[k] }
           }}]})
         });
+        if (!delResp.ok) throw new Error('No se pudo borrar una fila vieja de ' + sheetName + ' (HTTP ' + delResp.status + ')');
       }
       // Insertar las filas nuevas
       if (filas.length) await appendHoja(sheetName, filas);
@@ -8004,7 +8052,8 @@ async function eliminarFilasDondeCumple(hoja, predicado) {
   const requests = filasABorrar.slice().sort((a, b) => b - a).map(fila => ({
     deleteDimension: { range: { sheetId, dimension: 'ROWS', startIndex: fila - 1, endIndex: fila } }
   }));
-  await fetch(base + ':batchUpdate', { method: 'POST', headers: hdrs, body: JSON.stringify({ requests }) });
+  const delResp = await fetch(base + ':batchUpdate', { method: 'POST', headers: hdrs, body: JSON.stringify({ requests }) });
+  if (!delResp.ok) throw new Error('No se pudieron borrar filas de ' + hoja + ' (HTTP ' + delResp.status + ')');
   _invalidarCacheHoja(hoja);
   return filasABorrar.length;
 }
@@ -10487,10 +10536,11 @@ async function _actualizarFilaPorClave(hoja, cols, colClave, valorClave, datosPa
 
   const colFin = numToCol(colsReales.length - 1);
   if (numeroFila > 0) {
-    await fetch(base + '/values/' + encodeURIComponent(hoja + `!A${numeroFila}:${colFin}${numeroFila}`) + '?valueInputOption=RAW', {
+    const putResp = await fetch(base + '/values/' + encodeURIComponent(hoja + `!A${numeroFila}:${colFin}${numeroFila}`) + '?valueInputOption=RAW', {
       method: 'PUT', headers: { ...hdrs, 'Content-Type': 'application/json' },
       body: JSON.stringify({ values: [filaCompleta] })
     });
+    if (!putResp.ok) throw new Error('No se pudo actualizar la fila en ' + hoja + ' (HTTP ' + putResp.status + ')');
     _invalidarCacheHoja(hoja);
   } else {
     await appendHoja(hoja, [filaCompleta]); // ya invalida la caché de "hoja" internamente
@@ -10546,9 +10596,10 @@ async function _actualizarFilasPorClaveEnLote(hoja, cols, colClave, cambiosPorCl
   const todasLasFilas = [...filasActualizadas, ...filasNuevas];
   if (!todasLasFilas.length) return;
   const colFin = numToCol(colsReales.length - 1);
-  await fetch(base + '/values/' + encodeURIComponent(hoja + `!A2:${colFin}${1 + todasLasFilas.length}`) + '?valueInputOption=RAW', {
+  const putResp = await fetch(base + '/values/' + encodeURIComponent(hoja + `!A2:${colFin}${1 + todasLasFilas.length}`) + '?valueInputOption=RAW', {
     method: 'PUT', headers: hdrs, body: JSON.stringify({ values: todasLasFilas })
   });
+  if (!putResp.ok) throw new Error('No se pudo guardar el lote de cambios en ' + hoja + ' (HTTP ' + putResp.status + ')');
   _invalidarCacheHoja(hoja);
 }
 
