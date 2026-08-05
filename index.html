@@ -1968,8 +1968,14 @@ body.inv-activo .container { max-width: 1800px; }
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
               <div class="field"><label>Código *</label><input id="invs_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="SERV-001"></div>
               <div class="field"><label>Nombre *</label><input id="invs_nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del servicio"></div>
-              <div class="field"><label>Precio de referencia</label><input id="invs_precio" type="number" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field"><label>Precio</label><input id="invs_precio" type="number" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field"><label>Fecha</label><input id="invs_fecha" type="date"></div>
+              <div class="field"><label>Proveedor</label><select id="invs_proveedor"><option value="">Selecciona un proveedor...</option></select></div>
               <div class="field" style="grid-column:1/-1"><label>Descripción</label><input id="invs_descripcion" placeholder="Opcional"></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text3)">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.71.71 1.23 1.5 1.41 2.5"></path></svg>
+              <span>Si el código ya existe, esto agrega un nuevo precio con su propia fecha — no reemplaza el anterior. El historial completo de precios por fecha queda disponible en la pestaña "Lotes", y en las órdenes de trabajo se autocompleta siempre con el precio más reciente.</span>
             </div>
             <button class="btn btn-primary" onclick="invRegistrarServicio()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Registrar Servicio</button>
             <div id="invsMsg" style="margin-top:10px;font-size:12.5px"></div>
@@ -2019,7 +2025,7 @@ body.inv-activo .container { max-width: 1800px; }
         <div class="grid-lista-detalle" style="--lista-w:280px">
           <!-- Selector de producto -->
           <div class="card" style="margin:0">
-            <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Productos</div>
+            <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Productos y Servicios</div>
             <div style="padding:10px 14px 0">
               <input id="lotesBuscarProducto" placeholder="Buscar código o nombre…" oninput="invFiltrarListaLotes()" style="margin-bottom:10px">
             </div>
@@ -2031,7 +2037,7 @@ body.inv-activo .container { max-width: 1800px; }
             <div class="card-head" id="lotesTitulo" style="border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> Selecciona un producto</div>
             <div class="card-body" style="padding:18px;overflow-x:auto" id="lotesContenido">
               <div style="color:var(--text3);font-size:13px;text-align:center;padding:30px">
-                Elige un producto de la lista para ver todos sus lotes — cada uno con su fecha de ingreso y su precio.
+                Elige un producto o servicio de la lista para ver su historial completo de precios — cada uno con su fecha y su precio.
               </div>
             </div>
           </div>
@@ -2583,10 +2589,12 @@ const INVENTARIO_SHEETS = {
 const INV_PRODUCTOS_COLS   = ['Código','Nombre','Unidad','Grupo','Stock Mínimo','Fecha Creación','Precio Unitario','Tipo','Ubicacion','Proveedor'];
 const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante','PrecioUnitario','TipoDocumento','NumeroDocumento'];
 // Servicios (mano de obra/servicios de terceros) — a diferencia de
-// Productos, NO tienen stock ni lotes: es solo un catálogo código → nombre
-// (con un precio de referencia opcional) para que al escribir el código en
-// una orden de trabajo se autocomplete el nombre del servicio.
-const INV_SERVICIOS_COLS = ['Código','Nombre','Descripcion','Precio Unitario','Fecha Creación'];
+// Productos, NO tienen stock: es un catálogo código → nombre, pero SÍ
+// admite varios registros por código (uno por cada fecha en que cambió
+// el precio), igual que los lotes de Productos — solo que aquí no hay
+// cantidad ni consumo FIFO, cada registro es simplemente un precio
+// vigente desde su fecha, con su proveedor asociado.
+const INV_SERVICIOS_COLS = ['Código','Nombre','Descripcion','Precio Unitario','Fecha','Proveedor'];
 const INV_TIPOS_MOVIMIENTO = ['INGRESO','SALIDA','AJUSTE_POSITIVO','AJUSTE_NEGATIVO'];
 
 function _invSpreadsheetId(sede) {
@@ -2730,11 +2738,21 @@ async function obtenerTodosLosLotesInventario(sede) {
     _invGet(spreadsheetId, 'Movimientos!A2:M100000'),
   ]);
   const lotesPorCodigo = _agruparLotesFIFO(movimientos);
-  return productos.filter(row => row[0] && row[1]).map(row => {
+  const items = productos.filter(row => row[0] && row[1]).map(row => {
     const codigo = row[0].toString().trim();
     const lotes  = (lotesPorCodigo.get(codigo.toUpperCase()) || []).sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
-    return { codigo, nombre: row[1] || '', unidad: row[2] || 'Unidades', lotes };
-  }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return { codigo, nombre: row[1] || '', unidad: row[2] || 'Unidades', tipo: 'producto', lotes };
+  });
+  // Los servicios no tienen cantidad ni consumo FIFO — cada registro es
+  // simplemente un precio vigente desde su fecha, con su proveedor. Se
+  // muestran en la misma sección de "Lotes" porque, igual que un lote de
+  // producto, representan el historial de precios de un mismo código.
+  const servicios = await obtenerServiciosInventarioDirecto(sede);
+  const itemsServicios = servicios.map(s => ({
+    codigo: s.codigo, nombre: s.nombre, unidad: 'servicio', tipo: 'servicio',
+    lotes: s.historial.map(h => ({ fecha: h.fecha, precio: h.precioUnitario, proveedor: h.proveedor, descripcion: h.descripcion })),
+  }));
+  return items.concat(itemsServicios).sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
 async function obtenerStockInventarioDirecto(sede) {
@@ -2796,16 +2814,36 @@ async function registrarProductoInventarioDirecto(sede, producto) {
    de terceros. Vive en la misma hoja de cálculo de inventario de
    cada sede (pestaña "Servicios"), pero sin stock ni lotes.
 ══════════════════════════════════════════════════════════════ */
+/** Cada código de servicio puede tener varios registros (uno por cada
+ *  fecha en que cambió el precio) — por eso se agrupan por código y se
+ *  expone tanto el más reciente (para el autocompletado en Órdenes) como
+ *  el historial completo (para la sección "Lotes"). */
 async function obtenerServiciosInventarioDirecto(sede) {
   const spreadsheetId = _invSpreadsheetId(sede);
-  const filas = await _invGet(spreadsheetId, 'Servicios!A2:E100000');
-  const servicios = filas.filter(row => row[0] && row[1]).map(row => ({
-    codigo: (row[0] || '').toString().trim(),
-    nombre: row[1] || '',
-    descripcion: row[2] || '',
-    precioUnitario: parseFloat(row[3]) || 0,
-    fechaCreacion: row[4] || '',
-  }));
+  const filas = await _invGet(spreadsheetId, 'Servicios!A2:F100000');
+  const porCodigo = new Map();
+  filas.filter(row => row[0] && row[1]).forEach(row => {
+    const codigo = row[0].toString().trim();
+    const entrada = {
+      nombre: row[1] || '',
+      descripcion: row[2] || '',
+      precioUnitario: parseFloat(row[3]) || 0,
+      fecha: row[4] || '',
+      proveedor: row[5] || '',
+    };
+    if (!porCodigo.has(codigo)) porCodigo.set(codigo, []);
+    porCodigo.get(codigo).push(entrada);
+  });
+  const servicios = [];
+  porCodigo.forEach((historial, codigo) => {
+    historial.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    const ultima = historial[historial.length - 1];
+    servicios.push({
+      codigo, nombre: ultima.nombre, descripcion: ultima.descripcion,
+      precioUnitario: ultima.precioUnitario, fecha: ultima.fecha, proveedor: ultima.proveedor,
+      historial,
+    });
+  });
   return servicios.sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
@@ -2817,15 +2855,11 @@ async function registrarServicioInventarioDirecto(sede, servicio) {
   const nombre = (servicio.nombre || '').toString().trim().toUpperCase();
   if (!codigo || !nombre) throw new Error('Código y nombre son obligatorios');
 
-  const existentes = await _invGet(spreadsheetId, 'Servicios!A2:A100000');
-  if (existentes.some(r => (r[0] || '').toString().trim().toUpperCase() === codigo)) {
-    throw new Error('Ya existe un servicio con este código');
-  }
-
   const fila = [
     codigo, nombre, servicio.descripcion || '',
     Math.max(0, parseFloat(servicio.precioUnitario) || 0),
-    new Date().toISOString(),
+    servicio.fecha || new Date().toISOString().split('T')[0],
+    servicio.proveedor || '',
   ];
   await _invAppend(spreadsheetId, 'Servicios', [fila]);
 }
@@ -7637,6 +7671,7 @@ function abrirInventario(opKey) {
   document.body.classList.add('inv-activo');
 
   document.getElementById('invm_fecha').valueAsDate = new Date();
+  document.getElementById('invs_fecha').valueAsDate = new Date();
   invHandleTipoChange();
   invPoblarEquipos();
   invMostrarSubTab('dashboard');
@@ -8524,7 +8559,7 @@ function invMostrarSubTab(nombre) {
   if (nombre === 'lotes')     invCargarListaLotes();
   if (nombre === 'producto')  invPoblarProveedores();
   if (nombre === 'reportes')  invPoblarCodigosReporte();
-  if (nombre === 'servicios') invCargarServicios();
+  if (nombre === 'servicios') { invCargarServicios(); invPoblarProveedores(); }
 }
 
 async function invCargarDashboard() {
@@ -8645,10 +8680,12 @@ let _proveedoresCache = null;
 
 /** Llena el desplegable de "Proveedor" en Nuevo Producto con los
  *  proveedores ya registrados en la sección de Proveedores. */
+/** Puebla el desplegable de proveedores en "Nuevo Producto" y en "Nuevo
+ *  Servicio" — ambos leen la MISMA lista de proveedores ya registrados en
+ *  la pestaña "Proveedores", así que comparten el mismo caché. */
 async function invPoblarProveedores() {
-  const sel = document.getElementById('invp_proveedor');
-  if (!sel) return;
-  const actual = sel.value;
+  const selectores = ['invp_proveedor', 'invs_proveedor'].map(id => document.getElementById(id)).filter(Boolean);
+  if (!selectores.length) return;
   try {
     if (_proveedoresCache === null) {
       const spreadsheetId = _invSpreadsheetId(inventarioOperacionActual);
@@ -8656,15 +8693,18 @@ async function invPoblarProveedores() {
       const filas = await _invGet(spreadsheetId, 'Proveedores!A2:A100000');
       _proveedoresCache = filas.filter(r => r[0]).map(r => r[0]);
     }
-    if (!_proveedoresCache.length) {
-      sel.innerHTML = '<option value="">Aún no hay proveedores — regístralos en la pestaña "Proveedores"</option>';
-      return;
-    }
-    sel.innerHTML = '<option value="">Selecciona un proveedor...</option>' +
-      _proveedoresCache.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
-    if (_proveedoresCache.includes(actual)) sel.value = actual;
+    selectores.forEach(sel => {
+      const actual = sel.value;
+      if (!_proveedoresCache.length) {
+        sel.innerHTML = '<option value="">Aún no hay proveedores — regístralos en la pestaña "Proveedores"</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Selecciona un proveedor...</option>' +
+        _proveedoresCache.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+      if (_proveedoresCache.includes(actual)) sel.value = actual;
+    });
   } catch (e) {
-    sel.innerHTML = '<option value="">No se pudo cargar la lista de proveedores</option>';
+    selectores.forEach(sel => sel.innerHTML = '<option value="">No se pudo cargar la lista de proveedores</option>');
   }
 }
 
@@ -8702,12 +8742,16 @@ async function invRegistrarServicio() {
     nombre: document.getElementById('invs_nombre').value.trim(),
     descripcion: document.getElementById('invs_descripcion').value.trim(),
     precioUnitario: document.getElementById('invs_precio').value,
+    fecha: document.getElementById('invs_fecha').value,
+    proveedor: document.getElementById('invs_proveedor').value,
   };
   msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
   try {
     await registrarServicioInventarioDirecto(inventarioOperacionActual, servicio);
     msg.style.color = '#15803d'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Servicio registrado correctamente.';
     ['invs_codigo','invs_nombre','invs_descripcion','invs_precio'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('invs_proveedor').value = '';
+    document.getElementById('invs_fecha').valueAsDate = new Date();
     _serviciosInventarioCache = null; // invalida el caché del autocompletado, para que vea el servicio nuevo
     invCargarServicios();
   } catch (e) {
@@ -8739,8 +8783,8 @@ function invFiltrarServicios() {
 function invRenderTablaServicios(servicios) {
   const cont = document.getElementById('invServiciosTabla');
   if (!servicios.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay servicios que coincidan con el filtro</div>'; return; }
-  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Precio de referencia</th></tr></thead><tbody>` +
-    servicios.map(s => `<tr><td><strong>${esc(s.codigo)}</strong></td><td>${esc(s.nombre)}</td><td>${esc(s.descripcion)||'—'}</td><td>${fmtCOP(s.precioUnitario)}</td></tr>`).join('') +
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Precio actual</th><th>Fecha</th><th>Proveedor</th></tr></thead><tbody>` +
+    servicios.map(s => `<tr><td><strong>${esc(s.codigo)}</strong></td><td>${esc(s.nombre)}</td><td>${esc(s.descripcion)||'—'}</td><td>${fmtCOP(s.precioUnitario)}</td><td>${esc(s.fecha)||'—'}</td><td>${esc(s.proveedor)||'—'}</td></tr>`).join('') +
     `</tbody></table>`;
 }
 
@@ -8906,16 +8950,18 @@ function invFiltrarListaLotes() {
   if (!lista.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay productos registrados.</div>'; return; }
 
   cont.innerHTML = lista.map(p => {
-    const disponibles = p.lotes.filter(l => l.restante > 0.0001).length;
     const activo = p.codigo === _lotesProductoActual;
+    const resumen = p.tipo === 'servicio'
+      ? `${p.lotes.length} precio${p.lotes.length!==1?'s':''} registrado${p.lotes.length!==1?'s':''}`
+      : `${p.lotes.length} lote${p.lotes.length!==1?'s':''} · ${p.lotes.filter(l => l.restante > 0.0001).length} disponible${p.lotes.filter(l => l.restante > 0.0001).length!==1?'s':''}`;
     return `<div onclick="invSeleccionarProductoLotes('${esc(p.codigo).replace(/'/g,"\\'")}')"
         style="padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--border);
                background:${activo ? 'var(--surface2)' : 'transparent'}"
         onmouseover="this.style.background='var(--surface2)'"
         onmouseout="this.style.background='${activo ? 'var(--surface2)' : 'transparent'}'">
-        <div style="font-weight:700;font-size:13px;color:${activo ? 'var(--brand)' : 'inherit'}">${esc(p.codigo)}</div>
+        <div style="font-weight:700;font-size:13px;color:${activo ? 'var(--brand)' : 'inherit'}">${esc(p.codigo)} ${p.tipo === 'servicio' ? '<span class="inv-badge" style="background:var(--brand-light);color:var(--brand);font-weight:700">Servicio</span>' : ''}</div>
         <div style="font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.nombre)}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${p.lotes.length} lote${p.lotes.length!==1?'s':''} · ${disponibles} disponible${disponibles!==1?'s':''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${resumen}</div>
       </div>`;
   }).join('');
 }
@@ -8929,7 +8975,30 @@ function invSeleccionarProductoLotes(codigo) {
   const cont = document.getElementById('lotesContenido');
 
   if (!producto || !producto.lotes.length) {
-    cont.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px">Este producto todavía no tiene ningún ingreso registrado.</div>';
+    cont.innerHTML = `<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px">Este ${producto && producto.tipo === 'servicio' ? 'servicio todavía no tiene ningún precio registrado' : 'producto todavía no tiene ningún ingreso registrado'}.</div>`;
+    return;
+  }
+
+  if (producto.tipo === 'servicio') {
+    cont.innerHTML = `
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px;font-size:13px">
+        <div><span style="color:var(--text3)">Precios registrados:</span> <strong>${producto.lotes.length}</strong></div>
+        <div><span style="color:var(--text3)">Precio vigente:</span> <strong>${fmtCOP(producto.lotes[producto.lotes.length-1].precio)}</strong></div>
+      </div>
+      <table class="ie-table"><thead><tr>
+          <th>#</th><th>Fecha</th><th>Precio</th><th>Proveedor</th><th>Descripción</th><th>Estado</th>
+        </tr></thead><tbody>` +
+      producto.lotes.map((l, i) => {
+        const vigente = i === producto.lotes.length - 1;
+        return `<tr>
+          <td><strong>${i+1}</strong></td>
+          <td>${esc(l.fecha)||'—'}</td>
+          <td>${fmtCOP(l.precio)}</td>
+          <td>${esc(l.proveedor)||'—'}</td>
+          <td>${esc(l.descripcion)||'—'}</td>
+          <td><span class="inv-badge" style="background:${vigente ? '#dcfce7' : '#f1f5f9'};color:${vigente ? '#15803d' : 'var(--text3)'}">${vigente ? 'Vigente' : 'Histórico'}</span></td>
+        </tr>`;
+      }).join('') + `</tbody></table>`;
     return;
   }
 
