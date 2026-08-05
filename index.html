@@ -970,6 +970,25 @@ body.inv-activo .container { max-width: 1800px; }
       </div>
     </div>
 
+    <!-- Servicios -->
+    <div class="card">
+      <div class="card-head">Servicios Requeridos</div>
+      <div class="card-body">
+        <table class="dyn-table">
+          <thead><tr>
+            <th style="width:15%">Código</th>
+            <th style="width:38%">Nombre servicio</th>
+            <th style="width:14%">Cantidad</th>
+            <th style="width:14%">Unidades</th>
+            <th style="width:14%">Costo unit.</th>
+            <th style="width:5%"></th>
+          </tr></thead>
+          <tbody id="tbody_servicios"></tbody>
+        </table>
+        <button class="btn-add-row" onclick="addRow('tbody_servicios','servicio')">+ Agregar servicio</button>
+      </div>
+    </div>
+
     <!-- Seguridad -->
     <div class="card">
       <div class="card-head">Seguridad y Observaciones</div>
@@ -1254,9 +1273,28 @@ body.inv-activo .container { max-width: 1800px; }
         </div>
       </div>
 
-      <!-- ══ 6. SEGURIDAD ══ -->
+      <!-- ══ 6. SERVICIOS ══ -->
       <div class="card">
-        <div class="card-head">6 · Seguridad y Observaciones</div>
+        <div class="card-head">6 · Servicios Requeridos</div>
+        <div class="card-body">
+          <table class="dyn-table">
+            <thead><tr>
+              <th style="width:15%">Código</th>
+              <th style="width:37%">Nombre servicio</th>
+              <th style="width:13%">Cantidad</th>
+              <th style="width:13%">Unidades</th>
+              <th style="width:14%">Costo unit.</th>
+              <th style="width:8%"></th>
+            </tr></thead>
+            <tbody id="e_tbody_servicios"></tbody>
+          </table>
+          <button class="btn-add-row" onclick="addRow('e_tbody_servicios','servicio')">+ Agregar servicio</button>
+        </div>
+      </div>
+
+      <!-- ══ 7. SEGURIDAD ══ -->
+      <div class="card">
+        <div class="card-head">7 · Seguridad y Observaciones</div>
         <div class="card-body">
           <div class="grid-2">
             <div class="field">
@@ -1273,7 +1311,7 @@ body.inv-activo .container { max-width: 1800px; }
 
       <!-- ══ 7. FIRMA DEL SOLICITANTE (original) ══ -->
       <div class="card">
-        <div class="card-head">7 · Firma del Solicitante</div>
+        <div class="card-head">8 · Firma del Solicitante</div>
         <div class="card-body">
           <div class="grid-2">
             <div>
@@ -1766,6 +1804,7 @@ body.inv-activo .container { max-width: 1800px; }
         <button class="inv-subtab active" data-invtab="dashboard" onclick="invMostrarSubTab('dashboard')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> Dashboard</button>
         <button class="inv-subtab" data-invtab="producto" onclick="invMostrarSubTab('producto')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Nuevo Producto</button>
         <button class="inv-subtab" data-invtab="movimiento" onclick="invMostrarSubTab('movimiento')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Movimientos</button>
+        <button class="inv-subtab" data-invtab="servicios" onclick="invMostrarSubTab('servicios')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> Servicios</button>
         <button class="inv-subtab" data-invtab="stock" onclick="invMostrarSubTab('stock')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Stock</button>
         <button class="inv-subtab" data-invtab="lotes" onclick="invMostrarSubTab('lotes')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> Lotes</button>
         <button class="inv-subtab" data-invtab="reportes" onclick="invMostrarSubTab('reportes')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg> Reportes</button>
@@ -1918,6 +1957,32 @@ body.inv-activo .container { max-width: 1800px; }
             </div>
             <button class="btn btn-primary" onclick="invRegistrarMovimiento()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Guardar Movimiento</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Sub-panel: Servicios ── -->
+      <div id="invSub-servicios" class="inv-subpanel">
+        <div class="card" style="margin:0 0 16px">
+          <div class="card-head" style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> Nuevo Servicio</div>
+          <div style="padding:18px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:14px">
+              <div class="field"><label>Código *</label><input id="invs_codigo" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="SERV-001"></div>
+              <div class="field"><label>Nombre *</label><input id="invs_nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Nombre del servicio"></div>
+              <div class="field"><label>Precio de referencia</label><input id="invs_precio" type="number" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field" style="grid-column:1/-1"><label>Descripción</label><input id="invs_descripcion" placeholder="Opcional"></div>
+            </div>
+            <button class="btn btn-primary" onclick="invRegistrarServicio()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Registrar Servicio</button>
+            <div id="invsMsg" style="margin-top:10px;font-size:12.5px"></div>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+            <span style="display:flex;align-items:center;gap:8px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> Servicios Registrados</span>
+          </div>
+          <div style="padding:14px 18px 0">
+            <input id="invsBuscar" placeholder="Buscar por código o nombre…" oninput="invFiltrarServicios()" style="max-width:320px">
+          </div>
+          <div style="padding:14px 0 0" id="invServiciosTabla"><div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div></div>
         </div>
       </div>
 
@@ -2517,6 +2582,11 @@ const INVENTARIO_SHEETS = {
 
 const INV_PRODUCTOS_COLS   = ['Código','Nombre','Unidad','Grupo','Stock Mínimo','Fecha Creación','Precio Unitario','Tipo','Ubicacion','Proveedor'];
 const INV_MOVIMIENTOS_COLS = ['Código','Fecha','Tipo','Cantidad','Usuario','Timestamp','Responsable','Equipo Destino','Observaciones','Stock Resultante','PrecioUnitario','TipoDocumento','NumeroDocumento'];
+// Servicios (mano de obra/servicios de terceros) — a diferencia de
+// Productos, NO tienen stock ni lotes: es solo un catálogo código → nombre
+// (con un precio de referencia opcional) para que al escribir el código en
+// una orden de trabajo se autocomplete el nombre del servicio.
+const INV_SERVICIOS_COLS = ['Código','Nombre','Descripcion','Precio Unitario','Fecha Creación'];
 const INV_TIPOS_MOVIMIENTO = ['INGRESO','SALIDA','AJUSTE_POSITIVO','AJUSTE_NEGATIVO'];
 
 function _invSpreadsheetId(sede) {
@@ -2719,6 +2789,45 @@ async function registrarProductoInventarioDirecto(sede, producto) {
     producto.proveedor || '',
   ];
   await _invAppend(spreadsheetId, 'Productos', [fila]);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SERVICIOS — catálogo código → nombre para mano de obra/servicios
+   de terceros. Vive en la misma hoja de cálculo de inventario de
+   cada sede (pestaña "Servicios"), pero sin stock ni lotes.
+══════════════════════════════════════════════════════════════ */
+async function obtenerServiciosInventarioDirecto(sede) {
+  const spreadsheetId = _invSpreadsheetId(sede);
+  const filas = await _invGet(spreadsheetId, 'Servicios!A2:E100000');
+  const servicios = filas.filter(row => row[0] && row[1]).map(row => ({
+    codigo: (row[0] || '').toString().trim(),
+    nombre: row[1] || '',
+    descripcion: row[2] || '',
+    precioUnitario: parseFloat(row[3]) || 0,
+    fechaCreacion: row[4] || '',
+  }));
+  return servicios.sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+async function registrarServicioInventarioDirecto(sede, servicio) {
+  const spreadsheetId = _invSpreadsheetId(sede);
+  await _invAsegurarHoja(spreadsheetId, 'Servicios', INV_SERVICIOS_COLS);
+
+  const codigo = (servicio.codigo || '').toString().trim().toUpperCase();
+  const nombre = (servicio.nombre || '').toString().trim().toUpperCase();
+  if (!codigo || !nombre) throw new Error('Código y nombre son obligatorios');
+
+  const existentes = await _invGet(spreadsheetId, 'Servicios!A2:A100000');
+  if (existentes.some(r => (r[0] || '').toString().trim().toUpperCase() === codigo)) {
+    throw new Error('Ya existe un servicio con este código');
+  }
+
+  const fila = [
+    codigo, nombre, servicio.descripcion || '',
+    Math.max(0, parseFloat(servicio.precioUnitario) || 0),
+    new Date().toISOString(),
+  ];
+  await _invAppend(spreadsheetId, 'Servicios', [fila]);
 }
 
 /** Antes esta función sumaba/restaba Ingresos y Salidas en línea recta
@@ -2989,6 +3098,20 @@ async function _obtenerStockSedeActual() {
   return _stockInventarioCache;
 }
 
+let _serviciosInventarioCache = null;
+let _serviciosInventarioCacheSede = null;
+
+/** Igual que _obtenerStockSedeActual(), pero para el catálogo de Servicios
+ *  (sin stock ni lotes) — lo usa el autocompletado de código en la sección
+ *  "Servicios Requeridos" de la orden de trabajo. */
+async function _obtenerServiciosSedeActual() {
+  if (_serviciosInventarioCache && _serviciosInventarioCacheSede === operacionActual) return _serviciosInventarioCache;
+  const servicios = await obtenerServiciosInventarioDirecto(operacionActual);
+  _serviciosInventarioCache = servicios || [];
+  _serviciosInventarioCacheSede = operacionActual;
+  return _serviciosInventarioCache;
+}
+
 /** Handler del input de código/nombre de una fila de repuesto/insumo.
  *  campo: 'codigo' o 'nombre' — cuál de los dos escribió el usuario. */
 /** Suma cuánta cantidad de un código YA está escrita en OTRAS filas de
@@ -3111,6 +3234,44 @@ async function buscarProductoEnInventario(inputEl, campo) {
   // juntos aquí — así cualquier otra fila del mismo código (llenada antes
   // o después) también queda al día, sin importar el orden de edición.
   await recalcularTodosLosFIFO();
+}
+
+/** Igual que buscarProductoEnInventario(), pero para el catálogo de
+ *  Servicios (sin stock ni lotes): al escribir el código o el nombre y
+ *  salir del campo, autocompleta el otro y — si el campo de costo está
+ *  vacío — el precio de referencia del servicio, si lo tiene. */
+async function buscarServicioEnInventario(inputEl, campo) {
+  const tr = inputEl.closest('tr');
+  if (!tr) return;
+  const valor = inputEl.value.trim();
+  const hint  = tr.querySelector('.rep-ins-hint');
+  if (!valor) { if (hint) hint.style.display = 'none'; return; }
+
+  let servicios;
+  try {
+    servicios = await _obtenerServiciosSedeActual();
+  } catch (e) {
+    return; // Sin inventario configurado para esta sede — no interrumpe al usuario con esto
+  }
+
+  const buscado  = valor.toLowerCase();
+  const servicio = servicios.find(s =>
+    (campo === 'codigo' && (s.codigo || '').toLowerCase() === buscado) ||
+    (campo === 'nombre' && (s.nombre || '').toLowerCase() === buscado)
+  );
+
+  const inputs      = tr.querySelectorAll('input');
+  const inCodigo    = inputs[0], inNombre = inputs[1], inCosto = inputs[3];
+
+  if (servicio) {
+    if (inCodigo) inCodigo.value = servicio.codigo;
+    if (inNombre) inNombre.value = servicio.nombre;
+    if (inCosto && !inCosto.value && servicio.precioUnitario) inCosto.value = servicio.precioUnitario;
+    if (hint) hint.style.display = 'none';
+  } else if (hint) {
+    hint.innerHTML  = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-1px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> No existe en el catálogo de servicios — puedes escribirlo igual';
+    hint.style.display = 'block';
+  }
 }
 
 /** Cada vez que se cambia la cantidad de una fila, se recalcula TODO el
@@ -3851,7 +4012,27 @@ function abrirModalCompletar(id) {
     eIns.appendChild(tr);
   });
 
-  // ── 6. Seguridad
+  // ── 6. Servicios
+  const eServ = document.getElementById('e_tbody_servicios');
+  eServ.innerHTML = '';
+  const servicios = o.servicios && o.servicios.length ? o.servicios : [{codigo:'',nombre:'',cantidad:'',unidades:'und',costoUnitario:''}];
+  servicios.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" placeholder="SERV-001" value="${esc(s.codigo||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarServicioEnInventario(this,'codigo')"></td>
+      <td><input type="text" placeholder="Nombre" value="${esc(s.nombre||'')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarServicioEnInventario(this,'nombre')">
+        <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
+      </td>
+      <td><input type="number" placeholder="0" min="0" step="any" value="${esc(s.cantidad||'')}"></td>
+      <td><select>
+        ${['und','horas','visita','m'].map(u=>`<option value="${u}" ${s.unidades===u?'selected':''}>${u}</option>`).join('')}
+      </select></td>
+      <td><input type="number" placeholder="0.00" min="0" step="0.01" value="${esc(s.costoUnitario||s.costoUnit||'')}"></td>
+      <td><button class="btn-del-row" onclick="this.closest('tr').remove();">✕</button></td>`;
+    eServ.appendChild(tr);
+  });
+
+  // ── 7. Seguridad
   document.getElementById('e_seguridad').value     = o.MedidasSeguridad || '';
   document.getElementById('e_observaciones').value = o.Observaciones || '';
 
@@ -3984,6 +4165,13 @@ function leerEditorDatos() {
              costoUnitario: ins[4]?.value||'0' };
   }).filter(i => i.nombre);
 
+  const servicios = Array.from(document.getElementById('e_tbody_servicios').querySelectorAll('tr')).map(tr => {
+    const ins = tr.querySelectorAll('input,select');
+    return { codigo: ins[0]?.value||'', nombre: ins[1]?.value||'',
+             cantidad: ins[2]?.value||'', unidades: ins[3]?.value||'und',
+             costoUnitario: ins[4]?.value||'0' };
+  }).filter(s => s.nombre);
+
   return {
     Title:             document.getElementById('e_descripcion').value.trim(),
     Equipo:            document.getElementById('e_equipo').value.trim(),
@@ -3997,7 +4185,7 @@ function leerEditorDatos() {
     FechaFin:          document.getElementById('e_fechaFin').value,
     MedidasSeguridad:  document.getElementById('e_seguridad').value.trim(),
     Observaciones:     document.getElementById('e_observaciones').value.trim(),
-    tareas, repuestos, insumos,
+    tareas, repuestos, insumos, servicios,
   };
 }
 
@@ -4222,6 +4410,7 @@ async function guardarCierre() {
           tareas:       o.tareas    || [],
           repuestos:    o.repuestos || [],
           insumos:      o.insumos   || [],
+          servicios:    o.servicios || [],
           FirmaCreador: o.FirmaCreador || '',
           FirmaCierre:  o.FirmaCierre || '',
         });
@@ -4436,6 +4625,24 @@ function addRow(tbodyId, tipo) {
     tbody.appendChild(tr);
     if (tbodyId === 'e_tbody_tareas') tbody.appendChild(_crearFilaObservacionFantasma(''));
     return;
+  } else if (tipo === 'servicio') {
+    // Los servicios no tienen stock/lotes — el código solo autocompleta el
+    // nombre (y el precio de referencia si está registrado), sin la
+    // validación de disponibilidad FIFO que sí aplica a repuestos/insumos.
+    tr.innerHTML = `
+      <td><input type="text" placeholder="SERV-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarServicioEnInventario(this,'codigo')"></td>
+      <td><input type="text" placeholder="Nombre" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarServicioEnInventario(this,'nombre')">
+        <div class="rep-ins-hint" style="display:none;font-size:10px;color:#b45309;margin-top:2px"></div>
+      </td>
+      <td><input type="number" placeholder="0" min="0" step="any"></td>
+      <td>
+        <select>
+          <option value="und">und</option><option value="horas">horas</option>
+          <option value="visita">visita</option><option value="m">m</option>
+        </select>
+      </td>
+      <td><input type="number" placeholder="0.00" min="0" step="0.01"></td>
+      <td><button class="btn-del-row" onclick="this.closest('tr').remove();">✕</button></td>`;
   } else {
     tr.innerHTML = `
       <td><input type="text" placeholder="COD-001" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" onblur="buscarProductoEnInventario(this,'codigo')"></td>
@@ -4603,6 +4810,7 @@ function initDefaultRows() {
   ['tarea','tarea','tarea'].forEach(() => addRow('tbody_tareas','tarea'));
   ['repuesto','repuesto'].forEach(() => addRow('tbody_repuestos','repuesto'));
   ['insumo','insumo'].forEach(() => addRow('tbody_insumos','insumo'));
+  addRow('tbody_servicios','servicio');
 }
 
 function readTable(tbodyId, tipo) {
@@ -4697,6 +4905,7 @@ const SHEETS_COLS = [
 const TAREAS_COLS    = ['NumeroOrden','#','Descripcion','TiempoEstimado','TiempoReal','OK','Responsable','ObservacionCierre'];
 const REPUESTOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const INSUMOS_COLS   = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
+const SERVICIOS_COLS = ['NumeroOrden','#','Codigo','Nombre','Cantidad','Unidades','CostoUnitario','Subtotal'];
 const FOTOS_COLS     = ['NumeroOrden','#','DriveFileId','UrlVer','UrlDescarga','TareaDescripcion','SubidoPor','Fecha'];
 /** TipoFrecuencia: 'calendario' (usa Frecuencia = clave de FRECUENCIAS_PLAN,
  *  contada desde FechaInicio/UltimaGeneracion) o 'horas' (usa Frecuencia =
@@ -5186,6 +5395,7 @@ const SH = {
   tareas:    'Tareas',
   repuestos: 'Repuestos',
   insumos:   'Insumos',
+  servicios: 'Servicios',
   fotos:     'Fotos',
   novedades: 'Novedades',
   fotosNovedades: 'FotosNovedades',
@@ -5790,6 +6000,29 @@ async function guardarOrdenEnSheets(datos) {
       });
     if (filasIns.length) await appendHoja(SH.insumos, filasIns);
   }
+
+  // ── 5. Hoja Servicios ──
+  if (datos.servicios && datos.servicios.length) {
+    const colsServ = await asegurarHoja(SH.servicios, SERVICIOS_COLS);
+    const filasServ = datos.servicios
+      .filter(s => s.nombre || s.Nombre)
+      .map((s, i) => {
+        const cant = Number(s.cantidad || 0);
+        const costo = Number(s.costoUnitario || s.costoUnit || 0);
+        return colsServ.map(c => {
+          if (c === 'NumeroOrden') return num;
+          if (c === '#') return i + 1;
+          if (c === 'Codigo') return s.codigo || '';
+          if (c === 'Nombre') return s.nombre || '';
+          if (c === 'Cantidad') return cant;
+          if (c === 'Unidades') return s.unidades || 'und';
+          if (c === 'CostoUnitario') return costo;
+          if (c === 'Subtotal') return cant * costo;
+          return '';
+        });
+      });
+    if (filasServ.length) await appendHoja(SH.servicios, filasServ);
+  }
 }
 
 /** Como guardarOrdenEnSheets, pero para varias órdenes a la vez: arma en
@@ -5934,9 +6167,15 @@ async function cargarOrdenesDeSheets() {
   // secuencial era buena parte de la demora al reiniciar el sistema. La
   // lectura completa usa un rango fijo generoso (A:AZ) en vez de esperar
   // los encabezados para calcular hasta dónde leer.
+  // Servicios es una hoja nueva — en sedes donde todavía no se ha guardado
+  // ninguna orden con servicios, la pestaña no existe aún, y leerHoja()
+  // más abajo fallaría con "Unable to parse range" al pedirla. Se asegura
+  // aquí (igual que ya se hace con Ordenes) para que SIEMPRE exista antes
+  // de intentar leerla, sin importar si esta sede ya la usó o no.
   const [hOrdenesHeaders, dOrden] = await Promise.all([
     asegurarHoja(SH.ordenes, SHEETS_COLS),
     fetch(base + '/values/' + encodeURIComponent(SH.ordenes + '!A:AZ'), { headers: hdrs }).then(r => r.json()),
+    asegurarHoja(SH.servicios, SERVICIOS_COLS),
   ]);
   window._sheetsHeaders = hOrdenesHeaders;
   if (!dOrden.values || dOrden.values.length < 2) return [];
@@ -5949,16 +6188,18 @@ async function cargarOrdenesDeSheets() {
     obj.tareas    = [];
     obj.repuestos = [];
     obj.insumos   = [];
+    obj.servicios = [];
     obj.fotos     = [];
     ['FirmaCreador','FirmaCierre'].forEach(c => { if (typeof obj[c] !== 'string') obj[c] = ''; });
     return obj;
   });
 
-  // Cargar tareas, repuestos, insumos, fotos en paralelo
-  const [tareasRows, repuestosRows, insumosRows, fotosRows] = await Promise.all([
+  // Cargar tareas, repuestos, insumos, servicios, fotos en paralelo
+  const [tareasRows, repuestosRows, insumosRows, serviciosRows, fotosRows] = await Promise.all([
     leerHoja(SH.tareas),
     leerHoja(SH.repuestos),
     leerHoja(SH.insumos),
+    leerHoja(SH.servicios),
     leerHoja(SH.fotos)
   ]);
 
@@ -5996,6 +6237,16 @@ async function cargarOrdenesDeSheets() {
   insumosRows.forEach(r => {
     if (r.NumeroOrden && idx[r.NumeroOrden]) {
       idx[r.NumeroOrden].insumos.push({
+        codigo: r.Codigo||'', nombre: r.Nombre||'',
+        cantidad: r.Cantidad||'', unidades: r.Unidades||'und',
+        costoUnitario: r.CostoUnitario||'0',
+      });
+    }
+  });
+
+  serviciosRows.forEach(r => {
+    if (r.NumeroOrden && idx[r.NumeroOrden]) {
+      idx[r.NumeroOrden].servicios.push({
         codigo: r.Codigo||'', nombre: r.Nombre||'',
         cantidad: r.Cantidad||'', unidades: r.Unidades||'und',
         costoUnitario: r.CostoUnitario||'0',
@@ -6116,6 +6367,16 @@ async function actualizarOrdenEnSheets(numeroOrden, campos) {
           return [numeroOrden, i+1, ins.codigo||'', ins.nombre||'', cant, ins.unidades||'und', costo, cant*costo];
         });
       await reemplazarFilasOrden(SH.insumos, INSUMOS_COLS, filas);
+    }
+
+    if (campos.servicios && Array.isArray(campos.servicios)) {
+      const filas = campos.servicios
+        .filter(s => (s.nombre||'').trim())
+        .map((s, i) => {
+          const cant = Number(s.cantidad||0), costo = Number(s.costoUnitario||s.costoUnit||0);
+          return [numeroOrden, i+1, s.codigo||'', s.nombre||'', cant, s.unidades||'und', costo, cant*costo];
+        });
+      await reemplazarFilasOrden(SH.servicios, SERVICIOS_COLS, filas);
     }
 
   } catch(e) {
@@ -6329,6 +6590,7 @@ function limpiarFormulario() {
   document.getElementById('tbody_tareas').innerHTML    = '';
   document.getElementById('tbody_repuestos').innerHTML = '';
   document.getElementById('tbody_insumos').innerHTML   = '';
+  document.getElementById('tbody_servicios').innerHTML = '';
   initDefaultRows();
   // Limpiar firma
   if (drawCtx && drawCanvas) {
@@ -6364,6 +6626,7 @@ async function guardarOrden() {
     tareas:             readTable('tbody_tareas','tarea'),
     repuestos:          readTable('tbody_repuestos','repuesto'),
     insumos:            readTable('tbody_insumos','insumo'),
+    servicios:          readTable('tbody_servicios','servicio'),
   };
 
   if (!datos.Title || !datos.Equipo) {
@@ -7722,6 +7985,7 @@ async function limpiarOrdenesAutomaticas() {
   await eliminarFilasDondeCumple(SH.tareas, t => numeros.has(t.NumeroOrden));
   await eliminarFilasDondeCumple(SH.repuestos, r => numeros.has(r.NumeroOrden));
   await eliminarFilasDondeCumple(SH.insumos, i => numeros.has(i.NumeroOrden));
+  await eliminarFilasDondeCumple(SH.servicios, s => numeros.has(s.NumeroOrden));
   allOrdenes = allOrdenes.filter(o => !numeros.has(o.NumeroOrden) && !numeros.has(o.id));
   guardarLocal();
   return numeros.size;
@@ -8260,6 +8524,7 @@ function invMostrarSubTab(nombre) {
   if (nombre === 'lotes')     invCargarListaLotes();
   if (nombre === 'producto')  invPoblarProveedores();
   if (nombre === 'reportes')  invPoblarCodigosReporte();
+  if (nombre === 'servicios') invCargarServicios();
 }
 
 async function invCargarDashboard() {
@@ -8428,6 +8693,55 @@ async function invRegistrarProducto() {
   } catch (e) {
     msg.style.color = 'var(--danger)'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
   }
+}
+
+async function invRegistrarServicio() {
+  const msg = document.getElementById('invsMsg');
+  const servicio = {
+    codigo: document.getElementById('invs_codigo').value.trim(),
+    nombre: document.getElementById('invs_nombre').value.trim(),
+    descripcion: document.getElementById('invs_descripcion').value.trim(),
+    precioUnitario: document.getElementById('invs_precio').value,
+  };
+  msg.style.color = 'var(--text3)'; msg.textContent = 'Guardando…';
+  try {
+    await registrarServicioInventarioDirecto(inventarioOperacionActual, servicio);
+    msg.style.color = '#15803d'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Servicio registrado correctamente.';
+    ['invs_codigo','invs_nombre','invs_descripcion','invs_precio'].forEach(id => document.getElementById(id).value = '');
+    _serviciosInventarioCache = null; // invalida el caché del autocompletado, para que vea el servicio nuevo
+    invCargarServicios();
+  } catch (e) {
+    msg.style.color = 'var(--danger)'; msg.innerHTML = '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> ' + esc(e.message);
+  }
+}
+
+let _invServiciosCacheTabla = [];
+
+async function invCargarServicios() {
+  const cont = document.getElementById('invServiciosTabla');
+  cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">Cargando…</div>';
+  try {
+    const servicios = await obtenerServiciosInventarioDirecto(inventarioOperacionActual);
+    _invServiciosCacheTabla = servicios;
+    invFiltrarServicios();
+  } catch (e) {
+    cont.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:13px;display:flex;align-items:center;gap:6px"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> ${esc(e.message)}</div>`;
+  }
+}
+
+function invFiltrarServicios() {
+  const texto = (document.getElementById('invsBuscar').value || '').toLowerCase().trim();
+  let lista = _invServiciosCacheTabla.slice();
+  if (texto) lista = lista.filter(s => (s.codigo||'').toLowerCase().includes(texto) || (s.nombre||'').toLowerCase().includes(texto));
+  invRenderTablaServicios(lista);
+}
+
+function invRenderTablaServicios(servicios) {
+  const cont = document.getElementById('invServiciosTabla');
+  if (!servicios.length) { cont.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px">No hay servicios que coincidan con el filtro</div>'; return; }
+  cont.innerHTML = `<table class="inv-table"><thead><tr><th>Código</th><th>Nombre</th><th>Descripción</th><th>Precio de referencia</th></tr></thead><tbody>` +
+    servicios.map(s => `<tr><td><strong>${esc(s.codigo)}</strong></td><td>${esc(s.nombre)}</td><td>${esc(s.descripcion)||'—'}</td><td>${fmtCOP(s.precioUnitario)}</td></tr>`).join('') +
+    `</tbody></table>`;
 }
 
 /** Llena el desplegable de "Equipo Destino" en Movimientos con la lista real
