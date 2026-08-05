@@ -1550,35 +1550,35 @@ body.inv-activo .container { max-width: 1800px; }
       </div>
     </div>
 
-    <!-- KPIs — paleta de azules solicitada (stratos/regal blue/bondi blue) -->
+    <!-- KPIs — colores pastel variados, uno distinto por tarjeta, solo en el Dashboard -->
     <div class="kpi-grid">
-      <div class="kpi-card" style="border-top-color:#001848">
-        <div class="kpi-val" id="kpi_total" style="color:#001848">—</div>
+      <div class="kpi-card" style="border-top-color:#3D6FB4">
+        <div class="kpi-val" id="kpi_total" style="color:#3D6FB4">—</div>
         <div class="kpi-label">Total órdenes</div>
         <div class="kpi-sub">Todas las registradas</div>
       </div>
-      <div class="kpi-card" style="border-top-color:#02457A">
-        <div class="kpi-val" id="kpi_pendientes" style="color:#02457A">—</div>
+      <div class="kpi-card" style="border-top-color:#C97A2E">
+        <div class="kpi-val" id="kpi_pendientes" style="color:#C97A2E">—</div>
         <div class="kpi-label">Pendientes</div>
         <div class="kpi-sub">En espera de aprobación</div>
       </div>
-      <div class="kpi-card" style="border-top-color:#018ABE">
-        <div class="kpi-val" id="kpi_cerradas" style="color:#018ABE">—</div>
+      <div class="kpi-card" style="border-top-color:#3D8F55">
+        <div class="kpi-val" id="kpi_cerradas" style="color:#3D8F55">—</div>
         <div class="kpi-label">Cerradas</div>
         <div class="kpi-sub">Completadas</div>
       </div>
-      <div class="kpi-card" style="border-top-color:#001848">
-        <div class="kpi-val" id="kpi_urgentes" style="color:#001848">—</div>
+      <div class="kpi-card" style="border-top-color:#D9534F">
+        <div class="kpi-val" id="kpi_urgentes" style="color:#D9534F">—</div>
         <div class="kpi-label">Urgentes</div>
         <div class="kpi-sub">Prioridad urgente activas</div>
       </div>
-      <div class="kpi-card" style="border-top-color:#02457A">
-        <div class="kpi-val" id="kpi_costo_rep" style="color:#02457A">—</div>
+      <div class="kpi-card" style="border-top-color:#7C4FC2">
+        <div class="kpi-val" id="kpi_costo_rep" style="color:#7C4FC2">—</div>
         <div class="kpi-label">Costo Repuestos</div>
         <div class="kpi-sub">Total acumulado</div>
       </div>
-      <div class="kpi-card" style="border-top-color:#018ABE">
-        <div class="kpi-val" id="kpi_costo_ins" style="color:#018ABE">—</div>
+      <div class="kpi-card" style="border-top-color:#1E8C82">
+        <div class="kpi-val" id="kpi_costo_ins" style="color:#1E8C82">—</div>
         <div class="kpi-label">Costo Insumos</div>
         <div class="kpi-sub">Total acumulado</div>
       </div>
@@ -6922,17 +6922,17 @@ async function cargarDashboard() {
   if (kpiRepSub) kpiRepSub.textContent = periodoLabel + ' · solo cerradas';
   if (kpiInsSub) kpiInsSub.textContent = periodoLabel + ' · solo cerradas';
 
-  // Colores — paleta de azules solicitada (stratos/regal blue/bondi blue/
-  // morning glory/botticelli), de más oscuro a más claro.
+  // Colores — paleta pastel variada (una tonalidad distinta por categoría)
+  // solo para las gráficas del Dashboard, así se distinguen de un vistazo.
   const colores = {
-    Preventivo: '#001848', Correctivo: '#02457A',
-    Predictivo: '#018ABE', Mejora: '#97CADB', Otro: '#D6EBEE'
+    Preventivo: '#A8C8EC', Correctivo: '#F7B98B',
+    Predictivo: '#8FD9D3', Mejora: '#A8DAB5', Otro: '#C9CED6'
   };
   const colEstado = {
-    Pendiente: '#001848', Aprobada: '#02457A',
-    'En ejecución': '#018ABE', Cerrada: '#97CADB', Rechazada: '#D6EBEE'
+    Pendiente: '#F7B98B', Aprobada: '#A8DAB5',
+    'En ejecución': '#A8C8EC', Cerrada: '#C9B6E4', Rechazada: '#F6A9A9'
   };
-  const colPrio = { Baja: '#D6EBEE', Media: '#97CADB', Alta: '#02457A', Urgente: '#001848' };
+  const colPrio = { Baja: '#A8DAB5', Media: '#F9E29C', Alta: '#F7B98B', Urgente: '#F6A9A9' };
 
   function destroyChart(key) { if (window[key]) { window[key].destroy(); window[key] = null; } }
   function makeChart(id, key, cfg) {
@@ -7021,7 +7021,7 @@ async function cargarDashboard() {
   makeChart('chartCostoRep','_chartCostoRep',{
     type: 'pie',
     data: { labels: ['Repuestos','Insumos'], datasets: [{ data: [costoRep, costoIns],
-      backgroundColor: ['#001848','#018ABE'], borderWidth: 2, borderColor: '#fff', hoverOffset: 10 }] },
+      backgroundColor: ['#C9B6E4','#8FD9D3'], borderWidth: 2, borderColor: '#fff', hoverOffset: 10 }] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, padding: 16, font: { size: 13 } } },
         tooltip: { callbacks: { label: ctx => ' ' + fmtCOP(ctx.raw) } } } }
@@ -7064,8 +7064,8 @@ async function cargarDashboard() {
     data: {
       labels: eqLabels,
       datasets: [
-        { label: 'Repuestos', data: eqRepData, backgroundColor: '#001848', borderRadius: 4, borderSkipped: false },
-        { label: 'Insumos',   data: eqInsData, backgroundColor: '#018ABE', borderRadius: 4, borderSkipped: false }
+        { label: 'Repuestos', data: eqRepData, backgroundColor: '#C9B6E4', borderRadius: 4, borderSkipped: false },
+        { label: 'Insumos',   data: eqInsData, backgroundColor: '#8FD9D3', borderRadius: 4, borderSkipped: false }
       ]
     },
     options: {
@@ -7114,8 +7114,8 @@ async function cargarDashboard() {
             ${equiposSorted.map((x,i) => `
               <tr style="border-bottom:1px solid var(--border);background:${i%2===0?'var(--surface)':'var(--brand-light)'}">
                 <td style="padding:9px 16px;font-weight:500">${esc(x.eq)}</td>
-                <td style="padding:9px 16px;text-align:right;color:#001848">${fmtCOP(x.rep)}</td>
-                <td style="padding:9px 16px;text-align:right;color:#018ABE">${fmtCOP(x.ins)}</td>
+                <td style="padding:9px 16px;text-align:right;color:#7C4FC2">${fmtCOP(x.rep)}</td>
+                <td style="padding:9px 16px;text-align:right;color:#1E8C82">${fmtCOP(x.ins)}</td>
                 <td style="padding:9px 16px;text-align:right;font-weight:700">${fmtCOP(x.total)}</td>
                 <td style="padding:9px 16px;text-align:right;color:var(--text2)">${totalGeneral>0?(x.total/totalGeneral*100).toFixed(1)+'%':'—'}</td>
               </tr>`).join('')}
@@ -7174,7 +7174,7 @@ function renderGraficasAntioquia(ordenesFiltradas) {
     data: {
       labels: empresas.map(n => 'Empresa ' + n),
       datasets: [{ label: 'Gasto total', data: totalesPorEmpresa,
-        backgroundColor: '#001848', borderRadius: 6, borderSkipped: false }]
+        backgroundColor: '#A8C8EC', borderRadius: 6, borderSkipped: false }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -7203,7 +7203,7 @@ function renderGraficasAntioquia(ordenesFiltradas) {
       data: {
         labels: equipos,
         datasets: [{ label: 'Gasto', data: datos,
-          backgroundColor: '#018ABE', borderRadius: 5, borderSkipped: false }]
+          backgroundColor: '#8FD9D3', borderRadius: 5, borderSkipped: false }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
