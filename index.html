@@ -2897,6 +2897,59 @@ async function _invStockDeUnProducto(spreadsheetId, codigo) {
   return Math.max(0, Math.round(cantidad * 100) / 100);
 }
 
+// ── Bloqueo (mutex) de inventario por sede — Sheets no ofrece transacciones,
+//    así que sin esto dos personas descontando el mismo producto casi al
+//    mismo tiempo pueden leer el mismo stock, pasar ambas la validación de
+//    "hay suficiente" y terminar sobregirando el inventario sin que quede
+//    registrado. Se usa la celda Config!B1 (la A1 ya la usa la clave de
+//    sede) como mutex "último en escribir gana": cada intento escribe su
+//    propio token con una expiración corta y, tras una breve pausa, vuelve
+//    a leer la celda — si todavía dice su token, ganó la carrera (porque
+//    Sheets serializa las escrituras, así que solo un token puede quedar
+//    como valor final); si no, algún otro cliente ganó y hay que reintentar. ──
+function _tokenAleatorio() {
+  const buf = new Uint8Array(8);
+  crypto.getRandomValues(buf);
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function _invSetCelda(spreadsheetId, rango, valor) {
+  const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(rango)}?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: { Authorization: 'Bearer ' + googleAccessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [[valor]] }),
+  });
+  if (resp.status === 401) { mostrarModalSesionExpirada(); throw new Error('Token expirado — cierra sesión y vuelve a entrar'); }
+  if (!resp.ok) { const t = await resp.text(); throw new Error('Error escribiendo el bloqueo de inventario: ' + t); }
+}
+
+async function _invAdquirirLock(spreadsheetId, timeoutMs = 10000) {
+  const token = _tokenAleatorio();
+  const desde = Date.now();
+  while (Date.now() - desde < timeoutMs) {
+    const celda = await _invGet(spreadsheetId, 'Config!B1:B1');
+    const actual = (celda[0] && celda[0][0]) ? celda[0][0].toString() : '';
+    const expiraActual = parseInt(actual.split(':')[1], 10) || 0;
+    if (!actual || Date.now() > expiraActual) {
+      await _invSetCelda(spreadsheetId, 'Config!B1', `${token}:${Date.now() + 6000}`);
+      await new Promise(r => setTimeout(r, 200));
+      const verificacion = await _invGet(spreadsheetId, 'Config!B1:B1');
+      const valorFinal = (verificacion[0] && verificacion[0][0]) ? verificacion[0][0].toString() : '';
+      if (valorFinal.startsWith(token + ':')) return token;
+    }
+    await new Promise(r => setTimeout(r, 250 + Math.random() * 400));
+  }
+  throw new Error('El inventario está ocupado por otro movimiento. Intenta de nuevo en unos segundos.');
+}
+
+async function _invLiberarLock(spreadsheetId, token) {
+  try {
+    const celda = await _invGet(spreadsheetId, 'Config!B1:B1');
+    const actual = (celda[0] && celda[0][0]) ? celda[0][0].toString() : '';
+    if (actual.startsWith(token + ':')) await _invSetCelda(spreadsheetId, 'Config!B1', '');
+  } catch (e) { console.warn('No se pudo liberar el bloqueo de inventario (expirará solo):', e.message); }
+}
+
 async function registrarMovimientoInventarioDirecto(sede, mov) {
   const spreadsheetId = _invSpreadsheetId(sede);
   await _invAsegurarHoja(spreadsheetId, 'Movimientos', INV_MOVIMIENTOS_COLS);
@@ -2912,33 +2965,38 @@ async function registrarMovimientoInventarioDirecto(sede, mov) {
     throw new Error('El producto no existe. Regístrelo primero.');
   }
 
-  const stockActual = await _invStockDeUnProducto(spreadsheetId, codigo);
-  if ((tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') && stockActual < cantidad) {
-    throw new Error(`Stock insuficiente. Disponible: ${stockActual}, Solicitado: ${cantidad}`);
+  const lockToken = await _invAdquirirLock(spreadsheetId);
+  try {
+    const stockActual = await _invStockDeUnProducto(spreadsheetId, codigo);
+    if ((tipo === 'SALIDA' || tipo === 'AJUSTE_NEGATIVO') && stockActual < cantidad) {
+      throw new Error(`Stock insuficiente. Disponible: ${stockActual}, Solicitado: ${cantidad}`);
+    }
+
+    let stockResultante = stockActual;
+    if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') stockResultante += cantidad;
+    else stockResultante -= cantidad;
+    stockResultante = Math.max(0, stockResultante);
+
+    const fila = [
+      codigo,
+      mov.fecha || new Date().toISOString().split('T')[0],
+      tipo,
+      cantidad,
+      (typeof currentUser !== 'undefined' && currentUser?.email) || 'Sistema',
+      new Date().toISOString(),
+      mov.responsable || '',
+      mov.equipo || '',
+      mov.observaciones || '',
+      stockResultante,
+      (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') ? (Math.max(0, parseFloat(mov.precioUnitario) || 0)) : '',
+      mov.tipoDocumento || '',
+      mov.numeroDocumento || '',
+    ];
+    await _invAppend(spreadsheetId, 'Movimientos', [fila]);
+    return { stockResultante };
+  } finally {
+    await _invLiberarLock(spreadsheetId, lockToken);
   }
-
-  let stockResultante = stockActual;
-  if (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') stockResultante += cantidad;
-  else stockResultante -= cantidad;
-  stockResultante = Math.max(0, stockResultante);
-
-  const fila = [
-    codigo,
-    mov.fecha || new Date().toISOString().split('T')[0],
-    tipo,
-    cantidad,
-    (typeof currentUser !== 'undefined' && currentUser?.email) || 'Sistema',
-    new Date().toISOString(),
-    mov.responsable || '',
-    mov.equipo || '',
-    mov.observaciones || '',
-    stockResultante,
-    (tipo === 'INGRESO' || tipo === 'AJUSTE_POSITIVO') ? (Math.max(0, parseFloat(mov.precioUnitario) || 0)) : '',
-    mov.tipoDocumento || '',
-    mov.numeroDocumento || '',
-  ];
-  await _invAppend(spreadsheetId, 'Movimientos', [fila]);
-  return { stockResultante };
 }
 
 async function obtenerHistorialInventarioDirecto(sede, filtros) {
@@ -6673,6 +6731,29 @@ function limpiarFormulario() {
 /* ══════════════════════════════════════════════
    GUARDAR ORDEN
 ══════════════════════════════════════════════ */
+/** El NumeroOrden es la ÚNICA clave que usa todo el sistema para encontrar,
+ *  actualizar y borrar filas de una orden en Sheets (verDetalle, editar,
+ *  cerrar, actualizarOrdenEnSheets, reemplazarFilasOrden...). Antes se
+ *  generaba con los últimos 5 dígitos de Date.now(), que se repiten cada
+ *  100 segundos — dos órdenes creadas (en el mismo o distinto dispositivo)
+ *  con ese mismo residuo terminaban con el mismo número, y guardar/cerrar
+ *  una borraba en Sheets las tareas/repuestos/insumos de la otra. Ahora se
+ *  usa el timestamp completo en base36 más un sufijo aleatorio (crypto,
+ *  no Math.random), y además se revisa contra las órdenes ya cargadas en
+ *  este dispositivo por si acaso — la combinación hace que una colisión
+ *  real sea, en la práctica, imposible. */
+function generarNumeroOrdenUnico() {
+  let numero;
+  do {
+    const ts = Date.now().toString(36).toUpperCase();
+    const azar = new Uint8Array(3);
+    crypto.getRandomValues(azar);
+    const sufijo = Array.from(azar).map(b => b.toString(36).toUpperCase().padStart(2, '0')).join('');
+    numero = 'OT-' + ts + sufijo;
+  } while (allOrdenes.some(o => o.NumeroOrden === numero));
+  return numero;
+}
+
 async function guardarOrden() {
   const btn   = document.getElementById('btnGuardar');
   const alert = document.getElementById('alertGuardar');
@@ -6709,7 +6790,7 @@ async function guardarOrden() {
   btn.disabled = true; btn.textContent = 'Guardando...';
 
   try {
-    const numOrden = 'OT-' + String(Date.now()).slice(-5);
+    const numOrden = generarNumeroOrdenUnico();
     datos.NumeroOrden = numOrden;
 
     const nuevaOrden = {
@@ -7606,7 +7687,7 @@ function limpiarCacheLocal() {
     `📋 Órdenes guardadas en este equipo (${datos.length} total):\n\n` +
     lista +
     `\n\n——————————————————————\n` +
-    `Escribe el NÚMERO DE ORDEN a borrar (ej: OT-98455)\n` +
+    `Escribe el NÚMERO DE ORDEN a borrar (cópialo de la lista de arriba)\n` +
     `o escribe TODAS para limpiar todo el caché local.\n` +
     `(Las órdenes que están en Google Sheets NO se borran de allá)`;
 
