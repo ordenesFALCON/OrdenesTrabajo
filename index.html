@@ -3776,7 +3776,10 @@ window.addEventListener('load', async () => {
    NAVEGACIÓN
 ══════════════════════════════════════════════ */
 const PANELES_PROTEGIDOS = ['nueva', 'dashboard'];
-const CLAVE_ACCESO = 'Admin123';
+// La clave real no se guarda en texto plano en el código (cualquiera puede ver
+// el HTML fuente) — se guarda su hash SHA-256 y se compara huella contra huella,
+// igual que con las claves de sede (ver _sha256Hex / validarClaveSedeDirecto).
+const CLAVE_ACCESO_HASH = '3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2';
 
 const PANELES_DE_DATOS = ['nueva', 'pendientes', 'realizadas', 'lista', 'dashboard', 'novedades', 'historico'];
 
@@ -3792,7 +3795,7 @@ function actualizarIndicadorNavTab() {
 }
 window.addEventListener('resize', actualizarIndicadorNavTab);
 
-function showPanel(name) {
+async function showPanel(name) {
   // Sin importar qué sede quedó guardada de antes, hay que volver a entrar
   // con contraseña cada vez que se abre el sistema (sessionStorage, no localStorage).
   if (PANELES_DE_DATOS.includes(name) && !operacionAutenticada) {
@@ -3807,7 +3810,7 @@ function showPanel(name) {
   if (PANELES_PROTEGIDOS.includes(name) && sessionStorage.getItem('panelesProtegidosDesbloqueados') !== '1') {
     const clave = prompt('Esta sección está protegida.\nIngresa la contraseña para continuar:');
     if (clave === null) return; // usuario canceló
-    if (clave !== CLAVE_ACCESO) {
+    if ((await _sha256Hex(clave)) !== CLAVE_ACCESO_HASH) {
       alert('Contraseña incorrecta. No tienes acceso a esta sección.');
       return;
     }
@@ -5478,28 +5481,16 @@ const INFORME_ANUAL_ESTADO_COLS = ['Equipo', 'UltimaGeneracionHoras'];
 /** Modal centrado y amigable cuando el token de Google caduca (pasa cada
  *  ~1 hora si dejas la pestaña abierta). Reemplaza los errores técnicos en JSON. */
 /** El token que usa toda la app (claves de sede, Órdenes, Inventario...)
- *  dura ~1 hora, lo entregue Google o el Apps Script de login. En vez de
- *  mandar de una al operario a volver a escribir su documento+PIN, primero
- *  se intenta pedir un token nuevo EN SILENCIO con las mismas credenciales
- *  que ya escribió al entrar (guardadas solo en esta pestaña) — si eso
- *  funciona, se recarga sin que se note. Solo si ese intento falla (o si
- *  no hay credenciales guardadas) se le muestra el aviso para que vuelva a
- *  escribir su documento+PIN. */
+ *  dura ~1 hora, lo entregue Google o el Apps Script de login. Antes se
+ *  guardaba el PIN del operario en sessionStorage para poder pedir un token
+ *  nuevo en silencio sin que volviera a escribirlo — pero eso dejaba su
+ *  credencial real (no un token acotado) en texto plano durante toda la
+ *  sesión de la pestaña, legible por cualquier XSS futuro en este mismo
+ *  archivo o por una extensión de navegador maliciosa. Se quitó: ahora,
+ *  cuando el token expira, simplemente se le pide volver a escribir su
+ *  documento+PIN. */
 async function mostrarModalSesionExpirada() {
   if (document.getElementById('modalSesionExpirada')) return; // ya está mostrándose
-
-  const documento = sessionStorage.getItem('docPinDocumento');
-  const pin       = sessionStorage.getItem('docPinPin');
-  if (documento && pin) {
-    try {
-      const data = await _loginAppsScript(documento, pin);
-      if (data.ok) {
-        sessionStorage.setItem('gToken', data.accessToken);
-        location.reload();
-        return;
-      }
-    } catch (e) { /* sigue abajo y muestra el aviso */ }
-  }
 
   const overlay = document.createElement('div');
   overlay.id = 'modalSesionExpirada';
@@ -6539,11 +6530,6 @@ async function loginConDocumentoPinClick() {
     };
     sessionStorage.setItem('gUser', JSON.stringify(currentUser));
     sessionStorage.setItem('gToken', data.accessToken);
-    // Se guardan (solo en esta pestaña) para poder pedir un token nuevo en
-    // silencio cuando el actual expire (~1 hora) sin tener que devolver al
-    // operario a la pantalla de login — ver mostrarModalSesionExpirada().
-    sessionStorage.setItem('docPinDocumento', documento);
-    sessionStorage.setItem('docPinPin', pin);
     location.reload();
   } catch (e) {
     errorEl.textContent = e.message;
